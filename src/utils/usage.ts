@@ -5,6 +5,7 @@
 
 import type { ScriptableContext } from 'chart.js';
 import { maskApiKey } from './format';
+import { parseTimestampMs } from './timestamp';
 import { USAGE_MODEL_CHART_COLORS } from './usage/palette';
 
 export interface KeyStatBucket {
@@ -39,7 +40,7 @@ export interface ModelPrice {
 export interface UsageDetail {
   timestamp: string;
   source: string;
-  auth_index: number;
+  auth_index: string | number | null;
   tokens: {
     input_tokens: number;
     output_tokens: number;
@@ -70,12 +71,14 @@ export interface ApiStats {
   models: Record<string, { requests: number; successCount: number; failureCount: number; tokens: number }>;
 }
 
-export type UsageTimeRange = '7h' | '24h' | '7d' | 'all';
+export type UsageTimeRange = '7h' | '24h' | 'today' | '7d' | 'all';
 
 const TOKENS_PER_PRICE_UNIT = 1_000_000;
 const MODEL_PRICE_STORAGE_KEY = 'cli-proxy-model-prices-v2';
 const USAGE_ENDPOINT_METHOD_REGEX = /^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(\S+)/i;
-const USAGE_TIME_RANGE_MS: Record<Exclude<UsageTimeRange, 'all'>, number> = {
+type RelativeUsageTimeRange = Exclude<UsageTimeRange, 'all' | 'today'>;
+
+const USAGE_TIME_RANGE_MS: Record<RelativeUsageTimeRange, number> = {
   '7h': 7 * 60 * 60 * 1000,
   '24h': 24 * 60 * 60 * 1000,
   '7d': 7 * 24 * 60 * 60 * 1000
@@ -122,12 +125,20 @@ export function filterUsageByTimeRange<T>(usageData: T, range: UsageTimeRange, n
     return usageData;
   }
 
-  const rangeMs = USAGE_TIME_RANGE_MS[range];
-  if (!Number.isFinite(rangeMs) || rangeMs <= 0) {
-    return usageData;
-  }
-
-  const windowStart = nowMs - rangeMs;
+  const windowStart =
+    range === 'today'
+      ? (() => {
+          const start = new Date(nowMs);
+          start.setHours(0, 0, 0, 0);
+          return start.getTime();
+        })()
+      : (() => {
+          const rangeMs = USAGE_TIME_RANGE_MS[range];
+          if (!Number.isFinite(rangeMs) || rangeMs <= 0) {
+            return nowMs;
+          }
+          return nowMs - rangeMs;
+        })();
   const filteredApis: Record<string, unknown> = {};
   const totalSummary = createUsageSummary();
 
@@ -159,7 +170,7 @@ export function filterUsageByTimeRange<T>(usageData: T, range: UsageTimeRange, n
         if (!detailRecord || typeof detailRecord.timestamp !== 'string') {
           return;
         }
-        const timestamp = Date.parse(detailRecord.timestamp);
+        const timestamp = parseTimestampMs(detailRecord.timestamp);
         if (Number.isNaN(timestamp) || timestamp < windowStart || timestamp > nowMs) {
           return;
         }
@@ -490,12 +501,16 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
       modelDetails.forEach((detailRaw) => {
         if (!isRecord(detailRaw) || typeof detailRaw.timestamp !== 'string') return;
         const timestamp = detailRaw.timestamp;
-        const timestampMs = Date.parse(timestamp);
+        const timestampMs = parseTimestampMs(timestamp);
         const tokensRaw = isRecord(detailRaw.tokens) ? detailRaw.tokens : {};
         details.push({
           timestamp,
           source: normalizeSource(detailRaw.source),
-          auth_index: detailRaw.auth_index as unknown as number,
+          auth_index:
+            (detailRaw?.auth_index ??
+              detailRaw?.authIndex ??
+              detailRaw?.AuthIndex ??
+              null) as UsageDetail['auth_index'],
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,
@@ -561,12 +576,16 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
       modelDetails.forEach((detailRaw) => {
         if (!isRecord(detailRaw) || typeof detailRaw.timestamp !== 'string') return;
         const timestamp = detailRaw.timestamp;
-        const timestampMs = Date.parse(timestamp);
+        const timestampMs = parseTimestampMs(timestamp);
         const tokensRaw = isRecord(detailRaw.tokens) ? detailRaw.tokens : {};
         details.push({
           timestamp,
           source: normalizeSource(detailRaw.source),
-          auth_index: detailRaw.auth_index as unknown as number,
+          auth_index:
+            (detailRaw?.auth_index ??
+              detailRaw?.authIndex ??
+              detailRaw?.AuthIndex ??
+              null) as UsageDetail['auth_index'],
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,
@@ -653,7 +672,7 @@ export function calculateRecentPerMinuteRates(
 
   details.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp < windowStart || timestamp > now) {
       return;
     }
@@ -1013,7 +1032,7 @@ export function buildHourlySeriesByModel(
 
   details.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp <= 0) {
       return;
     }
@@ -1070,7 +1089,7 @@ export function buildDailySeriesByModel(
 
   details.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp <= 0) {
       return;
     }
@@ -1253,7 +1272,7 @@ export interface StatusBarData {
 export function calculateStatusBarData(
   usageDetails: UsageDetail[],
   sourceFilter?: string,
-  authIndexFilter?: number
+  authIndexFilter?: string | number
 ): StatusBarData {
   const BLOCK_COUNT = 20;
   const BLOCK_DURATION_MS = 10 * 60 * 1000; // 10 minutes
@@ -1274,7 +1293,7 @@ export function calculateStatusBarData(
   // Filter and bucket the usage details
   usageDetails.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp <= 0 || timestamp < windowStart || timestamp > now) {
       return;
     }
@@ -1283,7 +1302,10 @@ export function calculateStatusBarData(
     if (sourceFilter !== undefined && detail.source !== sourceFilter) {
       return;
     }
-    if (authIndexFilter !== undefined && detail.auth_index !== authIndexFilter) {
+    if (
+      authIndexFilter !== undefined &&
+      normalizeAuthIndex(detail.auth_index) !== normalizeAuthIndex(authIndexFilter)
+    ) {
       return;
     }
 
@@ -1377,7 +1399,7 @@ export function calculateServiceHealthData(
 
   usageDetails.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp <= 0 || timestamp < windowStart || timestamp > now) {
       return;
     }
@@ -1577,7 +1599,7 @@ export function buildHourlyTokenBreakdown(
 
   details.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp <= 0) return;
     const normalized = new Date(timestamp);
     normalized.setMinutes(0, 0, 0);
@@ -1616,7 +1638,7 @@ export function buildDailyTokenBreakdown(usageData: unknown): TokenBreakdownSeri
 
   details.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp <= 0) return;
     const dayLabel = formatDayLabel(new Date(timestamp));
     if (!dayLabel) return;
@@ -1690,7 +1712,7 @@ export function buildHourlyCostSeries(
 
   details.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp <= 0) return;
     const normalized = new Date(timestamp);
     normalized.setMinutes(0, 0, 0);
@@ -1723,7 +1745,7 @@ export function buildDailyCostSeries(
 
   details.forEach((detail) => {
     const timestamp =
-      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : Date.parse(detail.timestamp);
+      typeof detail.__timestampMs === 'number' ? detail.__timestampMs : parseTimestampMs(detail.timestamp);
     if (!Number.isFinite(timestamp) || timestamp <= 0) return;
     const dayLabel = formatDayLabel(new Date(timestamp));
     if (!dayLabel) return;
@@ -1740,3 +1762,4 @@ export function buildDailyCostSeries(
 
   return { labels, data, hasData };
 }
+

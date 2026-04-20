@@ -7,7 +7,6 @@ import iconGemini from '@/assets/icons/gemini.svg';
 import type { GeminiKeyConfig } from '@/types';
 import { maskApiKey } from '@/utils/format';
 import {
-  buildCandidateUsageSourceIds,
   calculateStatusBarData,
   type KeyStats,
   type UsageDetail,
@@ -17,10 +16,12 @@ import { CountTooltipCell } from '../CountTooltipCell';
 import { ProviderList } from '../ProviderList';
 import { ProviderStatusBar } from '../ProviderStatusBar';
 import {
+  collectUsageDetailsForIdentity,
   getExcludedModelDisplayNames,
   getHeaderDisplayNames,
   getModelDisplayNames,
-  getStatsBySource,
+  getProviderConfigKey,
+  getStatsForIdentity,
   hasDisableAllModelsRule,
 } from '../utils';
 
@@ -60,16 +61,18 @@ export function GeminiSection({
   const statusBarCache = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof calculateStatusBarData>>();
 
-    configs.forEach((config) => {
+    configs.forEach((config, index) => {
       if (!config.apiKey) return;
-      const candidates = buildCandidateUsageSourceIds({
-        apiKey: config.apiKey,
-        prefix: config.prefix,
-      });
-      if (!candidates.length) return;
-      const candidateSet = new Set(candidates);
-      const filteredDetails = usageDetails.filter((detail) => candidateSet.has(detail.source));
-      cache.set(config.apiKey, calculateStatusBarData(filteredDetails));
+      const configKey = getProviderConfigKey(config, index);
+      cache.set(
+        configKey,
+        calculateStatusBarData(
+          collectUsageDetailsForIdentity(
+            { authIndex: config.authIndex, apiKey: config.apiKey, prefix: config.prefix },
+            usageDetails
+          )
+        )
+      );
     });
 
     return cache;
@@ -94,7 +97,7 @@ export function GeminiSection({
           items={configs}
           loading={loading}
           stateKey="gemini"
-          keyField={(item) => item.apiKey}
+          keyField={(item, index) => getProviderConfigKey(item, index)}
           getSearchText={(item) =>
             [
               item.apiKey,
@@ -202,7 +205,10 @@ export function GeminiSection({
               title: t('stats.success'),
               className: 'provider-table-cell-numeric provider-table-cell-success',
               render: (item) => {
-                const stats = getStatsBySource(item.apiKey, keyStats, item.prefix);
+                const stats = getStatsForIdentity(
+                  { authIndex: item.authIndex, apiKey: item.apiKey, prefix: item.prefix },
+                  keyStats
+                );
                 return stats.success.toLocaleString();
               },
             },
@@ -211,7 +217,10 @@ export function GeminiSection({
               title: t('stats.failure'),
               className: 'provider-table-cell-numeric provider-table-cell-failure',
               render: (item) => {
-                const stats = getStatsBySource(item.apiKey, keyStats, item.prefix);
+                const stats = getStatsForIdentity(
+                  { authIndex: item.authIndex, apiKey: item.apiKey, prefix: item.prefix },
+                  keyStats
+                );
                 return stats.failure.toLocaleString();
               },
             },
@@ -234,8 +243,8 @@ export function GeminiSection({
               key: 'statusBar',
               title: t('ai_providers.status_bar_title', { defaultValue: '状态条' }),
               className: 'provider-table-cell-status',
-              render: (item) => {
-                const statusData = statusBarCache.get(item.apiKey) || calculateStatusBarData([]);
+              render: (item, index) => {
+                const statusData = statusBarCache.get(getProviderConfigKey(item, index)) || calculateStatusBarData([]);
                 return <ProviderStatusBar statusData={statusData} />;
               },
             },

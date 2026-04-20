@@ -645,6 +645,7 @@ export function ProviderList<T>({
               disabled={actionsDisabled || bulkBusy}
               ariaLabel={t('auth_files.page_size_label', { defaultValue: '单页数量' })}
               fullWidth={false}
+              dropdownWidth="content"
             />
           </div>
         </div>

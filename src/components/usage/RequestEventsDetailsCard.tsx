@@ -10,6 +10,7 @@ import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@
 import type { AuthFileItem } from '@/types/authFile';
 import type { CredentialInfo } from '@/types/sourceInfo';
 import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
+import { parseTimestampMs } from '@/utils/timestamp';
 import {
   collectUsageDetails,
   extractTotalTokens,
@@ -28,6 +29,7 @@ type RequestEventRow = {
   timestampMs: number;
   timestampLabel: string;
   model: string;
+  sourceKey: string;
   sourceRaw: string;
   source: string;
   sourceType: string;
@@ -122,13 +124,13 @@ export function RequestEventsDetailsCard({
   const rows = useMemo<RequestEventRow[]>(() => {
     const details = collectUsageDetails(usage);
 
-    return details
+    const baseRows = details
       .map((detail, index) => {
         const timestamp = detail.timestamp;
         const timestampMs =
           typeof detail.__timestampMs === 'number' && detail.__timestampMs > 0
             ? detail.__timestampMs
-            : Date.parse(timestamp);
+            : parseTimestampMs(timestamp);
         const date = Number.isNaN(timestampMs) ? null : new Date(timestampMs);
         const sourceRaw = String(detail.source ?? '').trim();
         const authIndexRaw = detail.auth_index as unknown;
@@ -138,6 +140,7 @@ export function RequestEventsDetailsCard({
             : String(authIndexRaw);
         const sourceInfo = resolveSourceDisplay(sourceRaw, authIndexRaw, sourceInfoMap, authFileMap);
         const source = sourceInfo.displayName;
+        const sourceKey = sourceInfo.identityKey ?? `source:${sourceRaw || source}`;
         const sourceType = sourceInfo.type;
         const model = String(detail.__modelName ?? '').trim() || '-';
         const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
@@ -153,11 +156,12 @@ export function RequestEventsDetailsCard({
         );
 
         return {
-          id: `${timestamp}-${model}-${sourceRaw || source}-${authIndex}-${index}`,
+          id: `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
           timestamp,
           timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
           timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
           model,
+          sourceKey,
           sourceRaw: sourceRaw || '-',
           source,
           sourceType,
@@ -169,7 +173,41 @@ export function RequestEventsDetailsCard({
           cachedTokens,
           totalTokens
         };
-      })
+      });
+
+    const sourceLabelKeyMap = new Map<string, Set<string>>();
+    baseRows.forEach((row) => {
+      const keys = sourceLabelKeyMap.get(row.source) ?? new Set<string>();
+      keys.add(row.sourceKey);
+      sourceLabelKeyMap.set(row.source, keys);
+    });
+
+    const buildDisambiguatedSourceLabel = (row: RequestEventRow) => {
+      const labelKeyCount = sourceLabelKeyMap.get(row.source)?.size ?? 0;
+      if (labelKeyCount <= 1) {
+        return row.source;
+      }
+
+      if (row.authIndex !== '-') {
+        return `${row.source} · ${row.authIndex}`;
+      }
+
+      if (row.sourceRaw !== '-' && row.sourceRaw !== row.source) {
+        return `${row.source} · ${row.sourceRaw}`;
+      }
+
+      if (row.sourceType) {
+        return `${row.source} · ${row.sourceType}`;
+      }
+
+      return `${row.source} · ${row.sourceKey}`;
+    };
+
+    return baseRows
+      .map((row) => ({
+        ...row,
+        source: buildDisambiguatedSourceLabel(row),
+      }))
       .sort((a, b) => b.timestampMs - a.timestampMs);
   }, [authFileMap, i18n.language, sourceInfoMap, usage]);
 
@@ -184,16 +222,22 @@ export function RequestEventsDetailsCard({
     [rows, t]
   );
 
-  const sourceOptions = useMemo(
-    () => [
+  const sourceOptions = useMemo(() => {
+    const optionMap = new Map<string, string>();
+    rows.forEach((row) => {
+      if (!optionMap.has(row.sourceKey)) {
+        optionMap.set(row.sourceKey, row.source);
+      }
+    });
+
+    return [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(new Set(rows.map((row) => row.source))).map((source) => ({
-        value: source,
-        label: source
+      ...Array.from(optionMap.entries()).map(([value, label]) => ({
+        value,
+        label
       }))
-    ],
-    [rows, t]
-  );
+    ];
+  }, [rows, t]);
 
   const authIndexOptions = useMemo(
     () => [
@@ -230,7 +274,8 @@ export function RequestEventsDetailsCard({
     () =>
       rows.filter((row) => {
         const modelMatched = effectiveModelFilter === ALL_FILTER || row.model === effectiveModelFilter;
-        const sourceMatched = effectiveSourceFilter === ALL_FILTER || row.source === effectiveSourceFilter;
+        const sourceMatched =
+          effectiveSourceFilter === ALL_FILTER || row.sourceKey === effectiveSourceFilter;
         const authIndexMatched =
           effectiveAuthIndexFilter === ALL_FILTER || row.authIndex === effectiveAuthIndexFilter;
         const keywordMatched =

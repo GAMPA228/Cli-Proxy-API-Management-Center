@@ -1205,15 +1205,17 @@ textarea {
 }
 
 .provider-list-page-size {
+  --provider-page-size-width: 72px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
   min-width: 0;
 }
 
 .provider-list-page-size-select {
-  width: 72px;
-  min-width: 72px;
+  width: var(--provider-page-size-width);
+  min-width: var(--provider-page-size-width);
 }
 
 select.provider-list-sort-select,
@@ -1233,8 +1235,8 @@ select.provider-list-page-size-select {
 }
 
 .provider-list-page-size-select > button {
-  width: 72px !important;
-  min-width: 72px !important;
+  width: var(--provider-page-size-width) !important;
+  min-width: var(--provider-page-size-width) !important;
   height: 32px;
   padding: 0 14px 0 8px;
   gap: 4px;
@@ -1246,6 +1248,7 @@ select.provider-list-page-size-select {
 }
 
 .provider-list-page-size-select > button > span:first-child {
+  white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
   font-weight: 600;
@@ -1262,14 +1265,21 @@ select.provider-list-page-size-select {
 }
 
 .provider-list-page-size-select > [role='listbox'] {
-  width: 72px;
-  min-width: 72px;
-  max-width: 72px;
+  width: var(--provider-page-size-width);
+  min-width: var(--provider-page-size-width);
+  max-width: var(--provider-page-size-width);
   top: auto;
   bottom: calc(100% + 6px);
   left: 0;
   right: 0;
   transform-origin: bottom right;
+}
+
+.provider-list-page-size-listbox-content[role='listbox'] {
+  width: max-content !important;
+  min-width: var(--provider-page-size-width) !important;
+  max-width: none !important;
+  white-space: nowrap;
 }
 
 .provider-list-page-size-select [role='option'] {

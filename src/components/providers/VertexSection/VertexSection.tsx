@@ -7,7 +7,6 @@ import iconVertex from '@/assets/icons/vertex.svg';
 import type { ProviderKeyConfig } from '@/types';
 import { maskApiKey } from '@/utils/format';
 import {
-  buildCandidateUsageSourceIds,
   calculateStatusBarData,
   type KeyStats,
   type UsageDetail,
@@ -15,7 +14,12 @@ import {
 import styles from '@/pages/AiProvidersPage.module.scss';
 import { ProviderList } from '../ProviderList';
 import { ProviderStatusBar } from '../ProviderStatusBar';
-import { getStatsBySource, hasDisableAllModelsRule } from '../utils';
+import {
+  collectUsageDetailsForIdentity,
+  getProviderConfigKey,
+  getStatsForIdentity,
+  hasDisableAllModelsRule
+} from '../utils';
 
 interface VertexSectionProps {
   configs: ProviderKeyConfig[];
@@ -51,16 +55,18 @@ export function VertexSection({
   const statusBarCache = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof calculateStatusBarData>>();
 
-    configs.forEach((config) => {
+    configs.forEach((config, index) => {
       if (!config.apiKey) return;
-      const candidates = buildCandidateUsageSourceIds({
-        apiKey: config.apiKey,
-        prefix: config.prefix,
-      });
-      if (!candidates.length) return;
-      const candidateSet = new Set(candidates);
-      const filteredDetails = usageDetails.filter((detail) => candidateSet.has(detail.source));
-      cache.set(config.apiKey, calculateStatusBarData(filteredDetails));
+      const configKey = getProviderConfigKey(config, index);
+      cache.set(
+        configKey,
+        calculateStatusBarData(
+          collectUsageDetailsForIdentity(
+            { authIndex: config.authIndex, apiKey: config.apiKey, prefix: config.prefix },
+            usageDetails
+          )
+        )
+      );
     });
 
     return cache;
@@ -85,7 +91,7 @@ export function VertexSection({
           items={configs}
           loading={loading}
           stateKey="vertex"
-          keyField={(item) => item.apiKey}
+          keyField={(item, index) => getProviderConfigKey(item, index)}
           getSearchText={(item) =>
             [
               item.apiKey,
@@ -129,11 +135,14 @@ export function VertexSection({
             />
           )}
           renderContent={(item, index) => {
-            const stats = getStatsBySource(item.apiKey, keyStats, item.prefix);
+            const stats = getStatsForIdentity(
+              { authIndex: item.authIndex, apiKey: item.apiKey, prefix: item.prefix },
+              keyStats
+            );
             const headerEntries = Object.entries(item.headers || {});
             const configDisabled = hasDisableAllModelsRule(item.excludedModels);
             const excludedModels = item.excludedModels ?? [];
-            const statusData = statusBarCache.get(item.apiKey) || calculateStatusBarData([]);
+            const statusData = statusBarCache.get(getProviderConfigKey(item, index)) || calculateStatusBarData([]);
 
             return (
               <Fragment>

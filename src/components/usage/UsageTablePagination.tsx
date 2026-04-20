@@ -133,6 +133,7 @@ export function UsageTablePagination({
             disabled={disabled}
             ariaLabel={t('auth_files.page_size_label', { defaultValue: '单页数量' })}
             fullWidth={false}
+            dropdownWidth="content"
           />
         </div>
       </div>

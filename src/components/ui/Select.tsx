@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { IconChevronDown } from './icons';
 import styles from './Select.module.scss';
@@ -20,6 +21,7 @@ interface SelectProps {
   ariaDescribedBy?: string;
   fullWidth?: boolean;
   id?: string;
+  dropdownWidth?: 'trigger' | 'content';
 }
 
 export function Select({
@@ -34,6 +36,7 @@ export function Select({
   ariaDescribedBy,
   fullWidth = true,
   id,
+  dropdownWidth = 'trigger',
 }: SelectProps) {
   const generatedId = useId();
   const selectId = id ?? generatedId;
@@ -67,6 +70,7 @@ export function Select({
   const displayText = selected?.label ?? placeholder ?? '';
   const isPlaceholder = !selected && placeholder;
   const canUsePortal = typeof document !== 'undefined' && Boolean(document.body);
+  const useContentWidthDropdown = dropdownWidth === 'content';
 
   const updateDropdownRect = useCallback(() => {
     const trigger = triggerRef.current;
@@ -206,11 +210,22 @@ export function Select({
           ? createPortal(
               <div
                 ref={dropdownRef}
-                className={`${styles.dropdown} ${styles.dropdownFloating}`}
+                className={`${styles.dropdown} ${styles.dropdownFloating} ${useContentWidthDropdown ? 'provider-list-page-size-listbox-content' : ''}`.trim()}
                 style={{
+                  position: 'fixed',
                   top: `${dropdownRect.top}px`,
                   left: `${dropdownRect.left}px`,
-                  width: `${dropdownRect.width}px`,
+                  ...(useContentWidthDropdown
+                    ? {
+                        minWidth: `${dropdownRect.width}px`,
+                        width: 'max-content',
+                        maxWidth: 'none',
+                        right: 'auto',
+                        whiteSpace: 'nowrap',
+                      }
+                    : {
+                        width: `${dropdownRect.width}px`,
+                      }),
                 }}
                 id={listboxId}
                 role="listbox"
@@ -239,7 +254,23 @@ export function Select({
               document.body
             )
           : (
-        <div className={styles.dropdown} id={listboxId} role="listbox" aria-label={ariaLabel}>
+        <div
+          className={`${styles.dropdown} ${useContentWidthDropdown ? 'provider-list-page-size-listbox-content' : ''}`.trim()}
+          style={
+            useContentWidthDropdown
+              ? ({
+                  minWidth: '100%',
+                  width: 'max-content',
+                  maxWidth: 'none',
+                  right: 'auto',
+                  whiteSpace: 'nowrap',
+                } satisfies CSSProperties)
+              : undefined
+          }
+          id={listboxId}
+          role="listbox"
+          aria-label={ariaLabel}
+        >
           {options.map((opt, index) => {
             const active = opt.value === value;
             const highlighted = index === resolvedHighlightedIndex;

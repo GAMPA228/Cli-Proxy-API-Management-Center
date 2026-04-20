@@ -7,7 +7,6 @@ import iconOpenaiDark from '@/assets/icons/openai-dark.svg';
 import type { OpenAIProviderConfig } from '@/types';
 import { maskApiKey } from '@/utils/format';
 import {
-  buildCandidateUsageSourceIds,
   calculateStatusBarData,
   type KeyStats,
   type UsageDetail,
@@ -16,7 +15,13 @@ import styles from '@/pages/AiProvidersPage.module.scss';
 import { CountTooltipCell } from '../CountTooltipCell';
 import { ProviderList } from '../ProviderList';
 import { ProviderStatusBar } from '../ProviderStatusBar';
-import { getHeaderDisplayNames, getModelDisplayNames, getOpenAIProviderStats } from '../utils';
+import {
+  collectOpenAIProviderUsageDetails,
+  getHeaderDisplayNames,
+  getModelDisplayNames,
+  getOpenAIProviderKey,
+  getOpenAIProviderStats
+} from '../utils';
 
 interface OpenAISectionProps {
   configs: OpenAIProviderConfig[];
@@ -51,17 +56,14 @@ export function OpenAISection({
   const statusBarCache = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof calculateStatusBarData>>();
 
-    configs.forEach((provider) => {
-      const sourceIds = new Set<string>();
-      buildCandidateUsageSourceIds({ prefix: provider.prefix }).forEach((id) => sourceIds.add(id));
-      (provider.apiKeyEntries || []).forEach((entry) => {
-        buildCandidateUsageSourceIds({ apiKey: entry.apiKey }).forEach((id) => sourceIds.add(id));
-      });
-
-      const filteredDetails = sourceIds.size
-        ? usageDetails.filter((detail) => sourceIds.has(detail.source))
-        : [];
-      cache.set(provider.name, calculateStatusBarData(filteredDetails));
+    configs.forEach((provider, index) => {
+      const providerKey = getOpenAIProviderKey(provider, index);
+      cache.set(
+        providerKey,
+        calculateStatusBarData(
+          collectOpenAIProviderUsageDetails(provider, usageDetails)
+        )
+      );
     });
 
     return cache;
@@ -90,7 +92,7 @@ export function OpenAISection({
           items={configs}
           loading={loading}
           stateKey="openai"
-          keyField={(_, index) => `openai-provider-${index}`}
+          keyField={(item, index) => getOpenAIProviderKey(item, index)}
           getSearchText={(item) =>
             [
               item.name,
@@ -190,7 +192,7 @@ export function OpenAISection({
               title: t('stats.success'),
               className: 'provider-table-cell-numeric provider-table-cell-success',
               render: (item) => {
-                const stats = getOpenAIProviderStats(item.apiKeyEntries, keyStats, item.prefix);
+                const stats = getOpenAIProviderStats(item, keyStats);
                 return stats.success.toLocaleString();
               },
             },
@@ -199,7 +201,7 @@ export function OpenAISection({
               title: t('stats.failure'),
               className: 'provider-table-cell-numeric provider-table-cell-failure',
               render: (item) => {
-                const stats = getOpenAIProviderStats(item.apiKeyEntries, keyStats, item.prefix);
+                const stats = getOpenAIProviderStats(item, keyStats);
                 return stats.failure.toLocaleString();
               },
             },
@@ -207,8 +209,8 @@ export function OpenAISection({
               key: 'statusBar',
               title: t('common.status', { defaultValue: '状态' }),
               className: 'provider-table-cell-status',
-              render: (item) => {
-                const statusData = statusBarCache.get(item.name) || calculateStatusBarData([]);
+              render: (item, index) => {
+                const statusData = statusBarCache.get(getOpenAIProviderKey(item, index)) || calculateStatusBarData([]);
                 return <ProviderStatusBar statusData={statusData} />;
               },
             },

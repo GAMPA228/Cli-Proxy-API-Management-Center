@@ -1395,6 +1395,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
                     ariaLabel={t('auth_files.page_size_label', { defaultValue: '单页数量' })}
                     disabled={disabled}
                     fullWidth={false}
+                    dropdownWidth="content"
                   />
                 </div>
               </div>
