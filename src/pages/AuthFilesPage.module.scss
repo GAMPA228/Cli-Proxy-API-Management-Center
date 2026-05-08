@@ -124,6 +124,10 @@
   width: 110px;
 }
 
+.authTableColQuota {
+  width: 196px;
+}
+
 .authTableColActions {
   width: 292px;
 }
@@ -184,6 +188,11 @@
 .authTableCellStatus {
   width: 132px;
   max-width: 132px;
+}
+
+.authTableCellQuota {
+  width: 196px;
+  min-width: 196px;
 }
 
 .authTableNameTrigger {
@@ -325,6 +334,61 @@
 .authTableStatusCell .statusRate {
   font-size: 11px;
   padding: 2px 6px;
+}
+
+.authTableQuotaCell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 168px;
+  text-align: left;
+}
+
+.authTableQuotaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.authTableQuotaMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.authTableQuotaLabel {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.authTableQuotaValue {
+  color: var(--text-primary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.authTableQuotaHint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 6px 0;
+}
+
+.authTableQuotaError {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--danger-color);
+  text-align: left;
+}
+
+.authTableQuotaEmpty {
+  color: var(--text-tertiary);
+  font-size: 12px;
 }
 
 .hiddenInput {

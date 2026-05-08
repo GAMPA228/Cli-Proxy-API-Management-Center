@@ -22,6 +22,7 @@ import {
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
 import { copyToClipboard } from '@/utils/clipboard';
 import { calculateStatusBarData, normalizeAuthIndex } from '@/utils/usage';
+import { resolveAuthProvider } from '@/utils/quota';
 import {
   clampCardPageSize,
   formatModified,
@@ -32,11 +33,14 @@ import {
   isRuntimeOnlyAuthFile,
   parsePriorityValue,
   resolveAuthFileStats,
+  QUOTA_PROVIDER_TYPES,
+  type QuotaProviderType,
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
 import { AuthFileDetailModal } from '@/features/authFiles/components/AuthFileDetailModal';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
+import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
@@ -362,6 +366,12 @@ const resolveStatusToneClass = (status: string, stylesRef: Record<string, string
     return stylesRef.authTableStatusWarn;
   }
   return stylesRef.authTableStatusIdle;
+};
+
+const resolveQuotaType = (file: AuthFileItem): QuotaProviderType | null => {
+  const provider = resolveAuthProvider(file);
+  if (!QUOTA_PROVIDER_TYPES.has(provider as QuotaProviderType)) return null;
+  return provider as QuotaProviderType;
 };
 
 export function AuthFilesPage() {
@@ -981,6 +991,7 @@ export function AuthFilesPage() {
                 <col className={styles.authTableColSuccess} />
                 <col className={styles.authTableColFailure} />
                 <col className={styles.authTableColStatus} />
+                <col className={styles.authTableColQuota} />
                 <col className={styles.authTableColHealth} />
                 <col className={styles.authTableColActions} />
               </colgroup>
@@ -1049,6 +1060,11 @@ export function AuthFilesPage() {
                     </button>
                   </th>
                   <th
+                    className={styles.authTableColQuota}
+                  >
+                    {t('auth_files.quota_column', { defaultValue: '额度' })}
+                  </th>
+                  <th
                     className={styles.authTableColHealth}
                     aria-sort={statsSort?.key === 'health' ? (statsSort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >
@@ -1084,6 +1100,7 @@ export function AuthFilesPage() {
                   const statusToneClass = resolveStatusToneClass(statusRaw, styles);
                   const showStatusErrorTooltip = isErrorStatus(statusRaw) && Boolean(statusSummary);
                   const priorityValue = toPriorityValue(file.priority);
+                  const quotaType = !isRuntimeOnly ? resolveQuotaType(file) : null;
 
                   return (
                     <tr
@@ -1167,6 +1184,20 @@ export function AuthFilesPage() {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td
+                        className={`${styles.authTableCenterCell} ${styles.authTableCellQuota}`}
+                      >
+                        {quotaType ? (
+                          <AuthFileQuotaSection
+                            file={file}
+                            quotaType={quotaType}
+                            disableControls={disableControls}
+                            compact
+                          />
+                        ) : (
+                          <span className={styles.authTableQuotaEmpty}>-</span>
+                        )}
                       </td>
                       <td
                         className={`provider-table-cell-status ${styles.authTableCenterCell} ${styles.authTableCellHealth}`}

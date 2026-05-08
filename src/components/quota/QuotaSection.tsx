@@ -68,6 +68,13 @@ interface QuotaSplitCells {
   secondary: ReactNode;
 }
 
+interface CodexDetailWindowRow {
+  id: string;
+  label: string;
+  percent: number | null;
+  resetLabel: string;
+}
+
 interface QuotaPaginationState<T> {
   pageSize: number;
   totalPages: number;
@@ -262,6 +269,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
   const isAntigravitySection = config.type === 'antigravity';
   const showSecondaryQuotaColumn = !isAntigravitySection;
   const [antigravityDetailFileName, setAntigravityDetailFileName] = useState<string | null>(null);
+  const [codexDetailFileName, setCodexDetailFileName] = useState<string | null>(null);
 
   const {
     pageSize,
@@ -614,11 +622,47 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     resolveAntigravitySummary
   ]);
 
+  const codexDetailData = useMemo(() => {
+    if (config.type !== 'codex' || !codexDetailFileName) return null;
+
+    const file = filteredFilesByControls.find((item) => item.name === codexDetailFileName);
+    if (!file) return null;
+
+    const state = quota[file.name] as unknown as CodexQuotaState | undefined;
+    if (state?.status !== 'success') return null;
+
+    const windows = Array.isArray(state.windows) ? state.windows : [];
+    const rows = windows
+      .filter((window) => window.id !== 'five-hour' && window.id !== 'weekly')
+      .map<CodexDetailWindowRow>((window) => {
+        const used = window.usedPercent;
+        const clampedUsed = used === null ? null : Math.max(0, Math.min(100, used));
+        return {
+          id: window.id,
+          label: window.label,
+          percent: clampedUsed === null ? null : Math.max(0, Math.min(100, 100 - clampedUsed)),
+          resetLabel: window.resetLabel
+        };
+      });
+
+    return {
+      file,
+      planType: state.planType ?? null,
+      rows
+    };
+  }, [codexDetailFileName, config.type, filteredFilesByControls, quota]);
+
   useEffect(() => {
     if (config.type === 'antigravity') return;
     if (antigravityDetailFileName === null) return;
     setAntigravityDetailFileName(null);
   }, [antigravityDetailFileName, config.type]);
+
+  useEffect(() => {
+    if (config.type === 'codex') return;
+    if (codexDetailFileName === null) return;
+    setCodexDetailFileName(null);
+  }, [codexDetailFileName, config.type]);
 
   const renderSplitCells = useCallback(
     (file: AuthFileItem): QuotaSplitCells => {
@@ -670,18 +714,37 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
       if (config.type === 'codex') {
         const codexState = quotaState as CodexQuotaState;
         const windows = Array.isArray(codexState?.windows) ? codexState.windows : [];
+        const primaryWindow =
+          windows.find((window) => window.id === 'five-hour') ??
+          windows.find((window) => window.id.includes('five-hour') && !window.id.includes('code-review')) ??
+          null;
         const weekly =
           windows.find((window) => window.id === 'weekly') ??
           windows.find((window) => window.id.includes('weekly') && !window.id.includes('code-review')) ??
           null;
-        const reviewWeekly =
-          windows.find((window) => window.id === 'code-review-weekly') ??
-          windows.find((window) => window.id.includes('code-review') && window.id.includes('weekly')) ??
-          null;
+        const detailRows = windows.filter(
+          (window) => window.id !== 'five-hour' && window.id !== 'weekly'
+        );
+        const planNode = (
+          <div className={styles.quotaPlanCellContent}>
+            <span className={styles.quotaPlanBadge}>{resolveCodexPlanLabel(codexState?.planType)}</span>
+            {detailRows.length > 0 ? (
+              <button
+                type="button"
+                className={`${styles.quotaPlanBadge} ${styles.quotaPlanButton}`}
+                onClick={() => setCodexDetailFileName(file.name)}
+                title={t('quota_management.view_quota_detail', { defaultValue: '查看额度明细' })}
+                aria-label={t('quota_management.view_quota_detail', { defaultValue: '查看额度明细' })}
+              >
+                {t('quota_management.detail_action', { defaultValue: '明细' })}
+              </button>
+            ) : null}
+          </div>
+        );
         return {
-          plan: <span className={styles.quotaPlanBadge}>{resolveCodexPlanLabel(codexState?.planType)}</span>,
-          primary: renderQuotaMetric(toCodexMetric(weekly)),
-          secondary: renderQuotaMetric(toCodexMetric(reviewWeekly))
+          plan: planNode,
+          primary: renderQuotaMetric(toCodexMetric(primaryWindow)),
+          secondary: renderQuotaMetric(toCodexMetric(weekly))
         };
       }
 
@@ -1244,7 +1307,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
                   </th>
                   <th>
                     {isCodexSection
-                      ? t('quota_management.detail_col_weekly', { defaultValue: '周限额' })
+                      ? t('quota_management.detail_col_primary_window', { defaultValue: '5 小时限额' })
                       : isAntigravitySection
                         ? t('quota_management.detail_col_lowest_remaining', { defaultValue: '最低剩余' })
                       : t('quota_management.detail_col_primary', { defaultValue: '主限额' })}
@@ -1252,7 +1315,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
                   {showSecondaryQuotaColumn ? (
                     <th>
                       {isCodexSection
-                        ? t('quota_management.detail_col_review_weekly', { defaultValue: '代码审查周限额' })
+                        ? t('quota_management.detail_col_weekly', { defaultValue: '周限额' })
                         : t('quota_management.detail_col_secondary', { defaultValue: '次限额' })}
                     </th>
                   ) : null}
@@ -1512,6 +1575,97 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+      <Modal
+        open={Boolean(codexDetailData)}
+        onClose={() => setCodexDetailFileName(null)}
+        title={t('quota_management.codex_quota_detail_title', { defaultValue: 'Codex 额度明细' })}
+        width="min(760px, 92vw)"
+        className={styles.quotaDetailModal}
+      >
+        {codexDetailData ? (
+          <div className={styles.quotaDetailContent}>
+            <div className={styles.quotaDetailHeader}>
+              <span className={styles.quotaDetailFileName} title={codexDetailData.file.name}>
+                {codexDetailData.file.name}
+              </span>
+              <div className={styles.quotaDetailSummary}>
+                <span className={styles.quotaSummaryItem}>
+                  {t('quota_management.detail_col_plan', { defaultValue: '套餐' })}
+                  {': '}
+                  {resolveCodexPlanLabel(codexDetailData.planType)}
+                </span>
+                <span className={styles.quotaSummaryItem}>
+                  {t('quota_management.detail_count', {
+                    count: codexDetailData.rows.length,
+                    defaultValue: `${codexDetailData.rows.length} 条明细`
+                  })}
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.quotaDetailTableWrapper}>
+              <table className={styles.quotaDetailTable}>
+                <colgroup>
+                  <col className={styles.quotaDetailColIndex} />
+                  <col className={styles.quotaDetailColGroup} />
+                  <col className={styles.quotaDetailColRemain} />
+                  <col className={styles.quotaDetailColReset} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>{t('common.serial_number', { defaultValue: '序号' })}</th>
+                    <th>{t('quota_management.quota_window', { defaultValue: '额度窗口' })}</th>
+                    <th>{t('quota_management.remaining_quota', { defaultValue: '剩余额度' })}</th>
+                    <th>{t('quota_management.reset_time', { defaultValue: '重置时间' })}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {codexDetailData.rows.length > 0 ? (
+                    codexDetailData.rows.map((row, index) => {
+                      const remainingPercent = row.percent;
+                      const toneClass =
+                        remainingPercent === null
+                          ? styles.quotaRemainHealthy
+                          : remainingPercent <= 20
+                            ? styles.quotaRemainDanger
+                            : remainingPercent <= 60
+                              ? styles.quotaRemainWarning
+                              : styles.quotaRemainHealthy;
+                      return (
+                        <tr key={row.id}>
+                          <td>{index + 1}</td>
+                          <td title={row.label}>{row.label}</td>
+                          <td>
+                            <div className={styles.quotaDetailRemainingCell}>
+                              <span className={`${styles.quotaRemainBadge} ${toneClass}`}>
+                                {remainingPercent === null ? '--' : `${remainingPercent}%`}
+                              </span>
+                              <QuotaProgressBar
+                                percent={remainingPercent}
+                                highThreshold={80}
+                                mediumThreshold={50}
+                              />
+                            </div>
+                          </td>
+                          <td>{row.resetLabel || '-'}</td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className={styles.quotaDetailEmptyCell}>
+                        {t('quota_management.no_additional_quota_detail', {
+                          defaultValue: '暂无代码审查或附加额度明细'
+                        })}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
