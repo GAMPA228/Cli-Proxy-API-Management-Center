@@ -8,8 +8,14 @@ import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { IconEye, IconEyeOff } from '@/components/ui/icons';
 import { useAuthStore, useLanguageStore, useNotificationStore } from '@/stores';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
-import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
+import {
+  LANGUAGE_LABEL_KEYS,
+  LANGUAGE_ORDER,
+  MAX_REQUEST_TIMEOUT_SECONDS,
+  MIN_REQUEST_TIMEOUT_SECONDS,
+} from '@/utils/constants';
 import { isSupportedLanguage } from '@/utils/language';
+import { parseRequestTimeoutSeconds, requestTimeoutMsToSeconds } from '@/utils/requestTimeout';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
 import type { ApiError } from '@/types';
 import styles from './LoginPage.module.scss';
@@ -79,9 +85,11 @@ export function LoginPage() {
   const storedBase = useAuthStore((state) => state.apiBase);
   const storedKey = useAuthStore((state) => state.managementKey);
   const storedRememberPassword = useAuthStore((state) => state.rememberPassword);
+  const storedRequestTimeoutMs = useAuthStore((state) => state.requestTimeoutMs);
 
   const [apiBase, setApiBase] = useState('');
   const [managementKey, setManagementKey] = useState('');
+  const [requestTimeoutSeconds, setRequestTimeoutSeconds] = useState('');
   const [showCustomBase, setShowCustomBase] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
@@ -98,6 +106,20 @@ export function LoginPage() {
         label: t(LANGUAGE_LABEL_KEYS[lang])
       })),
     [t]
+  );
+  const parsedRequestTimeout = useMemo(
+    () => parseRequestTimeoutSeconds(requestTimeoutSeconds),
+    [requestTimeoutSeconds]
+  );
+  const requestTimeoutError = useMemo(
+    () =>
+      parsedRequestTimeout.isValid
+        ? ''
+        : t('login.request_timeout_invalid', {
+            min: MIN_REQUEST_TIMEOUT_SECONDS,
+            max: MAX_REQUEST_TIMEOUT_SECONDS
+          }),
+    [parsedRequestTimeout.isValid, t]
   );
   const handleLanguageChange = useCallback(
     (selectedLanguage: string) => {
@@ -124,6 +146,7 @@ export function LoginPage() {
           setApiBase(storedBase || detectedBase);
           setManagementKey(storedKey || '');
           setRememberPassword(storedRememberPassword || Boolean(storedKey));
+          setRequestTimeoutSeconds(requestTimeoutMsToSeconds(storedRequestTimeoutMs));
         }
       } finally {
         if (!autoLoginSuccess) {
@@ -141,6 +164,10 @@ export function LoginPage() {
       setError(t('login.error_required'));
       return;
     }
+    if (!parsedRequestTimeout.isValid) {
+      setError(requestTimeoutError);
+      return;
+    }
 
     const baseToUse = apiBase ? normalizeApiBase(apiBase) : detectedBase;
     setLoading(true);
@@ -149,7 +176,8 @@ export function LoginPage() {
       await login({
         apiBase: baseToUse,
         managementKey: managementKey.trim(),
-        rememberPassword
+        rememberPassword,
+        requestTimeoutMs: parsedRequestTimeout.timeoutMs
       });
       showNotification(t('common.connected_status'), 'success');
       navigate('/', { replace: true });
@@ -160,7 +188,18 @@ export function LoginPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiBase, detectedBase, login, managementKey, navigate, rememberPassword, showNotification, t]);
+  }, [
+    apiBase,
+    detectedBase,
+    login,
+    managementKey,
+    navigate,
+    parsedRequestTimeout,
+    rememberPassword,
+    requestTimeoutError,
+    showNotification,
+    t
+  ]);
 
   const handleSubmitKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
@@ -279,6 +318,19 @@ export function LoginPage() {
                     {showKey ? <IconEyeOff size={16} /> : <IconEye size={16} />}
                   </button>
                 }
+              />
+
+              <Input
+                label={t('login.request_timeout_label')}
+                placeholder={t('login.request_timeout_placeholder')}
+                value={requestTimeoutSeconds}
+                onChange={(e) => setRequestTimeoutSeconds(e.target.value)}
+                hint={t('login.request_timeout_hint')}
+                error={requestTimeoutError || undefined}
+                inputMode="numeric"
+                type="number"
+                min={MIN_REQUEST_TIMEOUT_SECONDS}
+                max={MAX_REQUEST_TIMEOUT_SECONDS}
               />
 
               <div className={styles.toggleAdvanced}>

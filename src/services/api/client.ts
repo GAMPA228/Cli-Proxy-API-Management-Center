@@ -16,6 +16,7 @@ class ApiClient {
   private instance: AxiosInstance;
   private apiBase: string = '';
   private managementKey: string = '';
+  private configuredTimeoutMs: number | null = null;
 
   constructor() {
     this.instance = axios.create({
@@ -34,12 +35,16 @@ class ApiClient {
   setConfig(config: ApiClientConfig): void {
     this.apiBase = computeApiUrl(config.apiBase);
     this.managementKey = config.managementKey;
+    this.configuredTimeoutMs =
+      typeof config.timeout === 'number' && Number.isFinite(config.timeout) && config.timeout > 0
+        ? Math.trunc(config.timeout)
+        : null;
 
-    if (config.timeout) {
-      this.instance.defaults.timeout = config.timeout;
-    } else {
-      this.instance.defaults.timeout = REQUEST_TIMEOUT_MS;
-    }
+    this.instance.defaults.timeout = this.configuredTimeoutMs ?? REQUEST_TIMEOUT_MS;
+  }
+
+  getTimeout(fallbackMs = REQUEST_TIMEOUT_MS): number {
+    return this.configuredTimeoutMs ?? fallbackMs;
   }
 
   private readHeader(

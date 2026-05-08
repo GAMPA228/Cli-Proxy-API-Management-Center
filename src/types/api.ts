@@ -10,7 +10,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export interface ApiClientConfig {
   apiBase: string;
   managementKey: string;
-  timeout?: number;
+  timeout?: number | null;
 }
 
 // 请求选项

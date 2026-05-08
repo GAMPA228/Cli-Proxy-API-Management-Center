@@ -27,22 +27,22 @@ export interface ErrorLogsResponse {
 
 export const logsApi = {
   fetchLogs: (params: LogsQuery = {}): Promise<LogsResponse> =>
-    apiClient.get('/logs', { params, timeout: LOGS_TIMEOUT_MS }),
+    apiClient.get('/logs', { params, timeout: apiClient.getTimeout(LOGS_TIMEOUT_MS) }),
 
   clearLogs: () => apiClient.delete('/logs'),
 
   fetchErrorLogs: (): Promise<ErrorLogsResponse> =>
-    apiClient.get('/request-error-logs', { timeout: LOGS_TIMEOUT_MS }),
+    apiClient.get('/request-error-logs', { timeout: apiClient.getTimeout(LOGS_TIMEOUT_MS) }),
 
   downloadErrorLog: (filename: string) =>
     apiClient.getRaw(`/request-error-logs/${encodeURIComponent(filename)}`, {
       responseType: 'blob',
-      timeout: LOGS_TIMEOUT_MS
+      timeout: apiClient.getTimeout(LOGS_TIMEOUT_MS)
     }),
 
   downloadRequestLogById: (id: string) =>
     apiClient.getRaw(`/request-log-by-id/${encodeURIComponent(id)}`, {
       responseType: 'blob',
-      timeout: LOGS_TIMEOUT_MS
+      timeout: apiClient.getTimeout(LOGS_TIMEOUT_MS)
     }),
 };

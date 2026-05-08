@@ -12,6 +12,7 @@ import { apiClient } from '@/services/api/client';
 import { useConfigStore } from './useConfigStore';
 import { useUsageStatsStore } from './useUsageStatsStore';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
+import { normalizeRequestTimeoutMs } from '@/utils/requestTimeout';
 
 interface AuthStoreState extends AuthState {
   connectionStatus: ConnectionStatus;
@@ -24,6 +25,7 @@ interface AuthStoreState extends AuthState {
   restoreSession: () => Promise<boolean>;
   updateServerVersion: (version: string | null, buildDate?: string | null) => void;
   updateConnectionStatus: (status: ConnectionStatus, error?: string | null) => void;
+  setRequestTimeoutMs: (timeoutMs: number | null) => void;
 }
 
 let restoreSessionPromise: Promise<boolean> | null = null;
@@ -36,6 +38,7 @@ export const useAuthStore = create<AuthStoreState>()(
       apiBase: '',
       managementKey: '',
       rememberPassword: false,
+      requestTimeoutMs: null,
       serverVersion: null,
       serverBuildDate: null,
       connectionStatus: 'disconnected',
@@ -54,24 +57,31 @@ export const useAuthStore = create<AuthStoreState>()(
             secureStorage.getItem<string>('apiUrl', { encrypt: true });
           const legacyKey = secureStorage.getItem<string>('managementKey');
 
-          const { apiBase, managementKey, rememberPassword } = get();
+          const { apiBase, managementKey, rememberPassword, requestTimeoutMs } = get();
           const resolvedBase = normalizeApiBase(apiBase || legacyBase || detectApiBaseFromLocation());
           const resolvedKey = managementKey || legacyKey || '';
           const resolvedRememberPassword = rememberPassword || Boolean(managementKey) || Boolean(legacyKey);
+          const resolvedTimeoutMs = normalizeRequestTimeoutMs(requestTimeoutMs);
 
           set({
             apiBase: resolvedBase,
             managementKey: resolvedKey,
-            rememberPassword: resolvedRememberPassword
+            rememberPassword: resolvedRememberPassword,
+            requestTimeoutMs: resolvedTimeoutMs
           });
-          apiClient.setConfig({ apiBase: resolvedBase, managementKey: resolvedKey });
+          apiClient.setConfig({
+            apiBase: resolvedBase,
+            managementKey: resolvedKey,
+            timeout: resolvedTimeoutMs
+          });
 
           if (wasLoggedIn && resolvedBase && resolvedKey) {
             try {
               await get().login({
                 apiBase: resolvedBase,
                 managementKey: resolvedKey,
-                rememberPassword: resolvedRememberPassword
+                rememberPassword: resolvedRememberPassword,
+                requestTimeoutMs: resolvedTimeoutMs
               });
               return true;
             } catch (error) {
@@ -91,6 +101,9 @@ export const useAuthStore = create<AuthStoreState>()(
         const apiBase = normalizeApiBase(credentials.apiBase);
         const managementKey = credentials.managementKey.trim();
         const rememberPassword = credentials.rememberPassword ?? get().rememberPassword ?? false;
+        const requestTimeoutMs = normalizeRequestTimeoutMs(
+          credentials.requestTimeoutMs ?? get().requestTimeoutMs
+        );
 
         try {
           set({ connectionStatus: 'connecting' });
@@ -98,7 +111,8 @@ export const useAuthStore = create<AuthStoreState>()(
           // 配置 API 客户端
           apiClient.setConfig({
             apiBase,
-            managementKey
+            managementKey,
+            timeout: requestTimeoutMs
           });
 
           // 测试连接 - 获取配置
@@ -110,6 +124,7 @@ export const useAuthStore = create<AuthStoreState>()(
             apiBase,
             managementKey,
             rememberPassword,
+            requestTimeoutMs,
             connectionStatus: 'connected',
             connectionError: null
           });
@@ -142,6 +157,7 @@ export const useAuthStore = create<AuthStoreState>()(
           isAuthenticated: false,
           apiBase: '',
           managementKey: '',
+          requestTimeoutMs: null,
           serverVersion: null,
           serverBuildDate: null,
           connectionStatus: 'disconnected',
@@ -152,7 +168,7 @@ export const useAuthStore = create<AuthStoreState>()(
 
       // 检查认证状态
       checkAuth: async () => {
-        const { managementKey, apiBase } = get();
+        const { managementKey, apiBase, requestTimeoutMs } = get();
 
         if (!managementKey || !apiBase) {
           return false;
@@ -160,7 +176,7 @@ export const useAuthStore = create<AuthStoreState>()(
 
         try {
           // 重新配置客户端
-          apiClient.setConfig({ apiBase, managementKey });
+          apiClient.setConfig({ apiBase, managementKey, timeout: requestTimeoutMs });
 
           // 验证连接
           await useConfigStore.getState().fetchConfig();
@@ -191,6 +207,18 @@ export const useAuthStore = create<AuthStoreState>()(
           connectionStatus: status,
           connectionError: error
         });
+      },
+
+      setRequestTimeoutMs: (timeoutMs) => {
+        const normalizedTimeoutMs = normalizeRequestTimeoutMs(timeoutMs);
+        const { apiBase, managementKey } = get();
+
+        set({ requestTimeoutMs: normalizedTimeoutMs });
+        apiClient.setConfig({
+          apiBase,
+          managementKey,
+          timeout: normalizedTimeoutMs
+        });
       }
     }),
     {
@@ -211,6 +239,7 @@ export const useAuthStore = create<AuthStoreState>()(
         apiBase: state.apiBase,
         ...(state.rememberPassword ? { managementKey: state.managementKey } : {}),
         rememberPassword: state.rememberPassword,
+        requestTimeoutMs: state.requestTimeoutMs,
         serverVersion: state.serverVersion,
         serverBuildDate: state.serverBuildDate
       })

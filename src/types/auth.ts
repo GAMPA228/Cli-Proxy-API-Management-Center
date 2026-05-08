@@ -8,6 +8,7 @@ export interface LoginCredentials {
   apiBase: string;
   managementKey: string;
   rememberPassword?: boolean;
+  requestTimeoutMs?: number | null;
 }
 
 // 认证状态
@@ -16,6 +17,7 @@ export interface AuthState {
   apiBase: string;
   managementKey: string;
   rememberPassword: boolean;
+  requestTimeoutMs: number | null;
   serverVersion: string | null;
   serverBuildDate: string | null;
 }

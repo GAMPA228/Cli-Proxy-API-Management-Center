@@ -16,6 +16,9 @@ export const CACHE_EXPIRY_MS = 30 * 1000; // 与基线保持一致，减少管�
 export const DEFAULT_API_PORT = 8317;
 export const MANAGEMENT_API_PREFIX = '/v0/management';
 export const REQUEST_TIMEOUT_MS = 30 * 1000;
+export const LONG_REQUEST_TIMEOUT_MS = 60 * 1000;
+export const MIN_REQUEST_TIMEOUT_SECONDS = 1;
+export const MAX_REQUEST_TIMEOUT_SECONDS = 3600;
 export const VERSION_HEADER_KEYS = ['x-cpa-version', 'x-server-version'];
 export const BUILD_DATE_HEADER_KEYS = ['x-cpa-build-date', 'x-server-build-date'];
 export const STATUS_UPDATE_INTERVAL_MS = 1000;
@@ -24,7 +27,7 @@ export const LOG_REFRESH_DELAY_MS = 500;
 // 日志相关
 export const MAX_LOG_LINES = 2000;
 export const LOG_FETCH_LIMIT = 2500;
-export const LOGS_TIMEOUT_MS = 60 * 1000;
+export const LOGS_TIMEOUT_MS = LONG_REQUEST_TIMEOUT_MS;
 
 // 认证文件分页
 export const DEFAULT_AUTH_FILES_PAGE_SIZE = 20;
