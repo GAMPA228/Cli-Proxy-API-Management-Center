@@ -22,7 +22,7 @@ import {
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
 import { copyToClipboard } from '@/utils/clipboard';
 import { calculateStatusBarData, normalizeAuthIndex } from '@/utils/usage';
-import { resolveAuthProvider } from '@/utils/quota';
+import { normalizeStringValue, resolveAuthProvider, resolveCodexPlanType } from '@/utils/quota';
 import {
   clampCardPageSize,
   formatModified,
@@ -53,8 +53,8 @@ import {
   readAuthFilesUiState,
   writeAuthFilesUiState,
 } from '@/features/authFiles/uiState';
-import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
-import type { AuthFileItem } from '@/types';
+import { useAuthStore, useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
+import type { AuthFileItem, ClaudeQuotaState, CodexQuotaState } from '@/types';
 import styles from './AuthFilesPage.module.scss';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -119,10 +119,53 @@ const resolveStatusLabel = (t: TFunction, rawStatus: string): string => {
 
 const resolvePlanTypeLabel = (t: TFunction, rawPlanType: string): string => {
   const normalized = normalizeStatusToken(rawPlanType);
+  const compact = normalized.replace(/[\s_-]+/g, '');
+
+  if (compact === 'pro5x' || compact === 'max5' || compact === 'max5x') {
+    return t('auth_files.plan_type_pro_5x', { defaultValue: 'Pro 5x' });
+  }
+  if (compact === 'pro20x' || compact === 'max20' || compact === 'max20x') {
+    return t('auth_files.plan_type_pro_20x', { defaultValue: 'Pro 20x' });
+  }
   if (!normalized) {
     return t('auth_files.plan_type_unknown', { defaultValue: '未知套餐' });
   }
   return t(`auth_files.plan_type_${normalized}`, { defaultValue: rawPlanType });
+};
+
+const resolveAuthFilePlanLabel = (
+  t: TFunction,
+  file: AuthFileItem,
+  quotaPlanType?: string | null
+): string | null => {
+  const provider = resolveAuthProvider(file);
+  const metadata =
+    file && typeof file.metadata === 'object' && file.metadata !== null
+      ? (file.metadata as Record<string, unknown>)
+      : null;
+  const attributes =
+    file && typeof file.attributes === 'object' && file.attributes !== null
+      ? (file.attributes as Record<string, unknown>)
+      : null;
+
+  const candidates: Array<string | null> = [
+    normalizeStringValue(quotaPlanType),
+    normalizeStringValue(file.plan_type),
+    normalizeStringValue(file.planType),
+    normalizeStringValue(file['plan_type']),
+    normalizeStringValue(file['planType']),
+    normalizeStringValue(metadata?.plan_type),
+    normalizeStringValue(metadata?.planType),
+    normalizeStringValue(attributes?.plan_type),
+    normalizeStringValue(attributes?.planType)
+  ];
+
+  if (provider === 'codex') {
+    candidates.unshift(resolveCodexPlanType(file));
+  }
+
+  const rawPlanType = candidates.find((value) => Boolean(value?.trim())) ?? null;
+  return rawPlanType ? resolvePlanTypeLabel(t, rawPlanType) : null;
 };
 
 const localizeKnownStatusMessage = (t: TFunction, message: string): string => {
@@ -382,6 +425,8 @@ export function AuthFilesPage() {
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.status === 'current' : true;
   const navigate = useNavigate();
+  const codexQuota = useQuotaStore((state) => state.codexQuota);
+  const claudeQuota = useQuotaStore((state) => state.claudeQuota);
 
   const [filter, setFilter] = useState<'all' | string>('all');
   const [problemOnly, setProblemOnly] = useState(false);
@@ -986,6 +1031,7 @@ export function AuthFilesPage() {
                 <col className={styles.authTableColIndex} />
                 <col />
                 <col className={styles.authTableColType} />
+                <col className={styles.authTableColPlan} />
                 <col className={styles.authTableColSize} />
                 <col className={styles.authTableColModified} />
                 <col className={styles.authTableColSuccess} />
@@ -1005,6 +1051,9 @@ export function AuthFilesPage() {
                     {t('auth_files.file_name', { defaultValue: '文件名' })}
                   </th>
                   <th className={styles.authTableColType}>{t('auth_files.file_type', { defaultValue: '类型' })}</th>
+                  <th className={styles.authTableColPlan}>
+                    {t('auth_files.plan_column', { defaultValue: '套餐' })}
+                  </th>
                   <th
                     className={styles.authTableColSize}
                     aria-sort={statsSort?.key === 'priority' ? (statsSort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -1101,6 +1150,13 @@ export function AuthFilesPage() {
                   const showStatusErrorTooltip = isErrorStatus(statusRaw) && Boolean(statusSummary);
                   const priorityValue = toPriorityValue(file.priority);
                   const quotaType = !isRuntimeOnly ? resolveQuotaType(file) : null;
+                  const quotaPlanType =
+                    quotaType === 'codex'
+                      ? (codexQuota[file.name] as CodexQuotaState | undefined)?.planType
+                      : quotaType === 'claude'
+                        ? (claudeQuota[file.name] as ClaudeQuotaState | undefined)?.planType
+                        : null;
+                  const planLabel = !isRuntimeOnly ? resolveAuthFilePlanLabel(t, file, quotaPlanType) : null;
 
                   return (
                     <tr
@@ -1141,6 +1197,13 @@ export function AuthFilesPage() {
                         <span className={styles.typeBadge} style={{ backgroundColor: typeColor.bg, color: typeColor.text }}>
                           {typeLabel}
                         </span>
+                      </td>
+                      <td className={`${styles.authTableCenterCell} ${styles.authTableCellPlan}`}>
+                        {planLabel ? (
+                          <span className={styles.authTablePlanBadge}>{planLabel}</span>
+                        ) : (
+                          <span className={styles.authTablePlanEmpty}>-</span>
+                        )}
                       </td>
                       <td
                         className={`provider-table-cell-numeric ${styles.authTableCenterCell} ${styles.authTableCellSize}`}

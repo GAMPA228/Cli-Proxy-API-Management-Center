@@ -594,6 +594,8 @@
     "plan_type_free": "Free",
     "plan_type_plus": "Plus",
     "plan_type_pro": "Pro",
+    "plan_type_pro_5x": "Pro 5x",
+    "plan_type_pro_20x": "Pro 20x",
     "plan_type_team": "Team",
     "plan_type_max": "Max",
     "status_error_type_usage_limit_reached": "Лимит использования исчерпан",

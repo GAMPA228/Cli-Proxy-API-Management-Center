@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Select } from '@/components/ui/Select';
 import { CountTooltipCell } from '@/components/providers/CountTooltipCell';
 import { authFilesApi } from '@/services/api/authFiles';
+import { usageApi, type UsageDetailRow } from '@/services/api/usage';
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@/types';
 import type { AuthFileItem } from '@/types/authFile';
 import type { CredentialInfo } from '@/types/sourceInfo';
@@ -14,14 +15,16 @@ import { parseTimestampMs } from '@/utils/timestamp';
 import {
   collectUsageDetails,
   extractTotalTokens,
-  normalizeAuthIndex
+  getModelNamesFromUsage,
+  normalizeAuthIndex,
+  normalizeUsageSourceId,
+  type UsageDetail
 } from '@/utils/usage';
 import { downloadBlob } from '@/utils/download';
 import { UsageTablePagination } from './UsageTablePagination';
 import styles from '@/pages/UsagePage.module.scss';
 
 const ALL_FILTER = '__all__';
-const MAX_RENDERED_EVENTS = 500;
 
 type RequestEventRow = {
   id: string;
@@ -30,6 +33,7 @@ type RequestEventRow = {
   timestampLabel: string;
   model: string;
   sourceKey: string;
+  sourceQuery: string;
   sourceRaw: string;
   source: string;
   sourceType: string;
@@ -65,6 +69,38 @@ const encodeCsv = (value: string | number): string => {
   return `"${safeText.replace(/"/g, '""')}"`;
 };
 
+const normalizeSourceForLookup = (value: unknown): string => {
+  const raw = typeof value === 'string' ? value.trim() : value === null || value === undefined ? '' : String(value).trim();
+  if (!raw) return '';
+  if (raw.startsWith('k:') || raw.startsWith('m:') || raw.startsWith('t:')) {
+    return raw;
+  }
+  return normalizeUsageSourceId(raw);
+};
+
+const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
+  const timestamp = typeof row.timestamp === 'string' ? row.timestamp : '';
+  if (!timestamp) return null;
+  const tokens = row.tokens ?? {};
+  const timestampMs = parseTimestampMs(timestamp);
+  return {
+    timestamp,
+    source: typeof row.source === 'string' ? row.source : '',
+    auth_index: row.auth_index ?? null,
+    tokens: {
+      input_tokens: Math.max(toNumber(tokens.input_tokens), 0),
+      output_tokens: Math.max(toNumber(tokens.output_tokens), 0),
+      reasoning_tokens: Math.max(toNumber(tokens.reasoning_tokens), 0),
+      cached_tokens: Math.max(toNumber(tokens.cached_tokens), 0),
+      cache_tokens: Math.max(toNumber(tokens.cache_tokens), 0),
+      total_tokens: Math.max(toNumber(tokens.total_tokens), 0),
+    },
+    failed: row.failed === true,
+    __modelName: typeof row.model === 'string' ? row.model : '',
+    __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
+  };
+};
+
 export function RequestEventsDetailsCard({
   usage,
   loading,
@@ -83,6 +119,11 @@ export function RequestEventsDetailsCard({
   const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [serverDetails, setServerDetails] = useState<UsageDetail[]>([]);
+  const [serverTotal, setServerTotal] = useState(0);
+  const [detailsMode, setDetailsMode] = useState<'server' | 'fallback'>('server');
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,59 +162,106 @@ export function RequestEventsDetailsCard({
     [claudeConfigs, codexConfigs, geminiKeys, openaiProviders, vertexConfigs]
   );
 
-  const rows = useMemo<RequestEventRow[]>(() => {
-    const details = collectUsageDetails(usage);
+  const detailQuery = useMemo(
+    () => ({
+      page,
+      page_size: pageSize,
+      model: modelFilter !== ALL_FILTER ? modelFilter : undefined,
+      auth_index: authIndexFilter !== ALL_FILTER ? authIndexFilter : undefined,
+      search: searchKeyword.trim() || undefined,
+    }),
+    [authIndexFilter, modelFilter, page, pageSize, searchKeyword]
+  );
 
-    const baseRows = details
-      .map((detail, index) => {
-        const timestamp = detail.timestamp;
-        const timestampMs =
-          typeof detail.__timestampMs === 'number' && detail.__timestampMs > 0
-            ? detail.__timestampMs
-            : parseTimestampMs(timestamp);
-        const date = Number.isNaN(timestampMs) ? null : new Date(timestampMs);
-        const sourceRaw = String(detail.source ?? '').trim();
-        const authIndexRaw = detail.auth_index as unknown;
-        const authIndex =
-          authIndexRaw === null || authIndexRaw === undefined || authIndexRaw === ''
-            ? '-'
-            : String(authIndexRaw);
-        const sourceInfo = resolveSourceDisplay(sourceRaw, authIndexRaw, sourceInfoMap, authFileMap);
-        const source = sourceInfo.displayName;
-        const sourceKey = sourceInfo.identityKey ?? `source:${sourceRaw || source}`;
-        const sourceType = sourceInfo.type;
-        const model = String(detail.__modelName ?? '').trim() || '-';
-        const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
-        const outputTokens = Math.max(toNumber(detail.tokens?.output_tokens), 0);
-        const reasoningTokens = Math.max(toNumber(detail.tokens?.reasoning_tokens), 0);
-        const cachedTokens = Math.max(
-          Math.max(toNumber(detail.tokens?.cached_tokens), 0),
-          Math.max(toNumber(detail.tokens?.cache_tokens), 0)
-        );
-        const totalTokens = Math.max(
-          toNumber(detail.tokens?.total_tokens),
-          extractTotalTokens(detail)
-        );
-
-        return {
-          id: `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
-          timestamp,
-          timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
-          timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
-          model,
-          sourceKey,
-          sourceRaw: sourceRaw || '-',
-          source,
-          sourceType,
-          authIndex,
-          failed: detail.failed === true,
-          inputTokens,
-          outputTokens,
-          reasoningTokens,
-          cachedTokens,
-          totalTokens
-        };
+  useEffect(() => {
+    let cancelled = false;
+    const loadingTimer = window.setTimeout(() => {
+      if (!cancelled) setDetailLoading(true);
+    }, 0);
+    usageApi
+      .getUsageDetails(detailQuery)
+      .then((response) => {
+        if (cancelled) return;
+        const details = Array.isArray(response.items)
+          ? response.items.map(usageDetailFromServerRow).filter((item): item is UsageDetail => item !== null)
+          : [];
+        setServerDetails(details);
+        setServerTotal(Math.max(toNumber(response.total), 0));
+        setDetailsMode('server');
+        setDetailError(null);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setServerDetails([]);
+        setServerTotal(0);
+        setDetailsMode('fallback');
+        setDetailError(error instanceof Error ? error.message : t('usage_stats.loading_error'));
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setDetailLoading(false);
+        }
       });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(loadingTimer);
+    };
+  }, [detailQuery, t]);
+
+  const rows = useMemo<RequestEventRow[]>(() => {
+    const details = detailsMode === 'server' ? serverDetails : collectUsageDetails(usage);
+
+    const baseRows = details.map((detail, index) => {
+      const timestamp = detail.timestamp;
+      const timestampMs =
+        typeof detail.__timestampMs === 'number' && detail.__timestampMs > 0
+          ? detail.__timestampMs
+          : parseTimestampMs(timestamp);
+      const date = Number.isNaN(timestampMs) ? null : new Date(timestampMs);
+      const sourceQuery = String(detail.source ?? '').trim();
+      const sourceLookup = normalizeSourceForLookup(sourceQuery);
+      const authIndexRaw = detail.auth_index as unknown;
+      const authIndex =
+        authIndexRaw === null || authIndexRaw === undefined || authIndexRaw === ''
+          ? '-'
+          : String(authIndexRaw);
+      const sourceInfo = resolveSourceDisplay(sourceLookup, authIndexRaw, sourceInfoMap, authFileMap);
+      const source = sourceInfo.displayName;
+      const sourceKey = sourceInfo.identityKey ?? `source:${sourceLookup || source}`;
+      const sourceType = sourceInfo.type;
+      const model = String(detail.__modelName ?? '').trim() || '-';
+      const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
+      const outputTokens = Math.max(toNumber(detail.tokens?.output_tokens), 0);
+      const reasoningTokens = Math.max(toNumber(detail.tokens?.reasoning_tokens), 0);
+      const cachedTokens = Math.max(
+        Math.max(toNumber(detail.tokens?.cached_tokens), 0),
+        Math.max(toNumber(detail.tokens?.cache_tokens), 0)
+      );
+      const totalTokens = Math.max(
+        toNumber(detail.tokens?.total_tokens),
+        extractTotalTokens(detail)
+      );
+
+      return {
+        id: `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
+        timestamp,
+        timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
+        timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
+        model,
+        sourceKey,
+        sourceQuery,
+        sourceRaw: sourceLookup || '-',
+        source,
+        sourceType,
+        authIndex,
+        failed: detail.failed === true,
+        inputTokens,
+        outputTokens,
+        reasoningTokens,
+        cachedTokens,
+        totalTokens
+      };
+    });
 
     const sourceLabelKeyMap = new Map<string, Set<string>>();
     baseRows.forEach((row) => {
@@ -209,65 +297,49 @@ export function RequestEventsDetailsCard({
         source: buildDisambiguatedSourceLabel(row),
       }))
       .sort((a, b) => b.timestampMs - a.timestampMs);
-  }, [authFileMap, i18n.language, sourceInfoMap, usage]);
+  }, [authFileMap, detailsMode, i18n.language, serverDetails, sourceInfoMap, usage]);
 
-  const modelOptions = useMemo(
-    () => [
+  const modelOptions = useMemo(() => {
+    const models = new Set<string>(getModelNamesFromUsage(usage));
+    rows.forEach((row) => models.add(row.model));
+    if (modelFilter !== ALL_FILTER) models.add(modelFilter);
+    return [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(new Set(rows.map((row) => row.model))).map((model) => ({
-        value: model,
-        label: model
-      }))
-    ],
-    [rows, t]
-  );
+      ...Array.from(models).filter(Boolean).map((model) => ({ value: model, label: model }))
+    ];
+  }, [modelFilter, rows, t, usage]);
 
   const sourceOptions = useMemo(() => {
     const optionMap = new Map<string, string>();
     rows.forEach((row) => {
-      if (!optionMap.has(row.sourceKey)) {
-        optionMap.set(row.sourceKey, row.source);
-      }
+      if (!row.sourceKey || optionMap.has(row.sourceKey)) return;
+      optionMap.set(row.sourceKey, row.source);
     });
+    if (sourceFilter !== ALL_FILTER && !optionMap.has(sourceFilter)) {
+      optionMap.set(sourceFilter, sourceFilter);
+    }
 
     return [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(optionMap.entries()).map(([value, label]) => ({
-        value,
-        label
-      }))
+      ...Array.from(optionMap.entries()).map(([value, label]) => ({ value, label }))
     ];
-  }, [rows, t]);
+  }, [rows, sourceFilter, t]);
 
-  const authIndexOptions = useMemo(
-    () => [
+  const authIndexOptions = useMemo(() => {
+    const authIndexes = new Set(rows.map((row) => row.authIndex));
+    if (authIndexFilter !== ALL_FILTER) authIndexes.add(authIndexFilter);
+    return [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(new Set(rows.map((row) => row.authIndex))).map((authIndex) => ({
+      ...Array.from(authIndexes).filter(Boolean).map((authIndex) => ({
         value: authIndex,
         label: authIndex
       }))
-    ],
-    [rows, t]
-  );
+    ];
+  }, [authIndexFilter, rows, t]);
 
-  const modelOptionSet = useMemo(
-    () => new Set(modelOptions.map((option) => option.value)),
-    [modelOptions]
-  );
-  const sourceOptionSet = useMemo(
-    () => new Set(sourceOptions.map((option) => option.value)),
-    [sourceOptions]
-  );
-  const authIndexOptionSet = useMemo(
-    () => new Set(authIndexOptions.map((option) => option.value)),
-    [authIndexOptions]
-  );
-
-  const effectiveModelFilter = modelOptionSet.has(modelFilter) ? modelFilter : ALL_FILTER;
-  const effectiveSourceFilter = sourceOptionSet.has(sourceFilter) ? sourceFilter : ALL_FILTER;
-  const effectiveAuthIndexFilter = authIndexOptionSet.has(authIndexFilter)
-    ? authIndexFilter
-    : ALL_FILTER;
+  const effectiveModelFilter = modelFilter;
+  const effectiveSourceFilter = sourceFilter;
+  const effectiveAuthIndexFilter = authIndexFilter;
   const normalizedSearchKeyword = searchKeyword.trim().toLowerCase();
 
   const filteredRows = useMemo(
@@ -290,16 +362,14 @@ export function RequestEventsDetailsCard({
     [effectiveAuthIndexFilter, effectiveModelFilter, effectiveSourceFilter, normalizedSearchKeyword, rows]
   );
 
-  const cappedRows = useMemo(
-    () => filteredRows.slice(0, MAX_RENDERED_EVENTS),
-    [filteredRows]
-  );
-  const totalPages = Math.max(1, Math.ceil(cappedRows.length / pageSize));
+  const serverPaging = detailsMode === 'server';
+  const totalItems = serverPaging ? serverTotal : filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pageStart = (currentPage - 1) * pageSize;
   const renderedRows = useMemo(
-    () => cappedRows.slice(pageStart, pageStart + pageSize),
-    [cappedRows, pageSize, pageStart]
+    () => (serverPaging ? filteredRows : filteredRows.slice(pageStart, pageStart + pageSize)),
+    [filteredRows, pageSize, pageStart, serverPaging]
   );
   const shouldEnableTableScroll = renderedRows.length > 10;
 
@@ -317,14 +387,6 @@ export function RequestEventsDetailsCard({
     setPage(1);
   };
 
-  useEffect(() => {
-    setPage(1);
-  }, [effectiveModelFilter, effectiveSourceFilter, effectiveAuthIndexFilter, normalizedSearchKeyword]);
-
-  useEffect(() => {
-    if (page <= totalPages) return;
-    setPage(totalPages);
-  }, [page, totalPages]);
 
   const handlePageSizeChange = (size: number) => {
     if (!Number.isFinite(size) || size < 1) return;
@@ -332,9 +394,7 @@ export function RequestEventsDetailsCard({
     setPage(1);
   };
 
-  const handleExportCsv = () => {
-    if (!filteredRows.length) return;
-
+  const exportRowsAsCsv = (rowsToExport: RequestEventRow[]) => {
     const csvHeader = [
       'timestamp',
       'model',
@@ -350,7 +410,7 @@ export function RequestEventsDetailsCard({
       'total_tokens'
     ];
 
-    const csvRows = filteredRows.map((row) =>
+    const csvRows = rowsToExport.map((row) =>
       [
         row.timestamp,
         row.model,
@@ -377,10 +437,8 @@ export function RequestEventsDetailsCard({
     });
   };
 
-  const handleExportJson = () => {
-    if (!filteredRows.length) return;
-
-    const payload = filteredRows.map((row) => ({
+  const exportRowsAsJson = (rowsToExport: RequestEventRow[]) => {
+    const payload = rowsToExport.map((row) => ({
       timestamp: row.timestamp,
       model: row.model,
       source_type: row.sourceType,
@@ -405,6 +463,16 @@ export function RequestEventsDetailsCard({
     });
   };
 
+  const handleExportCsv = () => {
+    if (!filteredRows.length) return;
+    exportRowsAsCsv(filteredRows);
+  };
+
+  const handleExportJson = () => {
+    if (!filteredRows.length) return;
+    exportRowsAsJson(filteredRows);
+  };
+
   return (
     <Card title={t('usage_stats.request_events_title')}>
       <div className={styles.requestEventsTopBar}>
@@ -413,7 +481,10 @@ export function RequestEventsDetailsCard({
             <input
               className={`input ${styles.requestEventsSearchInput}`}
               value={searchKeyword}
-              onChange={(event) => setSearchKeyword(event.target.value)}
+              onChange={(event) => {
+                setSearchKeyword(event.target.value);
+                setPage(1);
+              }}
               placeholder={t('usage_stats.request_events_search_placeholder', {
                 defaultValue: '搜索模型 / 类型 / 账号 / 认证索引'
               })}
@@ -426,7 +497,10 @@ export function RequestEventsDetailsCard({
             <Select
               value={effectiveModelFilter}
               options={modelOptions}
-              onChange={setModelFilter}
+              onChange={(value) => {
+                setModelFilter(value);
+                setPage(1);
+              }}
               className={styles.requestEventsSelect}
               ariaLabel={t('usage_stats.request_events_filter_model')}
               fullWidth={false}
@@ -436,7 +510,10 @@ export function RequestEventsDetailsCard({
             <Select
               value={effectiveSourceFilter}
               options={sourceOptions}
-              onChange={setSourceFilter}
+              onChange={(value) => {
+                setSourceFilter(value);
+                setPage(1);
+              }}
               className={styles.requestEventsSelect}
               ariaLabel={t('usage_stats.request_events_filter_source')}
               fullWidth={false}
@@ -446,7 +523,10 @@ export function RequestEventsDetailsCard({
             <Select
               value={effectiveAuthIndexFilter}
               options={authIndexOptions}
-              onChange={setAuthIndexFilter}
+              onChange={(value) => {
+                setAuthIndexFilter(value);
+                setPage(1);
+              }}
               className={styles.requestEventsSelect}
               ariaLabel={t('usage_stats.request_events_filter_auth_index')}
               fullWidth={false}
@@ -466,7 +546,7 @@ export function RequestEventsDetailsCard({
             variant="secondary"
             size="sm"
             onClick={handleExportCsv}
-            disabled={filteredRows.length === 0}
+            disabled={filteredRows.length === 0 || detailLoading}
           >
             {t('usage_stats.export_csv')}
           </Button>
@@ -474,19 +554,21 @@ export function RequestEventsDetailsCard({
             variant="secondary"
             size="sm"
             onClick={handleExportJson}
-            disabled={filteredRows.length === 0}
+            disabled={filteredRows.length === 0 || detailLoading}
           >
             {t('usage_stats.export_json')}
           </Button>
         </div>
       </div>
 
-      {loading && rows.length === 0 ? (
+      {(loading || detailLoading) && rows.length === 0 ? (
         <div className={styles.hint}>{t('common.loading')}</div>
+      ) : detailError && detailsMode === 'fallback' && rows.length === 0 ? (
+        <div className={styles.hint}>{detailError}</div>
       ) : rows.length === 0 ? (
         <EmptyState
-          title={t('usage_stats.request_events_empty_title')}
-          description={t('usage_stats.request_events_empty_desc')}
+          title={t(hasActiveFilters ? 'usage_stats.request_events_no_result_title' : 'usage_stats.request_events_empty_title')}
+          description={t(hasActiveFilters ? 'usage_stats.request_events_no_result_desc' : 'usage_stats.request_events_empty_desc')}
         />
       ) : filteredRows.length === 0 ? (
         <EmptyState
@@ -496,15 +578,7 @@ export function RequestEventsDetailsCard({
       ) : (
         <>
           <div className={styles.requestEventsMeta}>
-            <span>{t('usage_stats.request_events_count', { count: filteredRows.length })}</span>
-            {filteredRows.length > MAX_RENDERED_EVENTS && (
-              <span className={styles.requestEventsLimitHint}>
-                {t('usage_stats.request_events_limit_hint', {
-                  shown: MAX_RENDERED_EVENTS,
-                  total: filteredRows.length
-                })}
-              </span>
-            )}
+            <span>{t('usage_stats.request_events_count', { count: totalItems })}</span>
           </div>
 
           <div
@@ -589,11 +663,12 @@ export function RequestEventsDetailsCard({
           </div>
           <div className={styles.usageTablePagination}>
             <UsageTablePagination
-              totalItems={cappedRows.length}
+              totalItems={totalItems}
               currentPage={currentPage}
               pageSize={pageSize}
               onPageChange={setPage}
               onPageSizeChange={handlePageSizeChange}
+              disabled={detailLoading}
             />
           </div>
         </>
@@ -601,3 +676,7 @@ export function RequestEventsDetailsCard({
     </Card>
   );
 }
+
+
+
+

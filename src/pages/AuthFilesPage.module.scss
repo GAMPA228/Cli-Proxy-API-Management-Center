@@ -112,6 +112,10 @@
   width: 92px;
 }
 
+.authTableColPlan {
+  width: 108px;
+}
+
 .authTableColSuccess {
   width: 68px;
 }
@@ -173,6 +177,11 @@
 
 .authTableCellSize {
   width: 78px;
+}
+
+.authTableCellPlan {
+  width: 108px;
+  max-width: 108px;
 }
 
 .authTableCellModified {
@@ -387,6 +396,27 @@
 }
 
 .authTableQuotaEmpty {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.authTablePlanBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 24%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--bg-primary));
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.authTablePlanEmpty {
   color: var(--text-tertiary);
   font-size: 12px;
 }

@@ -22,6 +22,57 @@ export interface UsageImportResponse {
   failed_requests?: number;
   [key: string]: unknown;
 }
+export interface UsageDetailTokens {
+  input_tokens?: number;
+  output_tokens?: number;
+  reasoning_tokens?: number;
+  cached_tokens?: number;
+  cache_tokens?: number;
+  total_tokens?: number;
+}
+
+export interface UsageDetailRow {
+  id?: number;
+  api?: string;
+  model?: string;
+  timestamp?: string;
+  latency_ms?: number;
+  source?: string;
+  auth_index?: string | number | null;
+  tokens?: UsageDetailTokens;
+  failed?: boolean;
+}
+
+export interface UsageDetailsQuery {
+  page?: number;
+  page_size?: number;
+  offset?: number;
+  api?: string;
+  model?: string;
+  source?: string;
+  auth_index?: string | number | null;
+  search?: string;
+}
+
+export interface UsageDetailsPage {
+  items?: UsageDetailRow[];
+  total?: number;
+  page?: number;
+  page_size?: number;
+  offset?: number;
+  has_more?: boolean;
+}
+
+const compactQuery = (query: UsageDetailsQuery = {}) => {
+  const params: Record<string, string | number> = {};
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    const normalized = typeof value === 'string' ? value.trim() : value;
+    if (normalized === '') return;
+    params[key] = normalized;
+  });
+  return params;
+};
 
 export const usageApi = {
   /**
@@ -29,6 +80,14 @@ export const usageApi = {
    */
   getUsage: () =>
     apiClient.get<Record<string, unknown>>('/usage', {
+      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
+    }),
+  /**
+   * 分页获取请求事件明细
+   */
+  getUsageDetails: (query: UsageDetailsQuery = {}) =>
+    apiClient.get<UsageDetailsPage>('/usage/details', {
+      params: compactQuery(query),
       timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
     }),
 
@@ -62,3 +121,4 @@ export const usageApi = {
     return computeKeyStats(payload);
   }
 };
+
