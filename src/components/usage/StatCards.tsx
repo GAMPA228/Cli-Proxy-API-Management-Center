@@ -32,6 +32,8 @@ interface StatCardData {
 export interface StatCardsProps {
   usage: UsagePayload | null;
   loading: boolean;
+  costLoading?: boolean;
+  costUsage?: UsagePayload | null;
   modelPrices: Record<string, ModelPrice>;
   nowMs: number;
   sparklines: {
@@ -43,16 +45,15 @@ export interface StatCardsProps {
   };
 }
 
-export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: StatCardsProps) {
+export function StatCards({ usage, loading, costLoading = false, costUsage, modelPrices, nowMs, sparklines }: StatCardsProps) {
   const { t } = useTranslation();
 
   const hasPrices = Object.keys(modelPrices).length > 0;
 
-  const { tokenBreakdown, rateStats, totalCost } = useMemo(() => {
+  const { tokenBreakdown, rateStats } = useMemo(() => {
     const empty = {
       tokenBreakdown: { cachedTokens: 0, reasoningTokens: 0 },
-      rateStats: { rpm: 0, tpm: 0, windowMinutes: 30, requestCount: 0, tokenCount: 0 },
-      totalCost: 0
+      rateStats: { rpm: 0, tpm: 0, windowMinutes: 30, requestCount: 0, tokenCount: 0 }
     };
 
     if (!usage) return empty;
@@ -61,7 +62,6 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
 
     let cachedTokens = 0;
     let reasoningTokens = 0;
-    let totalCost = 0;
 
     const now = nowMs;
     const windowMinutes = 30;
@@ -85,10 +85,6 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
         requestCount += 1;
         tokenCount += extractTotalTokens(detail);
       }
-
-      if (hasPrices) {
-        totalCost += calculateCost(detail, modelPrices);
-      }
     });
 
     const denominator = windowMinutes > 0 ? windowMinutes : 1;
@@ -100,10 +96,17 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
         windowMinutes,
         requestCount,
         tokenCount
-      },
-      totalCost
+      }
     };
-  }, [hasPrices, modelPrices, nowMs, usage]);
+  }, [nowMs, usage]);
+
+  const totalCost = useMemo(() => {
+    const source = costUsage ?? usage;
+    if (!hasPrices || !source) return 0;
+    const details = collectUsageDetails(source);
+    if (!details.length) return 0;
+    return details.reduce((sum, detail) => sum + calculateCost(detail, modelPrices), 0);
+  }, [costUsage, hasPrices, modelPrices, usage]);
 
   const statsCards: StatCardData[] = [
     {
@@ -185,11 +188,11 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
       accent: USAGE_STAT_CARD_ACCENTS.cost.accent,
       accentSoft: USAGE_STAT_CARD_ACCENTS.cost.accentSoft,
       accentBorder: USAGE_STAT_CARD_ACCENTS.cost.accentBorder,
-      value: loading ? '-' : hasPrices ? formatUsd(totalCost) : '--',
+      value: loading || costLoading ? '-' : hasPrices ? formatUsd(totalCost) : '--',
       meta: (
         <>
           <span className={styles.statMetaItem}>
-            {t('usage_stats.total_tokens')}: {loading ? '-' : formatCompactNumber(usage?.total_tokens ?? 0)}
+            {t('usage_stats.total_tokens')}: {loading || costLoading ? '-' : formatCompactNumber((costUsage ?? usage)?.total_tokens ?? 0)}
           </span>
           {!hasPrices && (
             <span className={`${styles.statMetaItem} ${styles.statSubtle}`}>
@@ -198,7 +201,7 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
           )}
         </>
       ),
-      trend: hasPrices ? sparklines.cost : null
+      trend: hasPrices && !costLoading ? sparklines.cost : null
     }
   ];
 

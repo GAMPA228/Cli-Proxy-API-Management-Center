@@ -30,6 +30,7 @@ import {
   CostTrendChart,
   ServiceHealthCard,
   useUsageData,
+  useUsageDetailSnapshot,
   useSparklines,
   useChartData
 } from '@/components/usage';
@@ -157,10 +158,19 @@ export function UsagePage() {
     [t]
   );
 
+  const hasPrices = Object.keys(modelPrices).length > 0;
+  const nowMs = lastRefreshedAt?.getTime() ?? 0;
+  const { usage: aggregateUsage, loading: aggregateUsageLoading } = useUsageDetailSnapshot({
+    enabled: Boolean(usage && hasPrices),
+    range: timeRange,
+    refreshKey: `${nowMs}:${timeRange}`
+  });
   const filteredUsage = useMemo(
     () => (usage ? filterUsageByTimeRange(usage, timeRange) : null),
     [usage, timeRange]
   );
+  const analysisUsage = aggregateUsage ?? filteredUsage;
+  const analysisLoading = loading || (hasPrices && aggregateUsageLoading && !aggregateUsage);
   const hourWindowHours = useMemo(() => {
     if (timeRange === 'all') {
       return undefined;
@@ -201,7 +211,6 @@ export function UsagePage() {
     }
   }, [timeRange]);
 
-  const nowMs = lastRefreshedAt?.getTime() ?? 0;
 
   // Sparklines hook
   const {
@@ -227,14 +236,13 @@ export function UsagePage() {
   // Derived data
   const modelNames = useMemo(() => getModelNamesFromUsage(usage), [usage]);
   const apiStats = useMemo(
-    () => getApiStats(filteredUsage, modelPrices),
-    [filteredUsage, modelPrices]
+    () => getApiStats(analysisUsage, modelPrices),
+    [analysisUsage, modelPrices]
   );
   const modelStats = useMemo(
-    () => getModelStats(filteredUsage, modelPrices),
-    [filteredUsage, modelPrices]
+    () => getModelStats(analysisUsage, modelPrices),
+    [analysisUsage, modelPrices]
   );
-  const hasPrices = Object.keys(modelPrices).length > 0;
 
   return (
     <div className={styles.container}>
@@ -315,6 +323,8 @@ export function UsagePage() {
       <StatCards
         usage={filteredUsage}
         loading={loading}
+        costLoading={analysisLoading}
+        costUsage={analysisUsage}
         modelPrices={modelPrices}
         nowMs={nowMs}
         sparklines={{
@@ -361,15 +371,15 @@ export function UsagePage() {
 
       <div className={styles.secondaryChartsGrid}>
         <TokenBreakdownChart
-          usage={filteredUsage}
-          loading={loading}
+          usage={analysisUsage}
+          loading={analysisLoading}
           isDark={isDark}
           isMobile={isMobile}
           hourWindowHours={hourWindowHours}
         />
         <CostTrendChart
-          usage={filteredUsage}
-          loading={loading}
+          usage={analysisUsage}
+          loading={analysisLoading}
           isDark={isDark}
           isMobile={isMobile}
           modelPrices={modelPrices}
@@ -378,8 +388,8 @@ export function UsagePage() {
       </div>
 
       <div className={styles.detailsGrid}>
-        <ApiDetailsCard apiStats={apiStats} loading={loading} hasPrices={hasPrices} />
-        <ModelStatsCard modelStats={modelStats} loading={loading} hasPrices={hasPrices} />
+        <ApiDetailsCard apiStats={apiStats} loading={analysisLoading} hasPrices={hasPrices} />
+        <ModelStatsCard modelStats={modelStats} loading={analysisLoading} hasPrices={hasPrices} />
       </div>
 
       <div className={styles.eventsSection}>

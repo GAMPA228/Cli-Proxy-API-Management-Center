@@ -63,13 +63,52 @@ export interface UsageDetailsPage {
   has_more?: boolean;
 }
 
-const compactQuery = (query: UsageDetailsQuery = {}) => {
+export interface UsageAggregateBucket {
+  bucket?: string;
+  api?: string;
+  model?: string;
+  total_requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  tokens?: UsageDetailTokens;
+}
+
+export interface UsageAggregateModel {
+  total_requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  tokens?: UsageDetailTokens;
+}
+
+export interface UsageAggregateApi extends UsageAggregateModel {
+  models?: Record<string, UsageAggregateModel>;
+}
+
+export interface UsageAggregatePayload extends UsageAggregateModel {
+  apis?: Record<string, UsageAggregateApi>;
+  models?: Record<string, UsageAggregateModel>;
+  hourly?: UsageAggregateBucket[];
+  daily?: UsageAggregateBucket[];
+  range?: string;
+  since?: string;
+  until?: string;
+}
+
+export interface UsageAggregateQuery {
+  range?: string;
+}
+
+const compactQuery = (query: object = {}) => {
   const params: Record<string, string | number> = {};
-  Object.entries(query).forEach(([key, value]) => {
+  Object.entries(query as Record<string, unknown>).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
     const normalized = typeof value === 'string' ? value.trim() : value;
     if (normalized === '') return;
-    params[key] = normalized;
+    if (typeof normalized === 'string' || typeof normalized === 'number') {
+      params[key] = normalized;
+    }
   });
   return params;
 };
@@ -87,6 +126,15 @@ export const usageApi = {
    */
   getUsageDetails: (query: UsageDetailsQuery = {}) =>
     apiClient.get<UsageDetailsPage>('/usage/details', {
+      params: compactQuery(query),
+      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
+    }),
+
+  /**
+   * 获取 SQLite 侧聚合后的使用统计数据
+   */
+  getUsageAggregate: (query: UsageAggregateQuery = {}) =>
+    apiClient.get<UsageAggregatePayload>('/usage/aggregate', {
       params: compactQuery(query),
       timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
     }),

@@ -2,6 +2,9 @@
 export { useUsageData } from './hooks/useUsageData';
 export type { UsagePayload, UseUsageDataReturn } from './hooks/useUsageData';
 
+export { useUsageDetailSnapshot } from './hooks/useUsageDetailSnapshot';
+export type { UseUsageDetailSnapshotOptions, UseUsageDetailSnapshotReturn } from './hooks/useUsageDetailSnapshot';
+
 export { useSparklines } from './hooks/useSparklines';
 export type { SparklineData, SparklineBundle, UseSparklinesOptions, UseSparklinesReturn } from './hooks/useSparklines';
 
