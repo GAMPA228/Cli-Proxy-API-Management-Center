@@ -82,7 +82,7 @@ export function StatCards({ usage, loading, costLoading = false, costUsage, mode
 
       const timestamp = detail.__timestampMs ?? 0;
       if (hasValidNow && Number.isFinite(timestamp) && timestamp >= windowStart && timestamp <= now) {
-        requestCount += 1;
+        requestCount += detail.__requestCount ?? 1;
         tokenCount += extractTotalTokens(detail);
       }
     });

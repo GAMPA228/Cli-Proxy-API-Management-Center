@@ -4,6 +4,7 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  BarElement,
   PointElement,
   LineElement,
   Title,
@@ -20,6 +21,7 @@ import { useThemeStore, useConfigStore } from '@/stores';
 import {
   StatCards,
   UsageChart,
+  ApiKeyTokenTrendChart,
   ChartLineSelector,
   ApiDetailsCard,
   ModelStatsCard,
@@ -47,6 +49,7 @@ import styles from './UsagePage.module.scss';
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  BarElement,
   PointElement,
   LineElement,
   Title,
@@ -161,7 +164,7 @@ export function UsagePage() {
   const hasPrices = Object.keys(modelPrices).length > 0;
   const nowMs = lastRefreshedAt?.getTime() ?? 0;
   const { usage: aggregateUsage, loading: aggregateUsageLoading } = useUsageDetailSnapshot({
-    enabled: Boolean(usage && hasPrices),
+    enabled: Boolean(usage && (hasPrices || timeRange !== 'all')),
     range: timeRange,
     refreshKey: `${nowMs}:${timeRange}`
   });
@@ -170,7 +173,8 @@ export function UsagePage() {
     [usage, timeRange]
   );
   const analysisUsage = aggregateUsage ?? filteredUsage;
-  const analysisLoading = loading || (hasPrices && aggregateUsageLoading && !aggregateUsage);
+  const analysisLoading =
+    loading || ((hasPrices || timeRange !== 'all') && aggregateUsageLoading && !aggregateUsage);
   const hourWindowHours = useMemo(() => {
     if (timeRange === 'all') {
       return undefined;
@@ -219,7 +223,7 @@ export function UsagePage() {
     rpmSparkline,
     tpmSparkline,
     costSparkline
-  } = useSparklines({ usage: filteredUsage, loading, nowMs });
+  } = useSparklines({ usage: analysisUsage, loading: analysisLoading, nowMs });
 
   // Chart data hook
   const {
@@ -228,10 +232,8 @@ export function UsagePage() {
     tokensPeriod,
     setTokensPeriod,
     requestsChartData,
-    tokensChartData,
-    requestsChartOptions,
-    tokensChartOptions
-  } = useChartData({ usage: filteredUsage, chartLines, isDark, isMobile, hourWindowHours });
+    requestsChartOptions
+  } = useChartData({ usage: analysisUsage, chartLines, isDark, isMobile, hourWindowHours });
 
   // Derived data
   const modelNames = useMemo(() => getModelNamesFromUsage(usage), [usage]);
@@ -321,8 +323,8 @@ export function UsagePage() {
       {error && <div className={styles.errorBox}>{error}</div>}
 
       <StatCards
-        usage={filteredUsage}
-        loading={loading}
+        usage={analysisUsage}
+        loading={analysisLoading}
         costLoading={analysisLoading}
         costUsage={analysisUsage}
         modelPrices={modelPrices}
@@ -357,14 +359,14 @@ export function UsagePage() {
           isMobile={isMobile}
           emptyText={t('usage_stats.no_data')}
         />
-        <UsageChart
-          title={t('usage_stats.tokens_trend')}
+        <ApiKeyTokenTrendChart
+          usage={analysisUsage}
+          loading={analysisLoading}
           period={tokensPeriod}
           onPeriodChange={setTokensPeriod}
-          chartData={tokensChartData}
-          chartOptions={tokensChartOptions}
-          loading={loading}
+          isDark={isDark}
           isMobile={isMobile}
+          hourWindowHours={hourWindowHours}
           emptyText={t('usage_stats.no_data')}
         />
       </div>

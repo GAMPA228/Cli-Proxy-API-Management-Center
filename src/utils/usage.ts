@@ -52,6 +52,7 @@ export interface UsageDetail {
   failed: boolean;
   __modelName?: string;
   __timestampMs?: number;
+  __requestCount?: number;
 }
 
 export interface UsageDetailWithEndpoint extends UsageDetail {
@@ -515,6 +516,10 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           failed: detailRaw.failed === true,
           __modelName: modelName,
           __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
+          __requestCount:
+            typeof detailRaw.__requestCount === 'number'
+              ? Math.max(detailRaw.__requestCount, 0)
+              : undefined
         });
       });
     });
@@ -593,6 +598,10 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
           __endpointMethod: endpointMethod,
           __endpointPath: endpointPath,
           __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
+          __requestCount:
+            typeof detailRaw.__requestCount === 'number'
+              ? Math.max(detailRaw.__requestCount, 0)
+              : undefined
         });
       });
     });
@@ -624,6 +633,11 @@ export function extractTotalTokens(detail: unknown): number {
 
   return inputTokens + outputTokens + reasoningTokens + cachedTokens;
 }
+
+const extractRequestCount = (detail: UsageDetail): number =>
+  typeof detail.__requestCount === 'number' && Number.isFinite(detail.__requestCount)
+    ? Math.max(detail.__requestCount, 0)
+    : 1;
 
 /**
  * 计算 token 分类统计
@@ -676,7 +690,7 @@ export function calculateRecentPerMinuteRates(
     if (!Number.isFinite(timestamp) || timestamp < windowStart || timestamp > now) {
       return;
     }
-    requestCount += 1;
+    requestCount += extractRequestCount(detail);
     tokenCount += extractTotalTokens(detail);
   });
 
@@ -1059,7 +1073,7 @@ export function buildHourlySeriesByModel(
     if (metric === 'tokens') {
       bucketValues[bucketIndex] += extractTotalTokens(detail);
     } else {
-      bucketValues[bucketIndex] += 1;
+      bucketValues[bucketIndex] += extractRequestCount(detail);
     }
     hasData = true;
   });
@@ -1103,7 +1117,7 @@ export function buildDailySeriesByModel(
       valuesByModel.set(modelName, new Map());
     }
     const modelDayMap = valuesByModel.get(modelName)!;
-    const increment = metric === 'tokens' ? extractTotalTokens(detail) : 1;
+    const increment = metric === 'tokens' ? extractTotalTokens(detail) : extractRequestCount(detail);
     modelDayMap.set(dayLabel, (modelDayMap.get(dayLabel) || 0) + increment);
     labelsSet.add(dayLabel);
     hasData = true;

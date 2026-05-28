@@ -18,6 +18,9 @@ export type { StatCardsProps } from './StatCards';
 export { UsageChart } from './UsageChart';
 export type { UsageChartProps } from './UsageChart';
 
+export { ApiKeyTokenTrendChart } from './ApiKeyTokenTrendChart';
+export type { ApiKeyTokenTrendChartProps } from './ApiKeyTokenTrendChart';
+
 export { ChartLineSelector } from './ChartLineSelector';
 export type { ChartLineSelectorProps } from './ChartLineSelector';
 

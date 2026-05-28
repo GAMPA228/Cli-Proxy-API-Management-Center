@@ -108,7 +108,8 @@ const makeSyntheticDetail = (
   timestamp: string,
   modelName: string,
   tokens: UsageDetailTokens | undefined,
-  failed = false
+  failed = false,
+  requestCount = 1
 ) => {
   const timestampMs = parseTimestampMs(timestamp);
   return {
@@ -119,7 +120,8 @@ const makeSyntheticDetail = (
     tokens: normalizeTokens(tokens),
     failed,
     __modelName: modelName,
-    __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs
+    __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
+    __requestCount: Math.max(toNumber(requestCount), 0)
   };
 };
 
@@ -165,7 +167,9 @@ function buildUsageFromAggregate(aggregate: UsageAggregatePayload, range: UsageT
       : aggregate.until || new Date().toISOString();
     const apiBucket = ensureApiBucket(apis, apiName);
     const modelBucket = ensureModelBucket(apiBucket, modelName);
-    modelBucket.details.push(makeSyntheticDetail(timestamp, modelName, bucket.tokens, false));
+    modelBucket.details.push(
+      makeSyntheticDetail(timestamp, modelName, bucket.tokens, false, bucket.total_requests)
+    );
   });
 
   const fallbackTimestamp = aggregate.until || new Date().toISOString();

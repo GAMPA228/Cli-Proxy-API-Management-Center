@@ -60,7 +60,7 @@ export function useSparklines({ usage, loading, nowMs }: UseSparklinesOptions): 
         windowMinutes - 1,
         Math.floor((timestamp - windowStart) / 60000)
       );
-      requestBuckets[minuteIndex] += 1;
+      requestBuckets[minuteIndex] += detail.__requestCount ?? 1;
       tokenBuckets[minuteIndex] += extractTotalTokens(detail);
     });
 

@@ -1253,6 +1253,23 @@
   gap: 6px;
 }
 
+.chartHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  @include mobile {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
+.chartTopSelect {
+  width: 104px;
+  flex: 0 0 auto;
+}
+
 .chartsGrid {
   display: grid;
   gap: 16px;
