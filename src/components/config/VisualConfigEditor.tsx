@@ -5,6 +5,7 @@ import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconChevronDown, IconChevronUp, IconInfo } from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
+import { FrontendRequestTimeoutSection } from '@/components/config/FrontendRequestTimeoutSection';
 import styles from './VisualConfigEditor.module.scss';
 import type {
   PayloadFilterRule,
@@ -457,6 +458,8 @@ export function VisualConfigEditor({
             </div>
           </div>
       </ConfigSection>
+
+      <FrontendRequestTimeoutSection />
 
       <ConfigSection title={t('config_management.visual.sections.quota.title')} description={t('config_management.visual.sections.quota.description')}>
           <div className={styles.sectionStack}>

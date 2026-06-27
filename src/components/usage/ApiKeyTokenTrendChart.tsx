@@ -44,6 +44,27 @@ const TOP_KEY_OPTIONS = [5, 10, 20, 50].map((value) => ({
 }));
 
 const OTHER_KEY = '__other_api_keys__';
+const tooltipElements = new WeakMap<HTMLCanvasElement, HTMLDivElement>();
+
+const getOrCreateTooltipElement = (canvas: HTMLCanvasElement): HTMLDivElement => {
+  const existing = tooltipElements.get(canvas);
+  if (existing) {
+    return existing;
+  }
+
+  const tooltip = document.createElement('div');
+  document.body.appendChild(tooltip);
+  tooltipElements.set(canvas, tooltip);
+  return tooltip;
+};
+
+const appendTextNode = (parent: HTMLElement, tagName: string, className: string, text: string) => {
+  const node = document.createElement(tagName);
+  node.className = className;
+  node.textContent = text;
+  parent.appendChild(node);
+  return node;
+};
 
 const toBucketLabel = (detail: UsageDetailWithEndpoint, period: Period): string => {
   const timestamp = detail.__timestampMs;
@@ -184,12 +205,9 @@ export function ApiKeyTokenTrendChart({
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(17, 24, 39, 0.06)';
     const axisBorderColor = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(17, 24, 39, 0.10)';
     const tickColor = isDark ? 'rgba(255, 255, 255, 0.72)' : 'rgba(17, 24, 39, 0.72)';
-    const tooltipBg = isDark ? 'rgba(17, 24, 39, 0.94)' : 'rgba(255, 255, 255, 0.98)';
-    const tooltipTitle = isDark ? '#ffffff' : '#111827';
-    const tooltipBody = isDark ? 'rgba(255, 255, 255, 0.86)' : '#374151';
-    const tooltipBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(17, 24, 39, 0.10)';
     const tickFontSize = isMobile ? 10 : 12;
     const maxTickLabelCount = isMobile ? (period === 'hour' ? 8 : 6) : period === 'hour' ? 12 : 10;
+    const totalTokensLabel = t('usage_stats.total_tokens');
 
     return {
       responsive: true,
@@ -262,48 +280,114 @@ export function ApiKeyTokenTrendChart({
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: tooltipBg,
-          titleColor: tooltipTitle,
-          bodyColor: tooltipBody,
-          borderColor: tooltipBorder,
-          borderWidth: 1,
-          padding: 10,
-          displayColors: true,
-          usePointStyle: true,
-          callbacks: {
-            label: () => '',
-            afterBody: (items) => {
-              const firstItem = items[0];
-              if (!firstItem) {
-                return [];
-              }
-              const rows = firstItem.chart.data.datasets
-                .map((dataset) => {
-                  const raw = dataset.data[firstItem.dataIndex];
-                  const value = typeof raw === 'number' ? raw : Number(raw) || 0;
-                  return {
-                    label: dataset.label || '',
-                    value
-                  };
-                })
-                .filter((row) => row.value > 0)
-                .sort((a, b) => b.value - a.value);
-              const total = rows.reduce((sum, row) => sum + row.value, 0);
-              return rows.map((row) => {
-                const percent = total > 0 ? ` (${((row.value / total) * 100).toFixed(1)}%)` : '';
-                return `${row.label}: ${formatCompactNumber(row.value)}${percent}`;
-              });
-            },
-            footer: (items) => {
-              const firstItem = items[0];
-              const total = firstItem
-                ? firstItem.chart.data.datasets.reduce((sum, dataset) => {
-                    const raw = dataset.data[firstItem.dataIndex];
-                    return sum + (typeof raw === 'number' ? raw : Number(raw) || 0);
-                  }, 0)
-                : 0;
-              return `${t('usage_stats.total_tokens')}: ${formatCompactNumber(total)}`;
+          enabled: false,
+          external: ({ chart, tooltip }) => {
+            const tooltipEl = getOrCreateTooltipElement(chart.canvas);
+            tooltipEl.className = `${styles.apiKeyTokenTooltip} ${
+              isDark ? styles.apiKeyTokenTooltipDark : ''
+            }`.trim();
+
+            if (tooltip.opacity === 0) {
+              tooltipEl.style.opacity = '0';
+              tooltipEl.style.visibility = 'hidden';
+              return;
             }
+
+            const firstItem = tooltip.dataPoints[0];
+            if (!firstItem) {
+              tooltipEl.style.opacity = '0';
+              tooltipEl.style.visibility = 'hidden';
+              return;
+            }
+
+            const rows = chart.data.datasets
+              .map((dataset, datasetIndex) => {
+                const raw = dataset.data[firstItem.dataIndex];
+                const value = typeof raw === 'number' ? raw : Number(raw) || 0;
+                const color =
+                  typeof dataset.backgroundColor === 'string'
+                    ? dataset.backgroundColor
+                    : typeof dataset.borderColor === 'string'
+                      ? dataset.borderColor
+                      : USAGE_MODEL_CHART_COLORS[datasetIndex % USAGE_MODEL_CHART_COLORS.length].borderColor;
+                return {
+                  color,
+                  label: dataset.label || '',
+                  value
+                };
+              })
+              .filter((row) => row.value > 0)
+              .sort((a, b) => b.value - a.value);
+
+            const total = rows.reduce((sum, row) => sum + row.value, 0);
+            const columnCount = rows.length > 30 ? 3 : rows.length > 10 ? 2 : 1;
+
+            tooltipEl.replaceChildren();
+            tooltipEl.style.setProperty('--api-key-tooltip-columns', String(columnCount));
+
+            const title = tooltip.title.join(' ');
+            if (title) {
+              appendTextNode(tooltipEl, 'div', styles.apiKeyTokenTooltipTitle, title);
+            }
+
+            const rowsEl = document.createElement('div');
+            rowsEl.className = styles.apiKeyTokenTooltipRows;
+            rows.forEach((row) => {
+              const rowEl = document.createElement('div');
+              rowEl.className = styles.apiKeyTokenTooltipRow;
+
+              const dotEl = document.createElement('span');
+              dotEl.className = styles.apiKeyTokenTooltipDot;
+              dotEl.style.backgroundColor = row.color;
+              rowEl.appendChild(dotEl);
+
+              const labelEl = document.createElement('span');
+              labelEl.className = styles.apiKeyTokenTooltipLabel;
+              labelEl.textContent = row.label;
+              rowEl.appendChild(labelEl);
+
+              const valueEl = document.createElement('span');
+              valueEl.className = styles.apiKeyTokenTooltipValue;
+              const percent = total > 0 ? ` (${((row.value / total) * 100).toFixed(1)}%)` : '';
+              valueEl.textContent = `${formatCompactNumber(row.value)}${percent}`;
+              rowEl.appendChild(valueEl);
+
+              rowsEl.appendChild(rowEl);
+            });
+            tooltipEl.appendChild(rowsEl);
+
+            appendTextNode(
+              tooltipEl,
+              'div',
+              styles.apiKeyTokenTooltipFooter,
+              `${totalTokensLabel}: ${formatCompactNumber(total)}`
+            );
+
+            tooltipEl.style.opacity = '1';
+            tooltipEl.style.visibility = 'hidden';
+            tooltipEl.style.left = '0px';
+            tooltipEl.style.top = '0px';
+
+            const canvasRect = chart.canvas.getBoundingClientRect();
+            const padding = 12;
+            const tooltipWidth = tooltipEl.offsetWidth;
+            const tooltipHeight = tooltipEl.offsetHeight;
+            let left = canvasRect.left + tooltip.caretX;
+            let top = canvasRect.top + tooltip.caretY + 12;
+
+            left = Math.min(
+              Math.max(left, padding + tooltipWidth / 2),
+              window.innerWidth - padding - tooltipWidth / 2
+            );
+
+            if (top + tooltipHeight > window.innerHeight - padding) {
+              top = canvasRect.top + tooltip.caretY - tooltipHeight - 12;
+            }
+            top = Math.min(Math.max(top, padding), window.innerHeight - padding - tooltipHeight);
+
+            tooltipEl.style.left = `${left}px`;
+            tooltipEl.style.top = `${top}px`;
+            tooltipEl.style.visibility = 'visible';
           }
         }
       },

@@ -734,6 +734,88 @@
   flex-wrap: wrap;
 }
 
+.quotaResetCreditButton:global(.btn.btn-sm) {
+  min-height: 24px;
+  border-radius: 999px;
+  padding-inline: 10px;
+  font-size: 12px;
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+}
+
+.quotaResetCreditCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-color) 18%, var(--bg-primary));
+  color: color-mix(in srgb, var(--primary-color) 82%, var(--text-primary));
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.quotaResetCreditExpiryButton {
+  min-height: 24px;
+}
+
+.codexResetCredits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.codexResetCreditsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.codexResetCreditRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  border-radius: $radius-sm;
+  background-color: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+}
+
+.codexResetCreditLabel {
+  color: var(--text-tertiary);
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.codexResetCreditTime {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.codexResetCreditsError {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--warning-text);
+  background-color: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: $radius-sm;
+  padding: $spacing-xs $spacing-sm;
+}
+
 .quotaPlanButton:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--primary-color) 65%, transparent);
   outline-offset: 2px;
@@ -829,6 +911,26 @@
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
+}
+
+.quotaResetCreditsDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--bg-secondary) 58%, transparent);
+}
+
+.quotaResetCreditsDetailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .quotaDetailTableWrapper {

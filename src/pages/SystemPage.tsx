@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconGithub, IconBookOpen, IconExternalLink, IconCode } from '@/components/ui/icons';
@@ -23,8 +22,6 @@ import iconGlm from '@/assets/icons/glm.svg';
 import iconGrok from '@/assets/icons/grok.svg';
 import iconDeepseek from '@/assets/icons/deepseek.svg';
 import iconMinimax from '@/assets/icons/minimax.svg';
-import { MAX_REQUEST_TIMEOUT_SECONDS, MIN_REQUEST_TIMEOUT_SECONDS } from '@/utils/constants';
-import { parseRequestTimeoutSeconds, requestTimeoutMsToSeconds } from '@/utils/requestTimeout';
 import styles from './SystemPage.module.scss';
 
 const MODEL_CATEGORY_ICONS: Record<string, string | { light: string; dark: string }> = {
@@ -59,7 +56,6 @@ export function SystemPage() {
   const [requestLogDraft, setRequestLogDraft] = useState(false);
   const [requestLogTouched, setRequestLogTouched] = useState(false);
   const [requestLogSaving, setRequestLogSaving] = useState(false);
-  const [requestTimeoutDraft, setRequestTimeoutDraft] = useState('');
 
   const apiKeysCache = useRef<string[]>([]);
   const versionTapCount = useRef(0);
@@ -73,26 +69,6 @@ export function SystemPage() {
   const requestLogEnabled = config?.requestLog ?? false;
   const requestLogDirty = requestLogDraft !== requestLogEnabled;
   const canEditRequestLog = auth.connectionStatus === 'connected' && Boolean(config);
-  const parsedRequestTimeout = useMemo(
-    () => parseRequestTimeoutSeconds(requestTimeoutDraft),
-    [requestTimeoutDraft]
-  );
-  const requestTimeoutError = useMemo(
-    () =>
-      parsedRequestTimeout.isValid
-        ? ''
-        : t('system_info.request_timeout_invalid', {
-            min: MIN_REQUEST_TIMEOUT_SECONDS,
-            max: MAX_REQUEST_TIMEOUT_SECONDS
-          }),
-    [parsedRequestTimeout.isValid, t]
-  );
-  const savedRequestTimeoutSeconds = useMemo(
-    () => requestTimeoutMsToSeconds(auth.requestTimeoutMs),
-    [auth.requestTimeoutMs]
-  );
-  const requestTimeoutDirty = requestTimeoutDraft.trim() !== savedRequestTimeoutSeconds;
-
   const appVersion = __APP_VERSION__ || t('system_info.version_unknown');
   const apiVersion = auth.serverVersion || t('system_info.version_unknown');
   const buildTime = auth.serverBuildDate
@@ -208,22 +184,6 @@ export function SystemPage() {
     });
   };
 
-  const handleRequestTimeoutSave = useCallback(() => {
-    if (!parsedRequestTimeout.isValid) {
-      showNotification(requestTimeoutError, 'error');
-      return;
-    }
-
-    auth.setRequestTimeoutMs(parsedRequestTimeout.timeoutMs);
-    showNotification(t('notification.request_timeout_updated'), 'success');
-  }, [auth, parsedRequestTimeout, requestTimeoutError, showNotification, t]);
-
-  const handleRequestTimeoutReset = useCallback(() => {
-    setRequestTimeoutDraft('');
-    auth.setRequestTimeoutMs(null);
-    showNotification(t('notification.request_timeout_updated'), 'success');
-  }, [auth, showNotification, t]);
-
   const openRequestLogModal = useCallback(() => {
     setRequestLogTouched(false);
     setRequestLogDraft(requestLogEnabled);
@@ -296,10 +256,6 @@ export function SystemPage() {
   }, [requestLogModalOpen, requestLogTouched, requestLogEnabled]);
 
   useEffect(() => {
-    setRequestTimeoutDraft(savedRequestTimeoutSeconds);
-  }, [savedRequestTimeoutSeconds]);
-
-  useEffect(() => {
     return () => {
       if (versionTapTimer.current) {
         clearTimeout(versionTapTimer.current);
@@ -353,36 +309,6 @@ export function SystemPage() {
           <Button variant="secondary" size="sm" onClick={() => fetchConfig(undefined, true)}>
             {t('common.refresh')}
           </Button>
-        </div>
-      </Card>
-
-      <Card title={t('system_info.request_timeout_title')}>
-        <p className={styles.sectionDescription}>{t('system_info.request_timeout_desc')}</p>
-        <div className={styles.timeoutEditor}>
-          <Input
-            label={t('system_info.request_timeout_label')}
-            value={requestTimeoutDraft}
-            onChange={(event) => setRequestTimeoutDraft(event.target.value)}
-            placeholder={t('system_info.request_timeout_placeholder')}
-            hint={t('system_info.request_timeout_hint')}
-            error={requestTimeoutError || undefined}
-            inputMode="numeric"
-            type="number"
-            min={MIN_REQUEST_TIMEOUT_SECONDS}
-            max={MAX_REQUEST_TIMEOUT_SECONDS}
-          />
-          <div className={styles.timeoutActions}>
-            <Button
-              variant="secondary"
-              onClick={handleRequestTimeoutReset}
-              disabled={!auth.requestTimeoutMs && !requestTimeoutDraft}
-            >
-              {t('system_info.request_timeout_reset')}
-            </Button>
-            <Button onClick={handleRequestTimeoutSave} disabled={!requestTimeoutDirty || !parsedRequestTimeout.isValid}>
-              {t('system_info.request_timeout_save')}
-            </Button>
-          </div>
         </div>
       </Card>
 

@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/Select';
 import { useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
 import type { AuthFileItem, ResolvedTheme, ThemeColors } from '@/types';
 import { isRetryableRequestError, runTasksWithConcurrency } from '@/utils/batch';
-import { TYPE_COLORS, formatKimiResetHint, formatQuotaResetTime } from '@/utils/quota';
+import { TYPE_COLORS, formatKimiResetHint, formatQuotaResetTime, formatShanghaiDateTime } from '@/utils/quota';
 import { formatFileSize } from '@/utils/format';
 import {
   formatModified,
@@ -32,6 +32,7 @@ import type {
   ClaudeQuotaState,
   ClaudeQuotaWindow,
   CodexQuotaState,
+  CodexRateLimitResetCredit,
   CodexQuotaWindow,
   GeminiCliQuotaBucketState,
   GeminiCliQuotaState,
@@ -73,6 +74,13 @@ interface CodexDetailWindowRow {
   label: string;
   percent: number | null;
   resetLabel: string;
+}
+
+interface CodexResetCreditExpiryRow {
+  id: string;
+  label: string;
+  expiresAt: string;
+  displayTime: string;
 }
 
 interface QuotaPaginationState<T> {
@@ -193,6 +201,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
   const [batchUpdating, setBatchUpdating] = useState(false);
   const [bulkRefreshing, setBulkRefreshing] = useState(false);
   const [bulkRefreshProgress, setBulkRefreshProgress] = useState<{ done: number; total: number } | null>(null);
+  const [resettingQuotaName, setResettingQuotaName] = useState<string | null>(null);
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
   const filesMatchingProblemFilter = useMemo(
     () => (problemOnly ? filteredFiles.filter(hasAuthFileStatusMessage) : filteredFiles),
@@ -645,12 +654,24 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
         };
       });
 
+    const resetCreditRows = (state.rateLimitResetCredits ?? []).map<CodexResetCreditExpiryRow>(
+      (credit: CodexRateLimitResetCredit, index: number) => ({
+        id: credit.id || `${credit.expiresAt}-${index}`,
+        label: t('codex_quota.reset_credit_number', { index: index + 1 }),
+        expiresAt: credit.expiresAt,
+        displayTime: formatShanghaiDateTime(credit.expiresAt) || credit.expiresAt
+      })
+    );
+
     return {
       file,
       planType: state.planType ?? null,
-      rows
+      rows,
+      resetCreditsAvailableCount: state.rateLimitResetCreditsAvailableCount ?? null,
+      resetCreditRows,
+      resetCreditsError: state.rateLimitResetCreditsError ?? ''
     };
-  }, [codexDetailFileName, config.type, filteredFilesByControls, quota]);
+  }, [codexDetailFileName, config.type, filteredFilesByControls, quota, t]);
 
   useEffect(() => {
     if (config.type === 'antigravity') return;
@@ -663,6 +684,48 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     if (codexDetailFileName === null) return;
     setCodexDetailFileName(null);
   }, [codexDetailFileName, config.type]);
+
+  const resetQuotaForFile = useCallback(
+    (file: AuthFileItem) => {
+      if (!config.resetQuota || disabled || file.disabled || resettingQuotaName) return;
+
+      showConfirmation({
+        title: t('codex_quota.reset_confirm_title'),
+        message: t('codex_quota.reset_confirm_message', { name: file.name }),
+        confirmText: t('codex_quota.reset_confirm_button'),
+        variant: 'primary',
+        onConfirm: async () => {
+          setResettingQuotaName(file.name);
+          try {
+            const data = await config.resetQuota!(file, t);
+            const nextQuotaState = config.buildSuccessState(data);
+            setQuota((prev) => ({
+              ...prev,
+              [file.name]: nextQuotaState
+            }));
+            showNotification(t('codex_quota.reset_success', { name: file.name }), 'success');
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : t('common.unknown_error');
+            showNotification(
+              t('codex_quota.reset_failed', { name: file.name, message }),
+              'error'
+            );
+          } finally {
+            setResettingQuotaName(null);
+          }
+        }
+      });
+    },
+    [
+      config,
+      disabled,
+      resettingQuotaName,
+      setQuota,
+      showConfirmation,
+      showNotification,
+      t
+    ]
+  );
 
   const renderSplitCells = useCallback(
     (file: AuthFileItem): QuotaSplitCells => {
@@ -725,10 +788,31 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
         const detailRows = windows.filter(
           (window) => window.id !== 'five-hour' && window.id !== 'weekly'
         );
+        const showResetQuotaAction = Boolean(
+          config.resetQuota && config.canResetQuota?.(codexState as unknown as TState)
+        );
+        const resetCreditsAvailableCount = codexState.rateLimitResetCreditsAvailableCount ?? 0;
+        const resetCreditRows = codexState.rateLimitResetCredits ?? [];
+        const resetCreditsError = codexState.rateLimitResetCreditsError ?? '';
+        const resetQuotaLabel = t('codex_quota.reset_button');
+        const resetQuotaTitle = `${resetQuotaLabel} x${resetCreditsAvailableCount}`;
+        const resetCreditExpiryLines = resetCreditRows.map((credit, index) => {
+          const label = t('codex_quota.reset_credit_number', { index: index + 1 });
+          const expiresAt = formatShanghaiDateTime(credit.expiresAt) || credit.expiresAt;
+          return `${label}: ${expiresAt}`;
+        });
+        const resetCreditExpiryTitle = resetCreditExpiryLines.length > 0
+          ? resetCreditExpiryLines.join('\n')
+          : resetCreditsError
+            ? t('codex_quota.reset_credits_expiry_failed', { message: resetCreditsError })
+            : t('codex_quota.reset_credits_expiry_label');
+        const showResetCreditExpiryAction = resetCreditRows.length > 0 || Boolean(resetCreditsError);
+        const isResettingQuota = resettingQuotaName === file.name;
+        const canUseQuotaAction = !disabled && !file.disabled;
         const planNode = (
           <div className={styles.quotaPlanCellContent}>
             <span className={styles.quotaPlanBadge}>{resolveCodexPlanLabel(codexState?.planType)}</span>
-            {detailRows.length > 0 ? (
+            {detailRows.length > 0 || showResetCreditExpiryAction ? (
               <button
                 type="button"
                 className={`${styles.quotaPlanBadge} ${styles.quotaPlanButton}`}
@@ -737,6 +821,34 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
                 aria-label={t('quota_management.view_quota_detail', { defaultValue: '查看额度明细' })}
               >
                 {t('quota_management.detail_action', { defaultValue: '明细' })}
+              </button>
+            ) : null}
+            {showResetQuotaAction ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className={styles.quotaResetCreditButton}
+                onClick={() => resetQuotaForFile(file)}
+                disabled={!canUseQuotaAction || isResettingQuota}
+                loading={isResettingQuota}
+                title={resetQuotaTitle}
+                aria-label={resetQuotaTitle}
+              >
+                {!isResettingQuota ? <IconRefreshCw size={14} /> : null}
+                {resetQuotaLabel}
+                <span className={styles.quotaResetCreditCount}>x{resetCreditsAvailableCount}</span>
+              </Button>
+            ) : null}
+            {showResetCreditExpiryAction ? (
+              <button
+                type="button"
+                className={`${styles.quotaPlanBadge} ${styles.quotaPlanButton} ${styles.quotaResetCreditExpiryButton}`}
+                onClick={() => setCodexDetailFileName(file.name)}
+                title={resetCreditExpiryTitle}
+                aria-label={t('codex_quota.reset_credits_expiry_label')}
+              >
+                {t('codex_quota.reset_credits_expiry_action', { defaultValue: '有效期' })}
               </button>
             ) : null}
           </div>
@@ -826,11 +938,12 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
       };
     },
     [
-      config.cardIdleMessageKey,
-      config.i18nPrefix,
-      config.type,
+      config,
+      disabled,
       quota,
       resolveCodexPlanLabel,
+      resetQuotaForFile,
+      resettingQuotaName,
       renderQuotaMetric,
       resolveAntigravitySummary,
       setAntigravityDetailFileName,
@@ -956,7 +1069,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
       const targets = allFiles.filter((file) => config.filterFn(file));
       await runBulkRefresh(targets);
     });
-  }, [config.filterFn, registerRefreshAll, runBulkRefresh]);
+  }, [config, config.filterFn, registerRefreshAll, runBulkRefresh]);
 
 
   const batchSetStatus = useCallback(
@@ -1606,8 +1719,41 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
                     defaultValue: `${codexDetailData.rows.length} 条明细`
                   })}
                 </span>
+                {codexDetailData.resetCreditsAvailableCount !== null ? (
+                  <span className={styles.quotaSummaryItem}>
+                    {t('codex_quota.reset_credits_label')}
+                    {': x'}
+                    {codexDetailData.resetCreditsAvailableCount}
+                  </span>
+                ) : null}
               </div>
             </div>
+
+            {codexDetailData.resetCreditRows.length > 0 || codexDetailData.resetCreditsError ? (
+              <div className={styles.quotaResetCreditsDetail}>
+                <div className={styles.quotaResetCreditsDetailHeader}>
+                  <span>{t('codex_quota.reset_credits_expiry_label')}</span>
+                </div>
+                {codexDetailData.resetCreditRows.length > 0 ? (
+                  <div className={styles.codexResetCredits}>
+                    {codexDetailData.resetCreditRows.map((row) => (
+                      <div key={row.id} className={styles.codexResetCreditRow}>
+                        <span className={styles.codexResetCreditLabel}>{row.label}</span>
+                        <span className={styles.codexResetCreditTime} title={row.expiresAt}>
+                          {row.displayTime}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.codexResetCreditsError}>
+                    {t('codex_quota.reset_credits_expiry_failed', {
+                      message: codexDetailData.resetCreditsError
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <div className={styles.quotaDetailTableWrapper}>
               <table className={styles.quotaDetailTable}>

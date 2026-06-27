@@ -28,6 +28,14 @@
   gap: 12px;
 }
 
+.localConfigActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .divider {
   height: 1px;
   background: var(--border-color);

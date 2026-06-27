@@ -211,19 +211,6 @@
   align-items: center;
 }
 
-.timeoutEditor {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-}
-
-.timeoutActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $spacing-sm;
-  flex-wrap: wrap;
-}
-
 .infoGrid {
   display: grid;
   gap: $spacing-sm;
