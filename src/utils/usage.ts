@@ -50,6 +50,7 @@ export interface UsageDetail {
     total_tokens: number;
   };
   failed: boolean;
+  reasoning_effort?: string;
   __modelName?: string;
   __timestampMs?: number;
   __requestCount?: number;

@@ -1326,6 +1326,24 @@
           "switch_preview_model": "Switch to Preview Model",
           "switch_preview_model_desc": "Switch to preview model version when quota is exceeded"
         },
+        "thinking_policy": {
+          "title": "Thinking Policy",
+          "description": "Backend-controlled Codex thinking effort: missing effort defaults to high, low/medium/high are preserved, xhigh requires whitelist",
+          "codex_enable": "Enable Codex thinking policy",
+          "codex_enable_desc": "When enabled, the backend fills missing reasoning.effort and restricts xhigh; non-whitelisted xhigh requests are downgraded to high",
+          "default_effort": "Default Effort",
+          "default_effort_hint": "Use high when no effort is specified",
+          "effort_high": "high (default)",
+          "xhigh_api_keys": "API Key whitelist for xhigh",
+          "xhigh_api_keys_add": "Add API Key",
+          "xhigh_api_keys_empty": "No whitelisted API keys",
+          "xhigh_api_keys_edit_title": "Edit whitelisted API key",
+          "xhigh_api_keys_add_title": "Add whitelisted API key",
+          "xhigh_api_keys_input_label": "Whitelisted API Key",
+          "xhigh_api_keys_placeholder": "Paste a downstream API key allowed to use xhigh",
+          "xhigh_api_keys_input_hint": "This is the downstream API key used to call this service, not an upstream Codex account key",
+          "xhigh_api_keys_hint": "Only these downstream API keys may keep xhigh when the request explicitly asks for it; missing effort defaults to high, low/medium/high keep the requested value"
+        },
         "streaming": {
           "title": "Streaming Configuration",
           "description": "Keepalive and bootstrap retry settings",

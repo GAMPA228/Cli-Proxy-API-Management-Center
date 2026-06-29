@@ -75,6 +75,9 @@ export type VisualConfigValues = {
   quotaSwitchPreviewModel: boolean;
   routingStrategy: 'round-robin' | 'fill-first';
   wsAuth: boolean;
+  thinkingPolicyCodexEnabled: boolean;
+  thinkingPolicyCodexDefaultEffort: 'high';
+  thinkingPolicyCodexXhighApiKeysText: string;
   payloadDefaultRules: PayloadRule[];
   payloadOverrideRules: PayloadRule[];
   payloadFilterRules: PayloadFilterRule[];
@@ -111,6 +114,9 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   quotaSwitchPreviewModel: true,
   routingStrategy: 'round-robin',
   wsAuth: false,
+  thinkingPolicyCodexEnabled: false,
+  thinkingPolicyCodexDefaultEffort: 'high',
+  thinkingPolicyCodexXhighApiKeysText: '',
   payloadDefaultRules: [],
   payloadOverrideRules: [],
   payloadFilterRules: [],

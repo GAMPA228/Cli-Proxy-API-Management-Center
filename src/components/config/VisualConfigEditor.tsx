@@ -177,6 +177,7 @@ export function VisualConfigEditor({
   const nonstreamKeepaliveInputId = useId();
   const nonstreamKeepaliveHintId = `${nonstreamKeepaliveInputId}-hint`;
   const nonstreamKeepaliveErrorId = `${nonstreamKeepaliveInputId}-error`;
+  const thinkingPolicyEffortLabelId = useId();
   const isKeepaliveDisabled = values.streaming.keepaliveSeconds === '' || values.streaming.keepaliveSeconds === '0';
   const isNonstreamKeepaliveDisabled =
     values.streaming.nonstreamKeepaliveInterval === '' || values.streaming.nonstreamKeepaliveInterval === '0';
@@ -480,6 +481,56 @@ export function VisualConfigEditor({
               />
             </div>
           </div>
+      </ConfigSection>
+
+      <ConfigSection title={t('config_management.visual.sections.thinking_policy.title')} description={t('config_management.visual.sections.thinking_policy.description')}>
+        <div className={styles.sectionStack}>
+          <ToggleRow
+            title={t('config_management.visual.sections.thinking_policy.codex_enable')}
+            description={t('config_management.visual.sections.thinking_policy.codex_enable_desc')}
+            checked={values.thinkingPolicyCodexEnabled}
+            disabled={disabled}
+            onChange={(thinkingPolicyCodexEnabled) => onChange({ thinkingPolicyCodexEnabled })}
+          />
+
+          <SectionGrid>
+            <div className="form-group">
+              <label id={thinkingPolicyEffortLabelId} htmlFor={`${thinkingPolicyEffortLabelId}-select`}>
+                {t('config_management.visual.sections.thinking_policy.default_effort')}
+              </label>
+              <Select
+                value={values.thinkingPolicyCodexDefaultEffort}
+                options={[
+                  { value: 'high', label: t('config_management.visual.sections.thinking_policy.effort_high') },
+                ]}
+                id={`${thinkingPolicyEffortLabelId}-select`}
+                disabled={disabled}
+                ariaLabelledBy={thinkingPolicyEffortLabelId}
+                onChange={() => onChange({ thinkingPolicyCodexDefaultEffort: 'high' })}
+              />
+            </div>
+
+            <div className={styles.fullWidthGridItem}>
+              <ApiKeysCardEditor
+                value={values.thinkingPolicyCodexXhighApiKeysText}
+                disabled={disabled}
+                onChange={(thinkingPolicyCodexXhighApiKeysText) =>
+                  onChange({ thinkingPolicyCodexXhighApiKeysText })
+                }
+                label={t('config_management.visual.sections.thinking_policy.xhigh_api_keys')}
+                addLabel={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_add')}
+                emptyLabel={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_empty')}
+                hint={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_hint')}
+                editTitle={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_edit_title')}
+                addTitle={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_add_title')}
+                inputLabel={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_input_label')}
+                inputPlaceholder={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_placeholder')}
+                inputHint={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_input_hint')}
+                showGenerate={false}
+              />
+            </div>
+          </SectionGrid>
+        </div>
       </ConfigSection>
 
       <ConfigSection title={t('config_management.visual.sections.streaming.title')} description={t('config_management.visual.sections.streaming.description')}>

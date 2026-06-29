@@ -47,6 +47,21 @@ function parseApiKeysText(raw: unknown): string {
   return keys.join('\n');
 }
 
+function parseStringListText(raw: unknown): string {
+  if (!Array.isArray(raw)) return '';
+  return raw
+    .map((item) => (typeof item === 'string' ? item.trim() : String(item ?? '').trim()))
+    .filter(Boolean)
+    .join('\n');
+}
+
+function parseLines(value: string): string[] {
+  return value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function replaceApiKeyValue(entry: unknown, apiKey: string): unknown {
   const record = asRecord(entry);
   if (!record) return apiKey;
@@ -471,6 +486,8 @@ export function useVisualConfig() {
       const routing = asRecord(parsed.routing);
       const payload = asRecord(parsed.payload);
       const streaming = asRecord(parsed.streaming);
+      const thinkingPolicy = asRecord(parsed['thinking-policy']);
+      const codexThinkingPolicy = asRecord(thinkingPolicy?.codex);
       const apiKeysStorage = resolveApiKeysStorage(parsed);
 
       const newValues: VisualConfigValues = {
@@ -506,6 +523,9 @@ export function useVisualConfig() {
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
         wsAuth: Boolean(parsed['ws-auth']),
+        thinkingPolicyCodexEnabled: Boolean(codexThinkingPolicy?.enabled),
+        thinkingPolicyCodexDefaultEffort: 'high',
+        thinkingPolicyCodexXhighApiKeysText: parseStringListText(codexThinkingPolicy?.['xhigh-api-keys']),
 
         quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
         quotaSwitchPreviewModel: Boolean(
@@ -638,6 +658,25 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
+
+        const codexXhighApiKeys = parseLines(values.thinkingPolicyCodexXhighApiKeysText);
+        if (
+          docHas(doc, ['thinking-policy']) ||
+          values.thinkingPolicyCodexEnabled ||
+          codexXhighApiKeys.length > 0
+        ) {
+          ensureMapInDoc(doc, ['thinking-policy']);
+          ensureMapInDoc(doc, ['thinking-policy', 'codex']);
+          setBooleanInDoc(doc, ['thinking-policy', 'codex', 'enabled'], values.thinkingPolicyCodexEnabled);
+          doc.setIn(['thinking-policy', 'codex', 'default-effort'], values.thinkingPolicyCodexDefaultEffort);
+          if (codexXhighApiKeys.length > 0) {
+            doc.setIn(['thinking-policy', 'codex', 'xhigh-api-keys'], codexXhighApiKeys);
+          } else if (docHas(doc, ['thinking-policy', 'codex', 'xhigh-api-keys'])) {
+            doc.deleteIn(['thinking-policy', 'codex', 'xhigh-api-keys']);
+          }
+          deleteIfMapEmpty(doc, ['thinking-policy', 'codex']);
+          deleteIfMapEmpty(doc, ['thinking-policy']);
+        }
 
         if (
           docHas(doc, ['quota-exceeded']) ||

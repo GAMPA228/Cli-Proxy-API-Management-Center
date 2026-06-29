@@ -32,6 +32,7 @@ type RequestEventRow = {
   timestampMs: number;
   timestampLabel: string;
   model: string;
+  reasoningEffort: string;
   sourceKey: string;
   sourceQuery: string;
   sourceRaw: string;
@@ -96,6 +97,7 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
       total_tokens: Math.max(toNumber(tokens.total_tokens), 0),
     },
     failed: row.failed === true,
+    reasoning_effort: typeof row.reasoning_effort === 'string' ? row.reasoning_effort : '',
     __modelName: typeof row.model === 'string' ? row.model : '',
     __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
   };
@@ -230,6 +232,7 @@ export function RequestEventsDetailsCard({
       const sourceKey = sourceInfo.identityKey ?? `source:${sourceLookup || source}`;
       const sourceType = sourceInfo.type;
       const model = String(detail.__modelName ?? '').trim() || '-';
+      const reasoningEffort = String(detail.reasoning_effort ?? '').trim();
       const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
       const outputTokens = Math.max(toNumber(detail.tokens?.output_tokens), 0);
       const reasoningTokens = Math.max(toNumber(detail.tokens?.reasoning_tokens), 0);
@@ -248,6 +251,7 @@ export function RequestEventsDetailsCard({
         timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
         model,
+        reasoningEffort,
         sourceKey,
         sourceQuery,
         sourceRaw: sourceLookup || '-',
@@ -398,6 +402,7 @@ export function RequestEventsDetailsCard({
     const csvHeader = [
       'timestamp',
       'model',
+      'reasoning_effort',
       'source_type',
       'source',
       'source_raw',
@@ -414,6 +419,7 @@ export function RequestEventsDetailsCard({
       [
         row.timestamp,
         row.model,
+        row.reasoningEffort,
         row.sourceType,
         row.source,
         row.sourceRaw,
@@ -441,6 +447,7 @@ export function RequestEventsDetailsCard({
     const payload = rowsToExport.map((row) => ({
       timestamp: row.timestamp,
       model: row.model,
+      reasoning_effort: row.reasoningEffort,
       source_type: row.sourceType,
       source: row.source,
       source_raw: row.sourceRaw,
@@ -619,8 +626,16 @@ export function RequestEventsDetailsCard({
                     <td title={row.timestamp} className={`${styles.requestEventsTimestamp} ${styles.tableCellMono}`}>
                       {row.timestampLabel}
                     </td>
-                    <td className={`${styles.modelCell} ${styles.tableCellLeft}`} title={row.model}>
-                      <span className={styles.truncateText}>{row.model}</span>
+                    <td
+                      className={`${styles.modelCell} ${styles.tableCellLeft}`}
+                      title={row.reasoningEffort ? `${row.model} · ${row.reasoningEffort}` : row.model}
+                    >
+                      <span className={styles.modelCellStack}>
+                        <span className={styles.truncateText}>{row.model}</span>
+                        {row.reasoningEffort && (
+                          <span className={styles.reasoningEffortBadge}>{row.reasoningEffort}</span>
+                        )}
+                      </span>
                     </td>
                     <td className={styles.tableCellStatus} title={row.sourceType || '-'}>
                       {row.sourceType ? (

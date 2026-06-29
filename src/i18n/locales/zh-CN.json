@@ -1326,6 +1326,24 @@
           "switch_preview_model": "切换预览模型",
           "switch_preview_model_desc": "配额耗尽时切换到预览版本模型"
         },
+        "thinking_policy": {
+          "title": "思考策略",
+          "description": "由后端控制 Codex thinking effort：未指定时默认 high，low/medium/high 保留，xhigh 需白名单",
+          "codex_enable": "启用 Codex 思考策略",
+          "codex_enable_desc": "启用后，后端会补齐缺省 reasoning.effort，并限制 xhigh；非白名单请求 xhigh 会降为 high",
+          "default_effort": "默认思考程度",
+          "default_effort_hint": "未指定思考程度时使用 high",
+          "effort_high": "high（默认）",
+          "xhigh_api_keys": "允许 xhigh 的 API Key 白名单",
+          "xhigh_api_keys_add": "添加 API Key",
+          "xhigh_api_keys_empty": "暂无白名单 API Key",
+          "xhigh_api_keys_edit_title": "编辑白名单 API Key",
+          "xhigh_api_keys_add_title": "添加白名单 API Key",
+          "xhigh_api_keys_input_label": "白名单 API Key",
+          "xhigh_api_keys_placeholder": "粘贴允许 xhigh 的下游 API Key",
+          "xhigh_api_keys_input_hint": "这里填写的是调用本服务的下游 API Key，不是上游 Codex 账号密钥",
+          "xhigh_api_keys_hint": "只有这些下游 API Key 在请求中明确指定 xhigh 时才会保留 xhigh；未指定时默认 high，low/medium/high 保持请求值"
+        },
         "streaming": {
           "title": "流式传输配置",
           "description": "Keepalive 与 bootstrap 重试设置",

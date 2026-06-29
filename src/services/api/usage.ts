@@ -39,6 +39,7 @@ export interface UsageDetailRow {
   latency_ms?: number;
   source?: string;
   auth_index?: string | number | null;
+  reasoning_effort?: string;
   tokens?: UsageDetailTokens;
   failed?: boolean;
 }

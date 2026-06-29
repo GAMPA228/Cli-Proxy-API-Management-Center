@@ -36,10 +36,30 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
   disabled,
   onChange,
+  label,
+  addLabel,
+  emptyLabel,
+  hint,
+  editTitle,
+  addTitle,
+  inputLabel,
+  inputPlaceholder,
+  inputHint,
+  showGenerate = true,
 }: {
   value: string;
   disabled?: boolean;
   onChange: (nextValue: string) => void;
+  label?: string;
+  addLabel?: string;
+  emptyLabel?: string;
+  hint?: string;
+  editTitle?: string;
+  addTitle?: string;
+  inputLabel?: string;
+  inputPlaceholder?: string;
+  inputHint?: string;
+  showGenerate?: boolean;
 }) {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -147,17 +167,17 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       <div className={styles.apiKeysHeader}>
         <div className={styles.apiKeysMeta}>
           <label className={styles.apiKeysLabel}>
-            <span>{t('config_management.visual.api_keys.label')}</span>
+            <span>{label ?? t('config_management.visual.api_keys.label')}</span>
           </label>
           <span className={styles.apiKeysCount}>{apiKeys.length}</span>
         </div>
         <Button size="sm" onClick={openAddModal} disabled={disabled}>
-          {t('config_management.visual.api_keys.add')}
+          {addLabel ?? t('config_management.visual.api_keys.add')}
         </Button>
       </div>
 
       {apiKeys.length === 0 ? (
-        <div className={styles.apiKeysEmpty}>{t('config_management.visual.api_keys.empty')}</div>
+        <div className={styles.apiKeysEmpty}>{emptyLabel ?? t('config_management.visual.api_keys.empty')}</div>
       ) : (
         <div className={styles.apiKeysList}>
           {apiKeys.map((key, index) => (
@@ -208,7 +228,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
         </div>
       )}
 
-      <div className="hint">{t('config_management.visual.api_keys.hint')}</div>
+      <div className="hint">{hint ?? t('config_management.visual.api_keys.hint')}</div>
 
       <Modal
         open={modalOpen}
@@ -216,8 +236,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
         className={styles.apiKeyModal}
         title={
           editingApiKeyId !== null
-            ? t('config_management.visual.api_keys.edit_title')
-            : t('config_management.visual.api_keys.add_title')
+            ? (editTitle ?? t('config_management.visual.api_keys.edit_title'))
+            : (addTitle ?? t('config_management.visual.api_keys.add_title'))
         }
         footer={
           <>
@@ -231,30 +251,32 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
         }
       >
         <div className="form-group">
-          <label htmlFor={apiKeyInputId}>{t('config_management.visual.api_keys.input_label')}</label>
+          <label htmlFor={apiKeyInputId}>{inputLabel ?? t('config_management.visual.api_keys.input_label')}</label>
           <div className={styles.apiKeyModalInputRow}>
             <input
               id={apiKeyInputId}
               className="input"
-              placeholder={t('config_management.visual.api_keys.input_placeholder')}
+              placeholder={inputPlaceholder ?? t('config_management.visual.api_keys.input_placeholder')}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               disabled={disabled}
               aria-describedby={formError ? `${apiKeyErrorId} ${apiKeyHintId}` : apiKeyHintId}
               aria-invalid={Boolean(formError)}
             />
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={handleGenerate}
-              disabled={disabled}
-            >
-              {t('config_management.visual.api_keys.generate')}
-            </Button>
+            {showGenerate && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleGenerate}
+                disabled={disabled}
+              >
+                {t('config_management.visual.api_keys.generate')}
+              </Button>
+            )}
           </div>
           <div id={apiKeyHintId} className="hint">
-            {t('config_management.visual.api_keys.input_hint')}
+            {inputHint ?? t('config_management.visual.api_keys.input_hint')}
           </div>
           {formError && (
             <div id={apiKeyErrorId} className="error-box">

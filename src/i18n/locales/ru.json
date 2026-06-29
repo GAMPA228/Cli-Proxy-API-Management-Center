@@ -1331,6 +1331,24 @@
           "switch_preview_model": "Переключить на preview-модель",
           "switch_preview_model_desc": "Переключаться на preview-версию модели при превышении квоты"
         },
+        "thinking_policy": {
+          "title": "Политика reasoning",
+          "description": "Codex reasoning effort управляется бэкендом: отсутствующее значение становится high, low/medium/high сохраняются, xhigh требует белого списка",
+          "codex_enable": "Включить политику Codex",
+          "codex_enable_desc": "Если включено, бэкенд заполняет отсутствующий reasoning.effort и ограничивает xhigh; xhigh вне белого списка понижается до high",
+          "default_effort": "Усилие по умолчанию",
+          "default_effort_hint": "Использовать high, если effort не указан",
+          "effort_high": "high (по умолчанию)",
+          "xhigh_api_keys": "Белый список API-ключей для xhigh",
+          "xhigh_api_keys_add": "Добавить API-ключ",
+          "xhigh_api_keys_empty": "Белый список пуст",
+          "xhigh_api_keys_edit_title": "Изменить API-ключ белого списка",
+          "xhigh_api_keys_add_title": "Добавить API-ключ в белый список",
+          "xhigh_api_keys_input_label": "API-ключ белого списка",
+          "xhigh_api_keys_placeholder": "Вставьте downstream API-ключ, которому разрешён xhigh",
+          "xhigh_api_keys_input_hint": "Это downstream API-ключ для вызова этого сервиса, а не ключ аккаунта Codex upstream",
+          "xhigh_api_keys_hint": "Только эти downstream API-ключи сохраняют xhigh, если запрос явно просит xhigh; отсутствующее значение становится high, low/medium/high сохраняют значение запроса"
+        },
         "streaming": {
           "title": "Настройки стриминга",
           "description": "Параметры keepalive и повторов запуска",
