@@ -1,0 +1,343 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+  border-radius: $radius-lg;
+  background:
+    linear-gradient(
+      140deg,
+      color-mix(in srgb, var(--primary-color) 9%, var(--bg-primary)) 0%,
+      color-mix(in srgb, var(--bg-primary) 96%, transparent) 54%
+    );
+  box-shadow: 0 12px 24px -24px rgba(2, 6, 23, 0.7);
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+.pageTitle {
+  font-size: clamp(26px, 2.7vw, 32px);
+  font-weight: 800;
+  color: color-mix(in srgb, var(--text-primary) 88%, var(--primary-color) 12%);
+  margin: 0;
+}
+
+.description {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+  max-width: 74ch;
+}
+
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.errorBox {
+  padding: $spacing-md;
+  background-color: rgba($error-color, 0.1);
+  border: 1px solid var(--danger-color);
+  border-radius: $radius-md;
+  color: var(--danger-color);
+  font-size: 14px;
+}
+
+.bulkCard {
+  overflow: visible;
+}
+
+.bulkPanel {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  @include mobile {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.bulkLabel {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 180px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.bulkActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+
+  @include mobile {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.bulkInputGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.bulkInput {
+  width: 180px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-size: 14px;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 14%, transparent);
+  }
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.searchCard {
+  overflow: visible;
+}
+
+.searchPanel {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  @include mobile {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.searchLabel {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 180px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.searchActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+
+  @include mobile {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.searchInput {
+  width: min(360px, 42vw);
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-size: 14px;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 14%, transparent);
+  }
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.statsGrid {
+  display: grid;
+  gap: $spacing-md;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  @include tablet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 88px;
+}
+
+.statLabel {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.statValue {
+  color: var(--text-primary);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.tableCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  min-width: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: var(--count-badge-text);
+  background-color: var(--count-badge-bg);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.loadingState,
+.emptyState {
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  color: var(--text-secondary);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 14px 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+    text-align: left;
+    vertical-align: top;
+    font-size: 14px;
+  }
+
+  th {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+  }
+
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--bg-secondary) 55%, transparent);
+  }
+}
+
+.keyCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.maskedKey {
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.remark {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.limitInput {
+  width: 150px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-size: 14px;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 14%, transparent);
+  }
+}
+
+.limitInputInvalid {
+  border-color: var(--danger-color);
+}
+
+.inputError {
+  margin-top: 4px;
+  color: var(--danger-color);
+  font-size: 12px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusOk {
+  color: color-mix(in srgb, var(--success-color) 84%, var(--text-primary));
+  background: color-mix(in srgb, var(--success-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success-color) 34%, transparent);
+}
+
+.statusExceeded {
+  color: var(--danger-color);
+  background: color-mix(in srgb, var(--danger-color) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger-color) 34%, transparent);
+}

@@ -3,6 +3,7 @@ export * from './apiCall';
 export * from './config';
 export * from './configFile';
 export * from './apiKeys';
+export * from './apiKeyQuotas';
 export * from './ampcode';
 export * from './providers';
 export * from './authFiles';

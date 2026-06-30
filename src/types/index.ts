@@ -13,4 +13,5 @@ export * from './oauth';
 export * from './usage';
 export * from './log';
 export * from './quota';
+export * from './apiKeyQuota';
 export * from './sourceInfo';

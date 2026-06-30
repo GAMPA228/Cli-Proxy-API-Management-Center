@@ -417,6 +417,21 @@ export function IconSidebarQuota({ size = 20, ...props }: IconProps) {
   );
 }
 
+export function IconSidebarApiKeyQuota({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...sidebarSvgProps} width={size} height={size} {...props}>
+      <circle cx="8" cy="15" r="3.5" />
+      <path d="M10.5 12.5 20 3" />
+      <path d="m15.5 7.5 2 2" />
+      <path d="m17.5 5.5 2 2" />
+      <path d="M4 5h7" />
+      <path d="M4 8.5h4" />
+      <path d="M15 15h5" />
+      <path d="M15 18.5h3" />
+    </svg>
+  );
+}
+
 export function IconSidebarUsage({ size = 20, ...props }: IconProps) {
   return (
     <svg {...sidebarSvgProps} width={size} height={size} {...props}>
