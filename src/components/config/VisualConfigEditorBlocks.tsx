@@ -8,12 +8,14 @@ import { useNotificationStore } from '@/stores';
 import styles from './VisualConfigEditor.module.scss';
 import { copyToClipboard } from '@/utils/clipboard';
 import type {
+  ModelRewriteRule,
   PayloadFilterRule,
   PayloadModelEntry,
   PayloadParamEntry,
   PayloadParamValidationErrorCode,
   PayloadParamValueType,
   PayloadRule,
+  VisualApiKeyEntry,
 } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
 import {
@@ -34,8 +36,10 @@ function getValidationMessage(
 
 export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
+  entries,
   disabled,
   onChange,
+  onEntriesChange,
   label,
   addLabel,
   emptyLabel,
@@ -46,10 +50,13 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   inputPlaceholder,
   inputHint,
   showGenerate = true,
+  showRemark = false,
 }: {
   value: string;
+  entries?: VisualApiKeyEntry[];
   disabled?: boolean;
   onChange: (nextValue: string) => void;
+  onEntriesChange?: (nextEntries: VisualApiKeyEntry[]) => void;
   label?: string;
   addLabel?: string;
   emptyLabel?: string;
@@ -60,6 +67,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   inputPlaceholder?: string;
   inputHint?: string;
   showGenerate?: boolean;
+  showRemark?: boolean;
 }) {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -71,12 +79,28 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
         .filter(Boolean),
     [value]
   );
+  const apiKeyEntries = useMemo<VisualApiKeyEntry[]>(
+    () =>
+      showRemark
+        ? (entries ?? []).map((entry) => ({
+            id: entry.id || makeClientId(),
+            apiKey: entry.apiKey.trim(),
+            remark: entry.remark.trim(),
+          })).filter((entry) => entry.apiKey)
+        : apiKeys.map((apiKey) => ({
+            id: '',
+            apiKey,
+            remark: '',
+          })),
+    [apiKeys, entries, showRemark]
+  );
   const [apiKeyIds, setApiKeyIds] = useState(() => apiKeys.map(() => makeClientId()));
   const renderApiKeyIds = useMemo(() => {
-    if (apiKeyIds.length === apiKeys.length) return apiKeyIds;
-    if (apiKeyIds.length > apiKeys.length) return apiKeyIds.slice(0, apiKeys.length);
-    return [...apiKeyIds, ...Array.from({ length: apiKeys.length - apiKeyIds.length }, () => makeClientId())];
-  }, [apiKeyIds, apiKeys.length]);
+    if (showRemark) return apiKeyEntries.map((entry) => entry.id || makeClientId());
+    if (apiKeyIds.length === apiKeyEntries.length) return apiKeyIds;
+    if (apiKeyIds.length > apiKeyEntries.length) return apiKeyIds.slice(0, apiKeyEntries.length);
+    return [...apiKeyIds, ...Array.from({ length: apiKeyEntries.length - apiKeyIds.length }, () => makeClientId())];
+  }, [apiKeyEntries, apiKeyIds, showRemark]);
 
   const apiKeyInputId = useId();
   const apiKeyHintId = `${apiKeyInputId}-hint`;
@@ -84,6 +108,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingApiKeyId, setEditingApiKeyId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const [inputRemark, setInputRemark] = useState('');
   const [formError, setFormError] = useState('');
 
   function generateSecureApiKey(): string {
@@ -96,6 +121,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const openAddModal = () => {
     setEditingApiKeyId(null);
     setInputValue('');
+    setInputRemark('');
     setFormError('');
     setModalOpen(true);
   };
@@ -103,7 +129,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const openEditModal = (apiKeyId: string) => {
     const editingIndex = renderApiKeyIds.findIndex((id) => id === apiKeyId);
     setEditingApiKeyId(apiKeyId);
-    setInputValue(apiKeys[editingIndex] ?? '');
+    setInputValue(apiKeyEntries[editingIndex]?.apiKey ?? '');
+    setInputRemark(apiKeyEntries[editingIndex]?.remark ?? '');
     setFormError('');
     setModalOpen(true);
   };
@@ -111,19 +138,24 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const closeModal = () => {
     setModalOpen(false);
     setInputValue('');
+    setInputRemark('');
     setEditingApiKeyId(null);
     setFormError('');
   };
 
-  const updateApiKeys = (nextKeys: string[]) => {
-    onChange(nextKeys.join('\n'));
+  const updateApiKeyEntries = (nextEntries: VisualApiKeyEntry[]) => {
+    if (showRemark && onEntriesChange) {
+      onEntriesChange(nextEntries);
+      return;
+    }
+    onChange(nextEntries.map((entry) => entry.apiKey).join('\n'));
   };
 
   const handleDelete = (apiKeyId: string) => {
     const index = renderApiKeyIds.findIndex((id) => id === apiKeyId);
     if (index < 0) return;
     setApiKeyIds(renderApiKeyIds.filter((id) => id !== apiKeyId));
-    updateApiKeys(apiKeys.filter((_, i) => i !== index));
+    updateApiKeyEntries(apiKeyEntries.filter((_, i) => i !== index));
   };
 
   const handleSave = () => {
@@ -138,14 +170,19 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     }
 
     const editingIndex = editingApiKeyId ? renderApiKeyIds.findIndex((id) => id === editingApiKeyId) : -1;
-    const nextKeys =
+    const nextEntry: VisualApiKeyEntry = {
+      id: editingApiKeyId ?? makeClientId(),
+      apiKey: trimmed,
+      remark: showRemark ? inputRemark.trim() : '',
+    };
+    const nextEntries =
       editingApiKeyId === null
-        ? [...apiKeys, trimmed]
-        : apiKeys.map((key, idx) => (idx === editingIndex ? trimmed : key));
+        ? [...apiKeyEntries, nextEntry]
+        : apiKeyEntries.map((entry, idx) => (idx === editingIndex ? { ...entry, ...nextEntry, id: entry.id } : entry));
     if (editingApiKeyId === null) {
       setApiKeyIds([...renderApiKeyIds, makeClientId()]);
     }
-    updateApiKeys(nextKeys);
+    updateApiKeyEntries(nextEntries);
     closeModal();
   };
 
@@ -169,30 +206,40 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           <label className={styles.apiKeysLabel}>
             <span>{label ?? t('config_management.visual.api_keys.label')}</span>
           </label>
-          <span className={styles.apiKeysCount}>{apiKeys.length}</span>
+          <span className={styles.apiKeysCount}>{apiKeyEntries.length}</span>
         </div>
         <Button size="sm" onClick={openAddModal} disabled={disabled}>
           {addLabel ?? t('config_management.visual.api_keys.add')}
         </Button>
       </div>
 
-      {apiKeys.length === 0 ? (
+      {apiKeyEntries.length === 0 ? (
         <div className={styles.apiKeysEmpty}>{emptyLabel ?? t('config_management.visual.api_keys.empty')}</div>
       ) : (
         <div className={styles.apiKeysList}>
-          {apiKeys.map((key, index) => (
-            <div key={renderApiKeyIds[index] ?? `${key}-${index}`} className={styles.apiKeyRow}>
+          {apiKeyEntries.map((entry, index) => {
+            const maskedKey = maskApiKey(String(entry.apiKey || ''));
+            const displayLabel = entry.remark ? `${maskedKey}(${entry.remark})` : maskedKey;
+            return (
+            <div key={renderApiKeyIds[index] ?? `${entry.apiKey}-${index}`} className={styles.apiKeyRow}>
               <div className={styles.apiKeyLine}>
                 <span className={styles.apiKeyIndex}>#{index + 1}</span>
-                <div className={styles.apiKeyValue} title={maskApiKey(String(key || ''))}>
-                  {maskApiKey(String(key || ''))}
+                <div className={styles.apiKeyValueWrap}>
+                  <div className={styles.apiKeyValue} title={displayLabel}>
+                    {displayLabel}
+                  </div>
+                  {showRemark && entry.remark ? (
+                    <div className={styles.apiKeyRemark} title={entry.remark}>
+                      {entry.remark}
+                    </div>
+                  ) : null}
                 </div>
                 <div className={styles.apiKeyActions}>
                   <Button
                     variant="secondary"
                     size="sm"
                     className={styles.iconActionButton}
-                    onClick={() => handleCopy(key)}
+                    onClick={() => handleCopy(entry.apiKey)}
                     disabled={disabled}
                     title={t('common.copy')}
                     aria-label={t('common.copy')}
@@ -224,7 +271,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 
@@ -284,6 +332,24 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
             </div>
           )}
         </div>
+        {showRemark && (
+          <div className="form-group">
+            <label htmlFor={`${apiKeyInputId}-remark`}>
+              {t('config_management.visual.api_keys.remark_label')}
+            </label>
+            <input
+              id={`${apiKeyInputId}-remark`}
+              className="input"
+              placeholder={t('config_management.visual.api_keys.remark_placeholder')}
+              value={inputRemark}
+              onChange={(e) => setInputRemark(e.target.value)}
+              disabled={disabled}
+            />
+            <div className="hint">
+              {t('config_management.visual.api_keys.remark_hint')}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
@@ -356,6 +422,117 @@ const StringListEditor = memo(function StringListEditor({
   );
 });
 
+export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: ModelRewriteRule[];
+  disabled?: boolean;
+  onChange: (next: ModelRewriteRule[]) => void;
+}) {
+  const { t } = useTranslation();
+  const rules = value.length ? value : [];
+
+  const addRule = () =>
+    onChange([
+      ...rules,
+      { id: makeClientId(), matchModels: [''], targetModel: '', bypassApiKeys: [] },
+    ]);
+  const removeRule = (ruleIndex: number) => onChange(rules.filter((_, i) => i !== ruleIndex));
+  const updateRule = (ruleIndex: number, patch: Partial<ModelRewriteRule>) =>
+    onChange(rules.map((rule, i) => (i === ruleIndex ? { ...rule, ...patch } : rule)));
+
+  return (
+    <div className={styles.ruleEditor}>
+      {rules.map((rule, ruleIndex) => (
+        <div key={rule.id} className={styles.ruleCard}>
+          <div className={styles.ruleHeader}>
+            <div className={styles.ruleHeaderMain}>
+              <div className={styles.ruleTitle}>
+                {t('config_management.visual.model_rewrite.rule')} {ruleIndex + 1}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={styles.payloadRowActionButton}
+              onClick={() => removeRule(ruleIndex)}
+              disabled={disabled}
+              title={t('config_management.visual.common.delete')}
+              aria-label={t('config_management.visual.common.delete')}
+            >
+              <IconTrash2 size={16} />
+            </Button>
+          </div>
+
+          <div className={styles.ruleGroup}>
+            <div className={styles.ruleGroupHeader}>
+              <div className={styles.ruleGroupTitle}>
+                <span className={styles.ruleGroupLabel}>
+                  {t('config_management.visual.model_rewrite.match_models')}
+                </span>
+                <span className={styles.ruleGroupCount}>{rule.matchModels.length}</span>
+              </div>
+            </div>
+            <StringListEditor
+              value={rule.matchModels}
+              disabled={disabled}
+              placeholder={t('config_management.visual.model_rewrite.match_model_placeholder')}
+              inputAriaLabel={t('config_management.visual.model_rewrite.match_models')}
+              onChange={(matchModels) => updateRule(ruleIndex, { matchModels })}
+            />
+          </div>
+
+          <div className={styles.ruleGroup}>
+            <div className={styles.ruleGroupHeader}>
+              <div className={styles.ruleGroupTitle}>
+                <span className={styles.ruleGroupLabel}>
+                  {t('config_management.visual.model_rewrite.target_model')}
+                </span>
+              </div>
+            </div>
+            <input
+              className="input"
+              placeholder={t('config_management.visual.model_rewrite.target_model_placeholder')}
+              value={rule.targetModel}
+              onChange={(e) => updateRule(ruleIndex, { targetModel: e.target.value })}
+              disabled={disabled}
+            />
+          </div>
+
+          <div className={styles.ruleGroup}>
+            <div className={styles.ruleGroupHeader}>
+              <div className={styles.ruleGroupTitle}>
+                <span className={styles.ruleGroupLabel}>
+                  {t('config_management.visual.model_rewrite.bypass_api_keys')}
+                </span>
+                <span className={styles.ruleGroupCount}>{rule.bypassApiKeys.length}</span>
+              </div>
+            </div>
+            <StringListEditor
+              value={rule.bypassApiKeys}
+              disabled={disabled}
+              placeholder={t('config_management.visual.model_rewrite.bypass_api_key_placeholder')}
+              inputAriaLabel={t('config_management.visual.model_rewrite.bypass_api_keys')}
+              onChange={(bypassApiKeys) => updateRule(ruleIndex, { bypassApiKeys })}
+            />
+          </div>
+        </div>
+      ))}
+
+      {rules.length === 0 && (
+        <div className={styles.ruleEmpty}>{t('config_management.visual.model_rewrite.no_rules')}</div>
+      )}
+
+      <div className={styles.actionsEnd}>
+        <Button variant="secondary" size="sm" onClick={addRule} disabled={disabled}>
+          {t('config_management.visual.model_rewrite.add_rule')}
+        </Button>
+      </div>
+    </div>
+  );
+});
 export const PayloadRulesEditor = memo(function PayloadRulesEditor({
   value,
   disabled,

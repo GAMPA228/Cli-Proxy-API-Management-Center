@@ -5,8 +5,11 @@ import { Card } from '@/components/ui/Card';
 import {
   collectUsageDetails,
   buildCandidateUsageSourceIds,
+  formatUsageApiKeyLabel,
   formatCompactNumber,
-  normalizeAuthIndex
+  normalizeAuthIndex,
+  type ApiKeyRemarkEntry,
+  type ApiKeyRemarkMap
 } from '@/utils/usage';
 import { authFilesApi } from '@/services/api/authFiles';
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@/types';
@@ -24,6 +27,8 @@ export interface CredentialStatsCardProps {
   codexConfigs: ProviderKeyConfig[];
   vertexConfigs: ProviderKeyConfig[];
   openaiProviders: OpenAIProviderConfig[];
+  apiKeyEntries?: ApiKeyRemarkEntry[];
+  apiKeyRemarks?: ApiKeyRemarkMap;
 }
 
 interface CredentialRow {
@@ -52,6 +57,8 @@ export function CredentialStatsCard({
   codexConfigs,
   vertexConfigs,
   openaiProviders,
+  apiKeyEntries = [],
+  apiKeyRemarks = {},
 }: CredentialStatsCardProps) {
   const { t } = useTranslation();
   const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
@@ -177,6 +184,17 @@ export function CredentialStatsCard({
     };
 
     // Provider rows — one row per config, stats merged across all its candidate source IDs
+    apiKeyEntries.forEach((entry, i) => {
+      const apiKey = String(entry.apiKey ?? '').trim();
+      if (!apiKey) return;
+      addConfigRow(
+        apiKey,
+        undefined,
+        formatUsageApiKeyLabel(apiKey, apiKeyRemarks),
+        'api-key',
+        `downstream:${i}`
+      );
+    });
     geminiKeys.forEach((c, i) =>
       addConfigRow(c.apiKey, c.prefix, c.prefix?.trim() || `Gemini #${i + 1}`, 'gemini', `gemini:${i}`));
     claudeConfigs.forEach((c, i) =>
@@ -277,7 +295,7 @@ export function CredentialStatsCard({
     });
 
     return result.sort((a, b) => b.total - a.total);
-  }, [usage, geminiKeys, claudeConfigs, codexConfigs, vertexConfigs, openaiProviders, authFileMap]);
+  }, [usage, apiKeyEntries, apiKeyRemarks, geminiKeys, claudeConfigs, codexConfigs, vertexConfigs, openaiProviders, authFileMap]);
   const normalizedSearchKeyword = searchKeyword.trim().toLowerCase();
   const filteredRows = useMemo(
     () =>

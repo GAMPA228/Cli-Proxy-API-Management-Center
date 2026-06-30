@@ -44,6 +44,19 @@ export type PayloadFilterRule = {
   params: string[];
 };
 
+export type ModelRewriteRule = {
+  id: string;
+  matchModels: string[];
+  targetModel: string;
+  bypassApiKeys: string[];
+};
+
+export type VisualApiKeyEntry = {
+  id: string;
+  apiKey: string;
+  remark: string;
+};
+
 export interface StreamingConfig {
   keepaliveSeconds: string;
   bootstrapRetries: string;
@@ -62,6 +75,7 @@ export type VisualConfigValues = {
   rmPanelRepo: string;
   authDir: string;
   apiKeysText: string;
+  apiKeyEntries: VisualApiKeyEntry[];
   debug: boolean;
   commercialMode: boolean;
   loggingToFile: boolean;
@@ -78,6 +92,8 @@ export type VisualConfigValues = {
   thinkingPolicyCodexEnabled: boolean;
   thinkingPolicyCodexDefaultEffort: 'high';
   thinkingPolicyCodexXhighApiKeysText: string;
+  modelRewriteEnabled: boolean;
+  modelRewriteRules: ModelRewriteRule[];
   payloadDefaultRules: PayloadRule[];
   payloadOverrideRules: PayloadRule[];
   payloadFilterRules: PayloadFilterRule[];
@@ -101,6 +117,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmPanelRepo: '',
   authDir: '',
   apiKeysText: '',
+  apiKeyEntries: [],
   debug: false,
   commercialMode: false,
   loggingToFile: false,
@@ -117,6 +134,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   thinkingPolicyCodexEnabled: false,
   thinkingPolicyCodexDefaultEffort: 'high',
   thinkingPolicyCodexXhighApiKeysText: '',
+  modelRewriteEnabled: false,
+  modelRewriteRules: [],
   payloadDefaultRules: [],
   payloadOverrideRules: [],
   payloadFilterRules: [],

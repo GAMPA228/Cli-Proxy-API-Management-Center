@@ -1344,6 +1344,12 @@
           "xhigh_api_keys_input_hint": "This is the downstream API key used to call this service, not an upstream Codex account key",
           "xhigh_api_keys_hint": "Only these downstream API keys may keep xhigh when the request explicitly asks for it; missing effort defaults to high, low/medium/high keep the requested value"
         },
+        "model_rewrite": {
+          "title": "Model Rewrite",
+          "description": "Configurable downgrade/alias rules for OpenAI-compatible requests; does not affect models visible in /models",
+          "enable": "Enable model rewrite",
+          "enable_desc": "When enabled, matching requests from downstream API keys outside the whitelist are rewritten to the target model"
+        },
         "streaming": {
           "title": "Streaming Configuration",
           "description": "Keepalive and bootstrap retry settings",
@@ -1377,8 +1383,22 @@
         "input_label": "API Key",
         "input_placeholder": "Paste your API key",
         "input_hint": "This only modifies the local config file content, it will not sync to the API Key Management interface",
+        "remark_label": "Remark",
+        "remark_placeholder": "e.g. Alice / Finance",
+        "remark_hint": "Shown in the config panel and usage statistics; it is not used for authentication",
         "error_empty": "Please enter an API key",
         "error_invalid": "API key contains invalid characters"
+      },
+      "model_rewrite": {
+        "rule": "Rule",
+        "match_models": "Match models",
+        "match_model_placeholder": "e.g. gpt-5.5 or gpt-5.*",
+        "target_model": "Target model",
+        "target_model_placeholder": "e.g. gpt-5.4",
+        "bypass_api_keys": "Bypass API key whitelist",
+        "bypass_api_key_placeholder": "Downstream API key allowed to keep the original model",
+        "no_rules": "No model rewrite rules",
+        "add_rule": "Add rule"
       },
       "payload_rules": {
         "rule": "Rule",

@@ -8,15 +8,18 @@ import { ConfigSection } from '@/components/config/ConfigSection';
 import { FrontendRequestTimeoutSection } from '@/components/config/FrontendRequestTimeoutSection';
 import styles from './VisualConfigEditor.module.scss';
 import type {
+  ModelRewriteRule,
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
   PayloadRule,
+  VisualApiKeyEntry,
   VisualConfigValidationErrorCode,
   VisualConfigValidationErrors,
   VisualConfigValues,
 } from '@/types/visualConfig';
 import {
   ApiKeysCardEditor,
+  ModelRewriteRulesEditor,
   PayloadFilterRulesEditor,
   PayloadRulesEditor,
 } from './VisualConfigEditorBlocks';
@@ -192,7 +195,18 @@ export function VisualConfigEditor({
     validationErrors?.['streaming.nonstreamKeepaliveInterval']
   );
 
-  const handleApiKeysTextChange = useCallback((apiKeysText: string) => onChange({ apiKeysText }), [onChange]);
+  const handleApiKeyEntriesChange = useCallback(
+    (apiKeyEntries: VisualApiKeyEntry[]) =>
+      onChange({
+        apiKeyEntries,
+        apiKeysText: apiKeyEntries.map((entry) => entry.apiKey.trim()).filter(Boolean).join('\n'),
+      }),
+    [onChange]
+  );
+  const handleModelRewriteRulesChange = useCallback(
+    (modelRewriteRules: ModelRewriteRule[]) => onChange({ modelRewriteRules }),
+    [onChange]
+  );
   const handlePayloadDefaultRulesChange = useCallback(
     (payloadDefaultRules: PayloadRule[]) => onChange({ payloadDefaultRules }),
     [onChange]
@@ -336,12 +350,31 @@ export function VisualConfigEditor({
             />
             <ApiKeysCardEditor
               value={values.apiKeysText}
+              entries={values.apiKeyEntries}
+              showRemark
               disabled={disabled}
-              onChange={handleApiKeysTextChange}
+              onChange={(apiKeysText) => onChange({ apiKeysText })}
+              onEntriesChange={handleApiKeyEntriesChange}
             />
           </div>
       </ConfigSection>
 
+      <ConfigSection title={t('config_management.visual.sections.model_rewrite.title')} description={t('config_management.visual.sections.model_rewrite.description')}>
+        <div className={styles.sectionStack}>
+          <ToggleRow
+            title={t('config_management.visual.sections.model_rewrite.enable')}
+            description={t('config_management.visual.sections.model_rewrite.enable_desc')}
+            checked={values.modelRewriteEnabled}
+            disabled={disabled}
+            onChange={(modelRewriteEnabled) => onChange({ modelRewriteEnabled })}
+          />
+          <ModelRewriteRulesEditor
+            value={values.modelRewriteRules}
+            disabled={disabled}
+            onChange={handleModelRewriteRulesChange}
+          />
+        </div>
+      </ConfigSection>
       <ConfigSection title={t('config_management.visual.sections.system.title')} description={t('config_management.visual.sections.system.description')}>
           <div className={styles.sectionStack}>
             <div className={styles.toggleGrid}>

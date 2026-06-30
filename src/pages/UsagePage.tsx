@@ -40,6 +40,7 @@ import {
   getModelNamesFromUsage,
   getApiStats,
   getModelStats,
+  buildApiKeyRemarkMap,
   filterUsageByTimeRange,
   type UsageTimeRange
 } from '@/utils/usage';
@@ -237,9 +238,13 @@ export function UsagePage() {
 
   // Derived data
   const modelNames = useMemo(() => getModelNamesFromUsage(usage), [usage]);
+  const apiKeyRemarks = useMemo(
+    () => buildApiKeyRemarkMap(config?.apiKeyEntries),
+    [config?.apiKeyEntries]
+  );
   const apiStats = useMemo(
-    () => getApiStats(analysisUsage, modelPrices),
-    [analysisUsage, modelPrices]
+    () => getApiStats(analysisUsage, modelPrices, apiKeyRemarks),
+    [analysisUsage, modelPrices, apiKeyRemarks]
   );
   const modelStats = useMemo(
     () => getModelStats(analysisUsage, modelPrices),
@@ -367,6 +372,7 @@ export function UsagePage() {
           isDark={isDark}
           isMobile={isMobile}
           hourWindowHours={hourWindowHours}
+          apiKeyRemarks={apiKeyRemarks}
           emptyText={t('usage_stats.no_data')}
         />
       </div>
@@ -403,6 +409,8 @@ export function UsagePage() {
           codexConfigs={config?.codexApiKeys || []}
           vertexConfigs={config?.vertexApiKeys || []}
           openaiProviders={config?.openaiCompatibility || []}
+          apiKeyEntries={config?.apiKeyEntries || []}
+          apiKeyRemarks={apiKeyRemarks}
         />
       </div>
 
@@ -415,6 +423,8 @@ export function UsagePage() {
           codexConfigs={config?.codexApiKeys || []}
           vertexConfigs={config?.vertexApiKeys || []}
           openaiProviders={config?.openaiCompatibility || []}
+          apiKeyEntries={config?.apiKeyEntries || []}
+          apiKeyRemarks={apiKeyRemarks}
         />
         <PriceSettingsCard
           modelNames={modelNames}

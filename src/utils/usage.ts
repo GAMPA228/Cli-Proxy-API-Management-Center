@@ -1,6 +1,6 @@
 /**
- * 使用统计相关工具
- * 迁移自基线 modules/usage.js 的纯逻辑部分
+ * Usage statistics utilities.
+ * Pure logic migrated from baseline modules/usage.js.
  */
 
 import type { ScriptableContext } from 'chart.js';
@@ -35,6 +35,13 @@ export interface ModelPrice {
   prompt: number;
   completion: number;
   cache: number;
+}
+
+export type ApiKeyRemarkMap = Record<string, string>;
+
+export interface ApiKeyRemarkEntry {
+  apiKey?: string;
+  remark?: string;
 }
 
 export interface UsageDetail {
@@ -357,7 +364,7 @@ export function buildCandidateUsageSourceIds(input: { apiKey?: string; prefix?: 
 }
 
 /**
- * 对使用数据中的敏感字段进行遮罩
+ * Mask sensitive fields in usage data.
  */
 export function maskUsageSensitiveValue(value: unknown, masker: (val: string) => string = maskApiKey): string {
   if (value === null || value === undefined) {
@@ -400,8 +407,40 @@ export function maskUsageSensitiveValue(value: unknown, masker: (val: string) =>
   return masked;
 }
 
+export function buildApiKeyRemarkMap(entries: ApiKeyRemarkEntry[] | undefined | null): ApiKeyRemarkMap {
+  if (!Array.isArray(entries)) return {};
+  const result: ApiKeyRemarkMap = {};
+  entries.forEach((entry) => {
+    const apiKey = String(entry?.apiKey ?? '').trim();
+    const remark = String(entry?.remark ?? '').trim();
+    if (!apiKey || !remark) return;
+    result[apiKey] = remark;
+  });
+  return result;
+}
+
+export function appendApiKeyRemark(
+  label: string,
+  apiKey: unknown,
+  apiKeyRemarks?: ApiKeyRemarkMap
+): string {
+  const raw = typeof apiKey === 'string' ? apiKey.trim() : apiKey === null || apiKey === undefined ? '' : String(apiKey).trim();
+  const remark = raw ? apiKeyRemarks?.[raw]?.trim() : '';
+  return remark ? `${label}(${remark})` : label;
+}
+
+export function formatUsageApiKeyLabel(
+  apiKey: unknown,
+  apiKeyRemarks?: ApiKeyRemarkMap
+): string {
+  const raw = typeof apiKey === 'string' ? apiKey.trim() : apiKey === null || apiKey === undefined ? '' : String(apiKey).trim();
+  if (!raw) return '';
+  const masked = maskUsageSensitiveValue(raw) || raw;
+  return appendApiKeyRemark(masked, raw, apiKeyRemarks);
+}
+
 /**
- * 格式化每分钟数值
+ * Format per-minute values.
  */
 export function formatPerMinuteValue(value: number): string {
   const num = Number(value);
@@ -422,7 +461,7 @@ export function formatPerMinuteValue(value: number): string {
 }
 
 /**
- * 格式化紧凑数字
+ * Format compact numbers.
  */
 export function formatCompactNumber(value: number): string {
   const num = Number(value);
@@ -440,7 +479,7 @@ export function formatCompactNumber(value: number): string {
 }
 
 /**
- * 格式化美元
+ * Format USD amounts.
  */
 export function formatUsd(value: number): string {
   const num = Number(value);
@@ -459,7 +498,7 @@ const usageDetailsCache = new WeakMap<object, UsageDetail[]>();
 const usageDetailsWithEndpointCache = new WeakMap<object, UsageDetailWithEndpoint[]>();
 
 /**
- * 从使用数据中收集所有请求明细
+ * Collect all request details from usage data.
  */
 export function collectUsageDetails(usageData: unknown): UsageDetail[] {
   const cacheKey = isRecord(usageData) ? (usageData as object) : null;
@@ -533,7 +572,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
 }
 
 /**
- * 从使用数据中收集包含 endpoint/method/path 的请求明细
+ * Collect request details with endpoint/method/path metadata.
  */
 export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetailWithEndpoint[] {
   const cacheKey = isRecord(usageData) ? (usageData as object) : null;
@@ -615,7 +654,7 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
 }
 
 /**
- * 从单条明细提取总 tokens
+ * Extract total tokens from one detail record.
  */
 export function extractTotalTokens(detail: unknown): number {
   const record = isRecord(detail) ? detail : null;
@@ -641,7 +680,7 @@ const extractRequestCount = (detail: UsageDetail): number =>
     : 1;
 
 /**
- * 计算 token 分类统计
+ * Calculate token breakdown statistics.
  */
 export function calculateTokenBreakdown(usageData: unknown): TokenBreakdown {
   const details = collectUsageDetails(usageData);
@@ -667,7 +706,7 @@ export function calculateTokenBreakdown(usageData: unknown): TokenBreakdown {
 }
 
 /**
- * 计算最近 N 分钟的 RPM/TPM
+ * Calculate RPM/TPM for the last N minutes.
  */
 export function calculateRecentPerMinuteRates(
   windowMinutes: number = 30,
@@ -706,7 +745,7 @@ export function calculateRecentPerMinuteRates(
 }
 
 /**
- * 从使用数据获取模型名称列表
+ * Get model names from usage data.
  */
 export function getModelNamesFromUsage(usageData: unknown): string[] {
   const apis = getApisRecord(usageData);
@@ -727,7 +766,7 @@ export function getModelNamesFromUsage(usageData: unknown): string[] {
 }
 
 /**
- * 计算成本数据
+ * Calculate cost data.
  */
 export function calculateCost(detail: UsageDetail, modelPrices: Record<string, ModelPrice>): number {
   const modelName = detail.__modelName || '';
@@ -757,7 +796,7 @@ export function calculateCost(detail: UsageDetail, modelPrices: Record<string, M
 }
 
 /**
- * 计算总成本
+ * Calculate total cost.
  */
 export function calculateTotalCost(usageData: unknown, modelPrices: Record<string, ModelPrice>): number {
   const details = collectUsageDetails(usageData);
@@ -768,7 +807,7 @@ export function calculateTotalCost(usageData: unknown, modelPrices: Record<strin
 }
 
 /**
- * 从 localStorage 加载模型价格
+ * Load model prices from localStorage.
  */
 export function loadModelPrices(): Record<string, ModelPrice> {
   try {
@@ -817,7 +856,7 @@ export function loadModelPrices(): Record<string, ModelPrice> {
 }
 
 /**
- * 保存模型价格到 localStorage
+ * Save model prices to localStorage.
  */
 export function saveModelPrices(prices: Record<string, ModelPrice>): void {
   try {
@@ -826,14 +865,18 @@ export function saveModelPrices(prices: Record<string, ModelPrice>): void {
     }
     localStorage.setItem(MODEL_PRICE_STORAGE_KEY, JSON.stringify(prices));
   } catch {
-    console.warn('保存模型价格失败');
+    console.warn('Failed to save model prices');
   }
 }
 
 /**
- * 获取 API 统计数据
+ * Get API statistics.
  */
-export function getApiStats(usageData: unknown, modelPrices: Record<string, ModelPrice>): ApiStats[] {
+export function getApiStats(
+  usageData: unknown,
+  modelPrices: Record<string, ModelPrice>,
+  apiKeyRemarks?: ApiKeyRemarkMap
+): ApiStats[] {
   const apis = getApisRecord(usageData);
   if (!apis) return [];
   const result: ApiStats[] = [];
@@ -900,7 +943,7 @@ export function getApiStats(usageData: unknown, modelPrices: Record<string, Mode
       : derivedFailureCount;
 
     result.push({
-      endpoint: maskUsageSensitiveValue(endpoint) || endpoint,
+      endpoint: formatUsageApiKeyLabel(endpoint, apiKeyRemarks) || endpoint,
       totalRequests: Number(apiData.total_requests) || 0,
       successCount,
       failureCount,
@@ -914,7 +957,7 @@ export function getApiStats(usageData: unknown, modelPrices: Record<string, Mode
 }
 
 /**
- * 获取模型统计数据
+ * Get model statistics.
  */
 export function getModelStats(usageData: unknown, modelPrices: Record<string, ModelPrice>): Array<{
   model: string;
@@ -981,7 +1024,7 @@ export function getModelStats(usageData: unknown, modelPrices: Record<string, Mo
 }
 
 /**
- * 格式化小时标签
+ * Format hour labels.
  */
 export function formatHourLabel(date: Date): string {
   if (!(date instanceof Date)) {
@@ -994,7 +1037,7 @@ export function formatHourLabel(date: Date): string {
 }
 
 /**
- * 格式化日期标签
+ * Format date labels.
  */
 export function formatDayLabel(date: Date): string {
   if (!(date instanceof Date)) {
@@ -1007,7 +1050,7 @@ export function formatDayLabel(date: Date): string {
 }
 
 /**
- * 构建小时级别的数据序列
+ * Build hourly data series.
  */
 export function buildHourlySeriesByModel(
   usageData: unknown,
@@ -1083,7 +1126,7 @@ export function buildHourlySeriesByModel(
 }
 
 /**
- * 构建日级别的数据序列
+ * Build daily data series.
  */
 export function buildDailySeriesByModel(
   usageData: unknown,
@@ -1194,7 +1237,7 @@ const buildAreaGradient = (context: ScriptableContext<'line'>, baseHex: string, 
 };
 
 /**
- * 构建图表数据
+ * Build chart data.
  */
 export function buildChartData(
   usageData: unknown,
@@ -1248,29 +1291,29 @@ export function buildChartData(
 }
 
 /**
- * 依据 usage 数据计算密钥使用统计
+ * Calculate key usage statistics from usage data.
  */
 /**
- * 状态栏单个格子的状态
+ * Status of one status-bar cell.
  */
 export type StatusBlockState = 'success' | 'failure' | 'mixed' | 'idle';
 
 /**
- * 状态栏单个格子的详细信息
+ * Details for one status-bar cell.
  */
 export interface StatusBlockDetail {
   success: number;
   failure: number;
-  /** 该格子的成功率 (0–1)，无请求时为 -1 */
+  /** Success rate for this cell (0-1), or -1 when there are no requests. */
   rate: number;
-  /** 格子起始时间戳 (ms) */
+  /** Cell start timestamp (ms). */
   startTime: number;
-  /** 格子结束时间戳 (ms) */
+  /** Cell end timestamp (ms). */
   endTime: number;
 }
 
 /**
- * 状态栏数据
+ * Status-bar data.
  */
 export interface StatusBarData {
   blocks: StatusBlockState[];
@@ -1281,8 +1324,8 @@ export interface StatusBarData {
 }
 
 /**
- * 计算状态栏数据（最近200分钟，分为20个10分钟的时间块）
- * 每个时间块代表窗口内的一个等长区间，用于展示成功/失败趋势
+ * Calculate status-bar data (last 200 minutes, split into 20 ten-minute buckets).
+ * Each bucket represents one equal-length interval for success/failure trends.
  */
 export function calculateStatusBarData(
   usageDetails: UsageDetail[],
@@ -1379,8 +1422,8 @@ export function calculateStatusBarData(
 }
 
 /**
- * 服务健康监测数据（最近168小时/7天，7×96网格）
- * 每个格子代表15分钟的健康度
+ * Service health data (last 168 hours/7 days, 7 x 96 grid).
+ * Each cell represents 15 minutes of health.
  */
 export interface ServiceHealthData {
   blocks: StatusBlockState[];
@@ -1578,7 +1621,7 @@ export interface TokenBreakdownSeries {
 }
 
 /**
- * 按 token 类别构建小时级别的堆叠序列
+ * Build hourly stacked series by token category.
  */
 export function buildHourlyTokenBreakdown(
   usageData: unknown,
@@ -1644,7 +1687,7 @@ export function buildHourlyTokenBreakdown(
 }
 
 /**
- * 按 token 类别构建日级别的堆叠序列
+ * Build daily stacked series by token category.
  */
 export function buildDailyTokenBreakdown(usageData: unknown): TokenBreakdownSeries {
   const details = collectUsageDetails(usageData);
@@ -1696,7 +1739,7 @@ export interface CostSeries {
 }
 
 /**
- * 按小时构建费用时间序列
+ * Build hourly cost time series.
  */
 export function buildHourlyCostSeries(
   usageData: unknown,
@@ -1748,7 +1791,7 @@ export function buildHourlyCostSeries(
 }
 
 /**
- * 按天构建费用时间序列
+ * Build daily cost time series.
  */
 export function buildDailyCostSeries(
   usageData: unknown,
@@ -1777,4 +1820,3 @@ export function buildDailyCostSeries(
 
   return { labels, data, hasData };
 }
-

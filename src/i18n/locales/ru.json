@@ -1349,6 +1349,12 @@
           "xhigh_api_keys_input_hint": "Это downstream API-ключ для вызова этого сервиса, а не ключ аккаунта Codex upstream",
           "xhigh_api_keys_hint": "Только эти downstream API-ключи сохраняют xhigh, если запрос явно просит xhigh; отсутствующее значение становится high, low/medium/high сохраняют значение запроса"
         },
+        "model_rewrite": {
+          "title": "Переписывание модели",
+          "description": "Гибкие правила downgrade/alias для OpenAI-совместимых запросов; не влияет на список моделей в /models",
+          "enable": "Включить переписывание модели",
+          "enable_desc": "Если включено, совпадающие запросы от downstream API-ключей вне белого списка переписываются на целевую модель"
+        },
         "streaming": {
           "title": "Настройки стриминга",
           "description": "Параметры keepalive и повторов запуска",
@@ -1382,8 +1388,22 @@
         "input_label": "API-ключ",
         "input_placeholder": "Вставьте API-ключ",
         "input_hint": "Меняет только содержимое локального файла конфигурации, не синхронизируется с интерфейсом управления API-ключами",
+        "remark_label": "Примечание",
+        "remark_placeholder": "например Алиса / Финансы",
+        "remark_hint": "Показывается в панели конфигурации и статистике; не используется для аутентификации",
         "error_empty": "Введите API-ключ",
         "error_invalid": "API-ключ содержит недопустимые символы"
+      },
+      "model_rewrite": {
+        "rule": "Правило",
+        "match_models": "Совпадающие модели",
+        "match_model_placeholder": "например gpt-5.5 или gpt-5.*",
+        "target_model": "Целевая модель",
+        "target_model_placeholder": "например gpt-5.4",
+        "bypass_api_keys": "Белый список API-ключей без переписывания",
+        "bypass_api_key_placeholder": "Downstream API-ключ, которому разрешена исходная модель",
+        "no_rules": "Правил переписывания моделей нет",
+        "add_rule": "Добавить правило"
       },
       "payload_rules": {
         "rule": "Правило",

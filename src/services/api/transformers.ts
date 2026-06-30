@@ -9,7 +9,7 @@ import type {
   AmpcodeModelMapping,
   AmpcodeUpstreamApiKeyMapping
 } from '@/types';
-import type { Config } from '@/types/config';
+import type { Config, DownstreamApiKeyEntry } from '@/types/config';
 import { buildHeaderObject } from '@/utils/headers';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -121,6 +121,23 @@ const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   };
   if (authIndex) result.authIndex = authIndex;
   return result;
+};
+
+const normalizeDownstreamApiKeyEntry = (entry: unknown): DownstreamApiKeyEntry | null => {
+  if (entry === undefined || entry === null) return null;
+  const record = isRecord(entry) ? entry : null;
+  const apiKey =
+    record?.['api-key'] ?? record?.apiKey ?? record?.key ?? record?.Key ?? (typeof entry === 'string' ? entry : '');
+  const trimmed = String(apiKey || '').trim();
+  if (!trimmed) return null;
+
+  const remark =
+    record?.remark ?? record?.name ?? record?.note ?? record?.label;
+  const remarkText = typeof remark === 'string' ? remark.trim() : '';
+  return {
+    apiKey: trimmed,
+    remark: remarkText || undefined,
+  };
 };
 
 const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => {
@@ -416,9 +433,15 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   if (strategyRaw !== undefined && strategyRaw !== null) {
     config.routingStrategy = String(strategyRaw);
   }
+  const apiKeyEntriesRaw = raw['api-key-entries'] ?? raw.apiKeyEntries;
   const apiKeysRaw = raw['api-keys'] ?? raw.apiKeys;
-  if (Array.isArray(apiKeysRaw)) {
-    config.apiKeys = apiKeysRaw.map((key) => String(key)).filter((key) => key.trim() !== '');
+  const apiKeyEntriesSource = Array.isArray(apiKeyEntriesRaw) ? apiKeyEntriesRaw : apiKeysRaw;
+  if (Array.isArray(apiKeyEntriesSource)) {
+    const entries = apiKeyEntriesSource
+      .map((entry) => normalizeDownstreamApiKeyEntry(entry))
+      .filter(Boolean) as DownstreamApiKeyEntry[];
+    config.apiKeyEntries = entries;
+    config.apiKeys = entries.map((entry) => entry.apiKey);
   }
 
   const geminiList = raw['gemini-api-key'] ?? raw.geminiApiKey ?? raw.geminiApiKeys;

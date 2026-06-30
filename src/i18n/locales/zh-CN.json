@@ -1344,6 +1344,12 @@
           "xhigh_api_keys_input_hint": "这里填写的是调用本服务的下游 API Key，不是上游 Codex 账号密钥",
           "xhigh_api_keys_hint": "只有这些下游 API Key 在请求中明确指定 xhigh 时才会保留 xhigh；未指定时默认 high，low/medium/high 保持请求值"
         },
+        "model_rewrite": {
+          "title": "模型改写",
+          "description": "OpenAI 兼容请求的可配置模型降级/别名规则，不影响 /models 可见模型列表",
+          "enable": "启用模型改写",
+          "enable_desc": "开启后，命中规则且不在白名单内的下游 API Key 会被改写到目标模型"
+        },
         "streaming": {
           "title": "流式传输配置",
           "description": "Keepalive 与 bootstrap 重试设置",
@@ -1377,8 +1383,22 @@
         "input_label": "API 密钥",
         "input_placeholder": "粘贴你的 API 密钥",
         "input_hint": "此处仅修改本地配置文件内容，不会自动同步到 API 密钥管理接口",
+        "remark_label": "备注",
+        "remark_placeholder": "例如：张三 / 财务组",
+        "remark_hint": "用于配置面板和使用统计展示，不参与鉴权",
         "error_empty": "请输入 API 密钥",
         "error_invalid": "API 密钥包含无效字符"
+      },
+      "model_rewrite": {
+        "rule": "规则",
+        "match_models": "匹配模型",
+        "match_model_placeholder": "如 gpt-5.5 或 gpt-5.*",
+        "target_model": "目标模型",
+        "target_model_placeholder": "如 gpt-5.4",
+        "bypass_api_keys": "不改写 API Key 白名单",
+        "bypass_api_key_placeholder": "允许保留原模型的下游 API Key",
+        "no_rules": "暂无模型改写规则",
+        "add_rule": "添加规则"
       },
       "payload_rules": {
         "rule": "规则",

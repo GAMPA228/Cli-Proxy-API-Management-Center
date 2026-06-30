@@ -1,15 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
 import { isMap, parse as parseYaml, parseDocument } from 'yaml';
 import type {
+  ModelRewriteRule,
   PayloadFilterRule,
   PayloadParamEntry,
   PayloadParamValueType,
   PayloadRule,
+  VisualApiKeyEntry,
   VisualConfigValues,
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
 } from '@/types/visualConfig';
-import { DEFAULT_VISUAL_VALUES } from '@/types/visualConfig';
+import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -36,15 +38,38 @@ function extractApiKeyValue(raw: unknown): string | null {
   return null;
 }
 
-function parseApiKeysText(raw: unknown): string {
-  if (!Array.isArray(raw)) return '';
+function extractApiKeyRemark(raw: unknown): string {
+  const record = asRecord(raw);
+  if (!record) return '';
 
-  const keys: string[] = [];
+  const candidates = [record.remark, record.name, record.note, record.label];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string') {
+      return candidate.trim();
+    }
+  }
+  return '';
+}
+
+function parseApiKeyEntries(raw: unknown): VisualApiKeyEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  const entries: VisualApiKeyEntry[] = [];
   for (const item of raw) {
     const key = extractApiKeyValue(item);
-    if (key) keys.push(key);
+    if (key) {
+      entries.push({
+        id: makeClientId(),
+        apiKey: key,
+        remark: extractApiKeyRemark(item),
+      });
+    }
   }
-  return keys.join('\n');
+  return entries;
+}
+
+function parseApiKeysText(raw: unknown): string {
+  return parseApiKeyEntries(raw).map((entry) => entry.apiKey).join('\n');
 }
 
 function parseStringListText(raw: unknown): string {
@@ -74,24 +99,60 @@ function replaceApiKeyValue(entry: unknown, apiKey: string): unknown {
   return { ...record, 'api-key': apiKey };
 }
 
+function replaceApiKeyRemark(entry: unknown, remark: string): unknown {
+  const record = asRecord(entry);
+  if (!record) return remark ? { 'api-key': '', remark } : entry;
+
+  const next = { ...record };
+  const remarkKey =
+    'remark' in next
+      ? 'remark'
+      : 'name' in next
+        ? 'name'
+        : 'note' in next
+          ? 'note'
+          : 'label' in next
+            ? 'label'
+            : 'remark';
+
+  if (remark) {
+    next[remarkKey] = remark;
+  } else {
+    delete next.remark;
+    delete next.name;
+    delete next.note;
+    delete next.label;
+  }
+  return next;
+}
+
 function buildApiKeyEntries(
-  apiKeys: string[],
+  apiKeyEntries: VisualApiKeyEntry[],
   metadata: ApiKeysStorageMetadata
 ): Array<string | Record<string, unknown>> {
-  return apiKeys.map((apiKey, index) => {
+  const hasRemark = apiKeyEntries.some((entry) => entry.remark.trim() !== '');
+  return apiKeyEntries.map((entry, index) => {
+    const apiKey = entry.apiKey.trim();
+    const remark = entry.remark.trim();
     const originalEntry = metadata.originalEntries[index];
-    if (metadata.entryMode === 'object') {
+    if (metadata.entryMode === 'object' || hasRemark) {
       const replaced = replaceApiKeyValue(originalEntry, apiKey);
-      return asRecord(replaced) ?? { 'api-key': apiKey };
+      const withKey = asRecord(replaced) ?? { 'api-key': apiKey };
+      const withRemark = replaceApiKeyRemark(withKey, remark);
+      return asRecord(withRemark) ?? { 'api-key': apiKey, ...(remark ? { remark } : {}) };
     }
 
     const record = asRecord(originalEntry);
-    return record ? ({ ...record, ...(replaceApiKeyValue(record, apiKey) as Record<string, unknown>) }) : apiKey;
+    if (!record) return apiKey;
+    const withKey = { ...record, ...(replaceApiKeyValue(record, apiKey) as Record<string, unknown>) };
+    const withRemark = replaceApiKeyRemark(withKey, remark);
+    return asRecord(withRemark) ?? apiKey;
   });
 }
 
 function resolveApiKeysStorage(parsed: Record<string, unknown>): {
   text: string;
+  entries: VisualApiKeyEntry[];
   metadata: ApiKeysStorageMetadata;
 } {
   const legacyEntries = Array.isArray(parsed['api-keys']) ? parsed['api-keys'] : [];
@@ -111,6 +172,7 @@ function resolveApiKeysStorage(parsed: Record<string, unknown>): {
 
     return {
       text: parseApiKeysText(providerEntries),
+      entries: parseApiKeyEntries(providerEntries),
       metadata: {
         source: 'auth-provider',
         providerListKey,
@@ -126,6 +188,7 @@ function resolveApiKeysStorage(parsed: Record<string, unknown>): {
 
   return {
     text: parseApiKeysText(legacyEntries),
+    entries: parseApiKeyEntries(legacyEntries),
     metadata: {
       source: 'legacy',
       entryMode: legacyEntries.some((entry) => Boolean(asRecord(entry))) ? 'object' : 'string',
@@ -388,6 +451,43 @@ function parsePayloadFilterRules(rules: unknown): PayloadFilterRule[] {
   });
 }
 
+function parseStringArray(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => (typeof item === 'string' ? item.trim() : String(item ?? '').trim()))
+    .filter(Boolean);
+}
+
+function parseModelRewriteRules(rules: unknown): ModelRewriteRule[] {
+  if (!Array.isArray(rules)) return [];
+
+  return rules.map((rule, index) => {
+    const record = asRecord(rule) ?? {};
+    const targetRaw = record['target-model'] ?? record.targetModel;
+    const targetModel = typeof targetRaw === 'string' ? targetRaw : String(targetRaw ?? '');
+    return {
+      id: `model-rewrite-rule-${index}`,
+      matchModels: parseStringArray(record['match-models'] ?? record.matchModels),
+      targetModel,
+      bypassApiKeys: parseStringArray(record['bypass-api-keys'] ?? record.bypassApiKeys),
+    };
+  });
+}
+
+function serializeModelRewriteRulesForYaml(rules: ModelRewriteRule[]): Array<Record<string, unknown>> {
+  return rules
+    .map((rule) => {
+      const matchModels = parseStringArray(rule.matchModels);
+      const targetModel = rule.targetModel.trim();
+      const bypassApiKeys = parseStringArray(rule.bypassApiKeys);
+      return {
+        'match-models': matchModels,
+        'target-model': targetModel,
+        'bypass-api-keys': bypassApiKeys,
+      };
+    })
+    .filter((rule) => rule['match-models'].length > 0 && Boolean(rule['target-model']));
+}
 function serializePayloadRulesForYaml(rules: PayloadRule[]): Array<Record<string, unknown>> {
   return rules
     .map((rule) => {
@@ -488,6 +588,7 @@ export function useVisualConfig() {
       const streaming = asRecord(parsed.streaming);
       const thinkingPolicy = asRecord(parsed['thinking-policy']);
       const codexThinkingPolicy = asRecord(thinkingPolicy?.codex);
+      const modelRewrite = asRecord(parsed['model-rewrite']);
       const apiKeysStorage = resolveApiKeysStorage(parsed);
 
       const newValues: VisualConfigValues = {
@@ -511,6 +612,7 @@ export function useVisualConfig() {
 
         authDir: typeof parsed['auth-dir'] === 'string' ? parsed['auth-dir'] : '',
         apiKeysText: apiKeysStorage.text,
+        apiKeyEntries: apiKeysStorage.entries,
 
         debug: Boolean(parsed.debug),
         commercialMode: Boolean(parsed['commercial-mode']),
@@ -526,6 +628,8 @@ export function useVisualConfig() {
         thinkingPolicyCodexEnabled: Boolean(codexThinkingPolicy?.enabled),
         thinkingPolicyCodexDefaultEffort: 'high',
         thinkingPolicyCodexXhighApiKeysText: parseStringListText(codexThinkingPolicy?.['xhigh-api-keys']),
+        modelRewriteEnabled: Boolean(modelRewrite?.enabled),
+        modelRewriteRules: parseModelRewriteRules(modelRewrite?.rules),
 
         quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
         quotaSwitchPreviewModel: Boolean(
@@ -607,12 +711,19 @@ export function useVisualConfig() {
         }
 
         setStringInDoc(doc, ['auth-dir'], values.authDir);
-        if (values.apiKeysText !== baselineValues.apiKeysText) {
-          const apiKeys = values.apiKeysText
-            .split('\n')
-            .map((key) => key.trim())
-            .filter(Boolean);
-          const apiKeyEntries = buildApiKeyEntries(apiKeys, apiKeysStorageMetadata);
+        if (
+          values.apiKeysText !== baselineValues.apiKeysText ||
+          JSON.stringify(values.apiKeyEntries) !== JSON.stringify(baselineValues.apiKeyEntries)
+        ) {
+          const normalizedEntries = values.apiKeyEntries
+            .map((entry) => ({
+              ...entry,
+              apiKey: entry.apiKey.trim(),
+              remark: entry.remark.trim(),
+            }))
+            .filter((entry) => entry.apiKey);
+          const apiKeys = normalizedEntries.map((entry) => entry.apiKey);
+          const apiKeyEntries = buildApiKeyEntries(normalizedEntries, apiKeysStorageMetadata);
 
           if (apiKeysStorageMetadata.source === 'auth-provider') {
             ensureMapInDoc(doc, ['auth']);
@@ -678,6 +789,21 @@ export function useVisualConfig() {
           deleteIfMapEmpty(doc, ['thinking-policy']);
         }
 
+        const modelRewriteRules = serializeModelRewriteRulesForYaml(values.modelRewriteRules);
+        if (
+          docHas(doc, ['model-rewrite']) ||
+          values.modelRewriteEnabled ||
+          modelRewriteRules.length > 0
+        ) {
+          ensureMapInDoc(doc, ['model-rewrite']);
+          setBooleanInDoc(doc, ['model-rewrite', 'enabled'], values.modelRewriteEnabled);
+          if (modelRewriteRules.length > 0) {
+            doc.setIn(['model-rewrite', 'rules'], modelRewriteRules);
+          } else if (docHas(doc, ['model-rewrite', 'rules'])) {
+            doc.deleteIn(['model-rewrite', 'rules']);
+          }
+          deleteIfMapEmpty(doc, ['model-rewrite']);
+        }
         if (
           docHas(doc, ['quota-exceeded']) ||
           !values.quotaSwitchProject ||

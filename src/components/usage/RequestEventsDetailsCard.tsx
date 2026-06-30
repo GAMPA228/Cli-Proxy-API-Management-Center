@@ -14,10 +14,15 @@ import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver
 import { parseTimestampMs } from '@/utils/timestamp';
 import {
   collectUsageDetails,
+  appendApiKeyRemark,
+  buildCandidateUsageSourceIds,
   extractTotalTokens,
+  formatUsageApiKeyLabel,
   getModelNamesFromUsage,
   normalizeAuthIndex,
   normalizeUsageSourceId,
+  type ApiKeyRemarkEntry,
+  type ApiKeyRemarkMap,
   type UsageDetail
 } from '@/utils/usage';
 import { downloadBlob } from '@/utils/download';
@@ -55,6 +60,8 @@ export interface RequestEventsDetailsCardProps {
   codexConfigs: ProviderKeyConfig[];
   vertexConfigs: ProviderKeyConfig[];
   openaiProviders: OpenAIProviderConfig[];
+  apiKeyEntries?: ApiKeyRemarkEntry[];
+  apiKeyRemarks?: ApiKeyRemarkMap;
 }
 
 const toNumber = (value: unknown): number => {
@@ -110,7 +117,9 @@ export function RequestEventsDetailsCard({
   claudeConfigs,
   codexConfigs,
   vertexConfigs,
-  openaiProviders
+  openaiProviders,
+  apiKeyEntries = [],
+  apiKeyRemarks = {}
 }: RequestEventsDetailsCardProps) {
   const { t, i18n } = useTranslation();
 
@@ -163,6 +172,19 @@ export function RequestEventsDetailsCard({
       }),
     [claudeConfigs, codexConfigs, geminiKeys, openaiProviders, vertexConfigs]
   );
+
+  const downstreamSourceLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    apiKeyEntries.forEach((entry) => {
+      const apiKey = String(entry.apiKey ?? '').trim();
+      if (!apiKey) return;
+      const label = formatUsageApiKeyLabel(apiKey, apiKeyRemarks);
+      buildCandidateUsageSourceIds({ apiKey }).forEach((sourceId) => {
+        map.set(sourceId, label);
+      });
+    });
+    return map;
+  }, [apiKeyEntries, apiKeyRemarks]);
 
   const detailQuery = useMemo(
     () => ({
@@ -228,7 +250,11 @@ export function RequestEventsDetailsCard({
           ? '-'
           : String(authIndexRaw);
       const sourceInfo = resolveSourceDisplay(sourceLookup, authIndexRaw, sourceInfoMap, authFileMap);
-      const source = sourceInfo.displayName;
+      const downstreamSource =
+        sourceQuery && apiKeyRemarks[sourceQuery]
+          ? formatUsageApiKeyLabel(sourceQuery, apiKeyRemarks)
+          : downstreamSourceLabelMap.get(sourceLookup);
+      const source = downstreamSource || sourceInfo.displayName;
       const sourceKey = sourceInfo.identityKey ?? `source:${sourceLookup || source}`;
       const sourceType = sourceInfo.type;
       const model = String(detail.__modelName ?? '').trim() || '-';
@@ -254,7 +280,7 @@ export function RequestEventsDetailsCard({
         reasoningEffort,
         sourceKey,
         sourceQuery,
-        sourceRaw: sourceLookup || '-',
+        sourceRaw: downstreamSource ? appendApiKeyRemark(sourceLookup || '-', sourceQuery, apiKeyRemarks) : sourceLookup || '-',
         source,
         sourceType,
         authIndex,
@@ -301,7 +327,7 @@ export function RequestEventsDetailsCard({
         source: buildDisambiguatedSourceLabel(row),
       }))
       .sort((a, b) => b.timestampMs - a.timestampMs);
-  }, [authFileMap, detailsMode, i18n.language, serverDetails, sourceInfoMap, usage]);
+  }, [apiKeyRemarks, authFileMap, detailsMode, downstreamSourceLabelMap, i18n.language, serverDetails, sourceInfoMap, usage]);
 
   const modelOptions = useMemo(() => {
     const models = new Set<string>(getModelNamesFromUsage(usage));
@@ -691,7 +717,6 @@ export function RequestEventsDetailsCard({
     </Card>
   );
 }
-
 
 
 

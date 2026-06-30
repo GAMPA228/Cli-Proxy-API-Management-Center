@@ -243,6 +243,10 @@
   flex-shrink: 0;
 }
 
+.apiKeyValueWrap {
+  min-width: 0;
+}
+
 .apiKeyValue {
   min-width: 0;
   overflow: hidden;
@@ -251,6 +255,15 @@
   font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   color: var(--text-primary);
+}
+
+.apiKeyRemark {
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .apiKeyActions {
@@ -724,4 +737,3 @@
     width: 100%;
   }
 }
-

@@ -12,6 +12,8 @@ import {
   formatCompactNumber,
   formatDayLabel,
   formatHourLabel,
+  formatUsageApiKeyLabel,
+  type ApiKeyRemarkMap,
   type UsageDetailWithEndpoint
 } from '@/utils/usage';
 import { getHourChartMinWidth } from '@/utils/usage/chartConfig';
@@ -29,6 +31,7 @@ export interface ApiKeyTokenTrendChartProps {
   isDark: boolean;
   isMobile: boolean;
   hourWindowHours?: number;
+  apiKeyRemarks?: ApiKeyRemarkMap;
   emptyText: string;
 }
 
@@ -134,14 +137,14 @@ const buildApiKeySeries = (
   return { labels, totalsByKey, valuesByKey };
 };
 
-const displayApiKey = (apiKey: string, otherLabel: string): string => {
+const displayApiKey = (apiKey: string, otherLabel: string, apiKeyRemarks?: ApiKeyRemarkMap): string => {
   if (apiKey === OTHER_KEY) {
     return otherLabel;
   }
   if (apiKey === 'unknown') {
     return 'unknown';
   }
-  return maskApiKey(apiKey) || apiKey;
+  return formatUsageApiKeyLabel(apiKey, apiKeyRemarks) || maskApiKey(apiKey) || apiKey;
 };
 
 export function ApiKeyTokenTrendChart({
@@ -152,6 +155,7 @@ export function ApiKeyTokenTrendChart({
   isDark,
   isMobile,
   hourWindowHours,
+  apiKeyRemarks,
   emptyText
 }: ApiKeyTokenTrendChartProps) {
   const { t } = useTranslation();
@@ -179,7 +183,7 @@ export function ApiKeyTokenTrendChart({
       );
 
       return {
-        label: displayApiKey(key, otherLabel),
+        label: displayApiKey(key, otherLabel, apiKeyRemarks),
         data,
         borderColor: color.borderColor,
         backgroundColor: color.borderColor,
@@ -199,7 +203,7 @@ export function ApiKeyTokenTrendChart({
         dataset.data.some((value) => typeof value === 'number' && value > 0)
       )
     };
-  }, [hourWindowHours, otherLabel, period, topCount, usage]);
+  }, [apiKeyRemarks, hourWindowHours, otherLabel, period, topCount, usage]);
 
   const chartOptions: ChartOptions<'bar'> = useMemo(() => {
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(17, 24, 39, 0.06)';
