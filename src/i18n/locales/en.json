@@ -1398,6 +1398,8 @@
         "target_model_placeholder": "e.g. gpt-5.4",
         "bypass_api_keys": "Bypass API key whitelist",
         "bypass_api_key_placeholder": "Downstream API key allowed to keep the original model",
+        "bypass_api_key_select_placeholder": "Select from API keys (with remarks)",
+        "bypass_api_key_no_options": "No API keys available",
         "no_rules": "No model rewrite rules",
         "add_rule": "Add rule"
       },

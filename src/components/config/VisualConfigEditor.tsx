@@ -370,6 +370,7 @@ export function VisualConfigEditor({
           />
           <ModelRewriteRulesEditor
             value={values.modelRewriteRules}
+            apiKeyEntries={values.apiKeyEntries}
             disabled={disabled}
             onChange={handleModelRewriteRulesChange}
           />

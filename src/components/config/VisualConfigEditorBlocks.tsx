@@ -34,6 +34,12 @@ function getValidationMessage(
   return t(`config_management.visual.validation.${errorCode}`);
 }
 
+function formatApiKeySelectLabel(apiKey: string, remark?: string): string {
+  const maskedKey = maskApiKey(apiKey);
+  const trimmedRemark = remark?.trim();
+  return trimmedRemark ? `${maskedKey}(${trimmedRemark})` : maskedKey;
+}
+
 export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
   entries,
@@ -360,16 +366,28 @@ const StringListEditor = memo(function StringListEditor({
   disabled,
   placeholder,
   inputAriaLabel,
+  options,
+  selectPlaceholder,
+  emptyOptionsLabel,
   onChange,
 }: {
   value: string[];
   disabled?: boolean;
   placeholder?: string;
   inputAriaLabel?: string;
+  options?: ReadonlyArray<{ value: string; label: string }>;
+  selectPlaceholder?: string;
+  emptyOptionsLabel?: string;
   onChange: (next: string[]) => void;
 }) {
   const { t } = useTranslation();
   const items = value.length ? value : [];
+  const [selectedOption, setSelectedOption] = useState('');
+  const optionList = useMemo(() => {
+    if (!options?.length) return [];
+    const selected = new Set(items.map((item) => item.trim()).filter(Boolean));
+    return options.filter((option) => !selected.has(option.value));
+  }, [items, options]);
   const [itemIds, setItemIds] = useState(() => items.map(() => makeClientId()));
   const renderItemIds = useMemo(() => {
     if (itemIds.length === items.length) return itemIds;
@@ -379,6 +397,17 @@ const StringListEditor = memo(function StringListEditor({
 
   const updateItem = (index: number, nextValue: string) =>
     onChange(items.map((item, i) => (i === index ? nextValue : item)));
+  const addSelectedOption = (nextValue: string) => {
+    const trimmed = nextValue.trim();
+    if (!trimmed) return;
+    if (items.some((item) => item.trim() === trimmed)) {
+      setSelectedOption('');
+      return;
+    }
+    setItemIds([...renderItemIds, makeClientId()]);
+    onChange([...items, trimmed]);
+    setSelectedOption('');
+  };
   const addItem = () => {
     setItemIds([...renderItemIds, makeClientId()]);
     onChange([...items, '']);
@@ -390,6 +419,22 @@ const StringListEditor = memo(function StringListEditor({
 
   return (
     <div className={styles.ruleGroupBody}>
+      {options ? (
+        <div className={styles.selectAddRow}>
+          <Select
+            value={selectedOption}
+            options={optionList}
+            onChange={addSelectedOption}
+            placeholder={
+              optionList.length > 0
+                ? ''
+                : (emptyOptionsLabel ?? selectPlaceholder ?? placeholder)
+            }
+            disabled={disabled || optionList.length === 0}
+            ariaLabel={inputAriaLabel ?? placeholder}
+          />
+        </div>
+      ) : null}
       {items.map((item, index) => (
         <div key={renderItemIds[index] ?? `item-${index}`} className={styles.stringRow}>
           <input
@@ -424,15 +469,27 @@ const StringListEditor = memo(function StringListEditor({
 
 export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
   value,
+  apiKeyEntries,
   disabled,
   onChange,
 }: {
   value: ModelRewriteRule[];
+  apiKeyEntries?: VisualApiKeyEntry[];
   disabled?: boolean;
   onChange: (next: ModelRewriteRule[]) => void;
 }) {
   const { t } = useTranslation();
   const rules = value.length ? value : [];
+  const apiKeyOptions = useMemo(
+    () =>
+      (apiKeyEntries ?? [])
+        .map((entry) => ({
+          value: entry.apiKey.trim(),
+          label: formatApiKeySelectLabel(entry.apiKey, entry.remark),
+        }))
+        .filter((option) => option.value),
+    [apiKeyEntries]
+  );
 
   const addRule = () =>
     onChange([
@@ -515,6 +572,9 @@ export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
               disabled={disabled}
               placeholder={t('config_management.visual.model_rewrite.bypass_api_key_placeholder')}
               inputAriaLabel={t('config_management.visual.model_rewrite.bypass_api_keys')}
+              options={apiKeyOptions}
+              selectPlaceholder={t('config_management.visual.model_rewrite.bypass_api_key_select_placeholder')}
+              emptyOptionsLabel={t('config_management.visual.model_rewrite.bypass_api_key_no_options')}
               onChange={(bypassApiKeys) => updateRule(ruleIndex, { bypassApiKeys })}
             />
           </div>

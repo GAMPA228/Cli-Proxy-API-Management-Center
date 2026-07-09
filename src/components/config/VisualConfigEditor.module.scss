@@ -474,6 +474,12 @@
   padding: 0;
 }
 
+.selectAddRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+}
+
 .groupRowHeader {
   display: grid;
   align-items: center;

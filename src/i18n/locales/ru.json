@@ -1403,6 +1403,8 @@
         "target_model_placeholder": "например gpt-5.4",
         "bypass_api_keys": "Белый список API-ключей без переписывания",
         "bypass_api_key_placeholder": "Downstream API-ключ, которому разрешена исходная модель",
+        "bypass_api_key_select_placeholder": "Выберите из API-ключей (с примечаниями)",
+        "bypass_api_key_no_options": "Нет доступных API-ключей",
         "no_rules": "Правил переписывания моделей нет",
         "add_rule": "Добавить правило"
       },

@@ -1398,6 +1398,8 @@
         "target_model_placeholder": "如 gpt-5.4",
         "bypass_api_keys": "不改写 API Key 白名单",
         "bypass_api_key_placeholder": "允许保留原模型的下游 API Key",
+        "bypass_api_key_select_placeholder": "从 API Key 列表选择（带备注）",
+        "bypass_api_key_no_options": "暂无可选择的 API Key",
         "no_rules": "暂无模型改写规则",
         "add_rule": "添加规则"
       },
