@@ -46,6 +46,8 @@ export interface ApiKeyRemarkEntry {
 
 export interface UsageDetail {
   timestamp: string;
+  api?: string;
+  client_ip?: string;
   source: string;
   auth_index: string | number | null;
   tokens: {
@@ -528,7 +530,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
     return normalized;
   };
 
-  Object.values(apis).forEach((apiEntry) => {
+  Object.entries(apis).forEach(([apiName, apiEntry]) => {
     if (!isRecord(apiEntry)) return;
     const modelsRaw = apiEntry.models;
     const models = isRecord(modelsRaw) ? modelsRaw : null;
@@ -546,6 +548,8 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
         const tokensRaw = isRecord(detailRaw.tokens) ? detailRaw.tokens : {};
         details.push({
           timestamp,
+          api: apiName,
+          client_ip: typeof detailRaw.client_ip === 'string' ? detailRaw.client_ip : '',
           source: normalizeSource(detailRaw.source),
           auth_index:
             (detailRaw?.auth_index ??

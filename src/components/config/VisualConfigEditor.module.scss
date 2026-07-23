@@ -164,6 +164,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.apiKeysHeaderSelect {
+  width: min(260px, 100%);
+  flex-shrink: 0;
 }
 
 .apiKeysMeta {
@@ -344,6 +350,10 @@
 @media (max-width: 640px) {
   .apiKeysList {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .apiKeysHeaderSelect {
+    width: 100%;
   }
 }
 

@@ -38,6 +38,9 @@ type RequestEventRow = {
   timestampLabel: string;
   model: string;
   reasoningEffort: string;
+  clientIP: string;
+  apiKey: string;
+  apiKeyLabel: string;
   sourceKey: string;
   sourceQuery: string;
   sourceRaw: string;
@@ -86,6 +89,13 @@ const normalizeSourceForLookup = (value: unknown): string => {
   return normalizeUsageSourceId(raw);
 };
 
+const formatRequestApiKeyLabel = (value: unknown, apiKeyRemarks?: ApiKeyRemarkMap): string => {
+  const raw = typeof value === 'string' ? value.trim() : value === null || value === undefined ? '' : String(value).trim();
+  if (!raw) return '-';
+  const masked = raw.length > 9 ? `${raw.slice(0, 6)}...${raw.slice(-3)}` : raw;
+  return appendApiKeyRemark(masked, raw, apiKeyRemarks);
+};
+
 const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
   const timestamp = typeof row.timestamp === 'string' ? row.timestamp : '';
   if (!timestamp) return null;
@@ -93,6 +103,8 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
   const timestampMs = parseTimestampMs(timestamp);
   return {
     timestamp,
+    api: typeof row.api === 'string' ? row.api : '',
+    client_ip: typeof row.client_ip === 'string' ? row.client_ip : '',
     source: typeof row.source === 'string' ? row.source : '',
     auth_index: row.auth_index ?? null,
     tokens: {
@@ -259,6 +271,9 @@ export function RequestEventsDetailsCard({
       const sourceType = sourceInfo.type;
       const model = String(detail.__modelName ?? '').trim() || '-';
       const reasoningEffort = String(detail.reasoning_effort ?? '').trim();
+      const clientIP = String(detail.client_ip ?? '').trim() || '-';
+      const apiKey = String(detail.api ?? '').trim();
+      const apiKeyLabel = formatRequestApiKeyLabel(apiKey, apiKeyRemarks);
       const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
       const outputTokens = Math.max(toNumber(detail.tokens?.output_tokens), 0);
       const reasoningTokens = Math.max(toNumber(detail.tokens?.reasoning_tokens), 0);
@@ -272,12 +287,15 @@ export function RequestEventsDetailsCard({
       );
 
       return {
-        id: `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
+        id: `${timestamp}-${model}-${apiKey}-${sourceKey}-${authIndex}-${index}`,
         timestamp,
         timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
         model,
         reasoningEffort,
+        clientIP,
+        apiKey,
+        apiKeyLabel,
         sourceKey,
         sourceQuery,
         sourceRaw: downstreamSource ? appendApiKeyRemark(sourceLookup || '-', sourceQuery, apiKeyRemarks) : sourceLookup || '-',
@@ -383,6 +401,9 @@ export function RequestEventsDetailsCard({
         const keywordMatched =
           !normalizedSearchKeyword ||
           row.model.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.clientIP.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.apiKey.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.apiKeyLabel.toLowerCase().includes(normalizedSearchKeyword) ||
           row.sourceType.toLowerCase().includes(normalizedSearchKeyword) ||
           row.source.toLowerCase().includes(normalizedSearchKeyword) ||
           row.sourceRaw.toLowerCase().includes(normalizedSearchKeyword) ||
@@ -428,6 +449,8 @@ export function RequestEventsDetailsCard({
     const csvHeader = [
       'timestamp',
       'model',
+      'client_ip',
+      'api_key',
       'reasoning_effort',
       'source_type',
       'source',
@@ -445,6 +468,8 @@ export function RequestEventsDetailsCard({
       [
         row.timestamp,
         row.model,
+        row.clientIP,
+        row.apiKeyLabel,
         row.reasoningEffort,
         row.sourceType,
         row.source,
@@ -473,6 +498,8 @@ export function RequestEventsDetailsCard({
     const payload = rowsToExport.map((row) => ({
       timestamp: row.timestamp,
       model: row.model,
+      client_ip: row.clientIP,
+      api_key: row.apiKeyLabel,
       reasoning_effort: row.reasoningEffort,
       source_type: row.sourceType,
       source: row.source,
@@ -519,10 +546,10 @@ export function RequestEventsDetailsCard({
                 setPage(1);
               }}
               placeholder={t('usage_stats.request_events_search_placeholder', {
-                defaultValue: '搜索模型 / 类型 / 账号 / 认证索引'
+                defaultValue: '搜索模型 / IP / API Key / 类型 / 账号 / 认证索引'
               })}
               aria-label={t('usage_stats.request_events_search_placeholder', {
-                defaultValue: '搜索模型 / 类型 / 账号 / 认证索引'
+                defaultValue: '搜索模型 / IP / API Key / 类型 / 账号 / 认证索引'
               })}
             />
           </div>
@@ -621,6 +648,8 @@ export function RequestEventsDetailsCard({
               <colgroup>
                 <col className={styles.requestEventsColTime} />
                 <col className={styles.requestEventsColModel} />
+                <col className={styles.requestEventsColClientIP} />
+                <col className={styles.requestEventsColAPIKey} />
                 <col className={styles.requestEventsColSourceType} />
                 <col className={styles.requestEventsColSourceAccount} />
                 <col className={styles.requestEventsColAuthIndex} />
@@ -635,6 +664,8 @@ export function RequestEventsDetailsCard({
                 <tr>
                   <th>{t('usage_stats.request_events_timestamp')}</th>
                   <th>{t('usage_stats.model_name')}</th>
+                  <th>{t('usage_stats.request_events_client_ip')}</th>
+                  <th>{t('usage_stats.request_events_api_key')}</th>
                   <th>{t('usage_stats.request_events_source_type')}</th>
                   <th>{t('usage_stats.request_events_source_account')}</th>
                   <th>{t('usage_stats.request_events_auth_index')}</th>
@@ -662,6 +693,18 @@ export function RequestEventsDetailsCard({
                           <span className={styles.reasoningEffortBadge}>{row.reasoningEffort}</span>
                         )}
                       </span>
+                    </td>
+                    <td
+                      className={`${styles.requestEventsClientIP} ${styles.tableCellMono}`}
+                      title={row.clientIP}
+                    >
+                      {row.clientIP}
+                    </td>
+                    <td
+                      className={`${styles.requestEventsAPIKey} ${styles.tableCellMono}`}
+                      title={row.apiKeyLabel}
+                    >
+                      {row.apiKeyLabel}
                     </td>
                     <td className={styles.tableCellStatus} title={row.sourceType || '-'}>
                       {row.sourceType ? (

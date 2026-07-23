@@ -48,6 +48,7 @@ export type ModelRewriteRule = {
   id: string;
   matchModels: string[];
   targetModel: string;
+  targetThinkingEffort: string;
   bypassApiKeys: string[];
 };
 
@@ -62,6 +63,8 @@ export interface StreamingConfig {
   bootstrapRetries: string;
   nonstreamKeepaliveInterval: string;
 }
+
+export type CodexThinkingDefaultEffort = 'low' | 'medium' | 'high';
 
 export type VisualConfigValues = {
   host: string;
@@ -90,7 +93,7 @@ export type VisualConfigValues = {
   routingStrategy: 'round-robin' | 'fill-first';
   wsAuth: boolean;
   thinkingPolicyCodexEnabled: boolean;
-  thinkingPolicyCodexDefaultEffort: 'high';
+  thinkingPolicyCodexDefaultEffort: CodexThinkingDefaultEffort;
   thinkingPolicyCodexXhighApiKeysText: string;
   modelRewriteEnabled: boolean;
   modelRewriteRules: ModelRewriteRule[];

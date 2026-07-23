@@ -7,6 +7,7 @@ export interface ModelInfo {
   name: string;
   alias?: string;
   description?: string;
+  supportedReasoningLevels?: string[];
 }
 
 const MODEL_CATEGORIES = [
@@ -33,6 +34,19 @@ const matchCategory = (text: string) => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
+const normalizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  value.forEach((item) => {
+    const text = String(item ?? '').trim().toLowerCase();
+    if (!text || seen.has(text)) return;
+    seen.add(text);
+    out.push(text);
+  });
+  return out;
+};
+
 export function normalizeModelList(payload: unknown, { dedupe = false } = {}): ModelInfo[] {
   const toModel = (entry: unknown): ModelInfo | null => {
     if (typeof entry === 'string') {
@@ -46,12 +60,20 @@ export function normalizeModelList(payload: unknown, { dedupe = false } = {}): M
 
     const alias = entry.alias || entry.display_name || entry.displayName;
     const description = entry.description || entry.note || entry.comment;
+    const supportedReasoningLevels = normalizeStringArray(
+      entry.supported_reasoning_levels ??
+        entry.supportedReasoningLevels ??
+        (isRecord(entry.thinking) ? entry.thinking.levels : undefined)
+    );
     const model: ModelInfo = { name: String(name) };
     if (alias && alias !== name) {
       model.alias = String(alias);
     }
     if (description) {
       model.description = String(description);
+    }
+    if (supportedReasoningLevels.length) {
+      model.supportedReasoningLevels = supportedReasoningLevels;
     }
     return model;
   };

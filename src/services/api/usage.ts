@@ -37,6 +37,7 @@ export interface UsageDetailRow {
   model?: string;
   timestamp?: string;
   latency_ms?: number;
+  client_ip?: string;
   source?: string;
   auth_index?: string | number | null;
   reasoning_effort?: string;

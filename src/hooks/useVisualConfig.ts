@@ -10,6 +10,7 @@ import type {
   VisualConfigValues,
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
+  CodexThinkingDefaultEffort,
 } from '@/types/visualConfig';
 import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
 
@@ -78,6 +79,13 @@ function parseStringListText(raw: unknown): string {
     .map((item) => (typeof item === 'string' ? item.trim() : String(item ?? '').trim()))
     .filter(Boolean)
     .join('\n');
+}
+
+function parseCodexThinkingDefaultEffort(raw: unknown): CodexThinkingDefaultEffort {
+  if (typeof raw !== 'string') return 'high';
+  const effort = raw.trim().toLowerCase();
+  if (effort === 'low' || effort === 'medium' || effort === 'high') return effort;
+  return 'high';
 }
 
 function parseLines(value: string): string[] {
@@ -464,11 +472,14 @@ function parseModelRewriteRules(rules: unknown): ModelRewriteRule[] {
   return rules.map((rule, index) => {
     const record = asRecord(rule) ?? {};
     const targetRaw = record['target-model'] ?? record.targetModel;
+    const effortRaw = record['target-thinking-effort'] ?? record.targetThinkingEffort;
     const targetModel = typeof targetRaw === 'string' ? targetRaw : String(targetRaw ?? '');
+    const targetThinkingEffort = typeof effortRaw === 'string' ? effortRaw : String(effortRaw ?? '');
     return {
       id: `model-rewrite-rule-${index}`,
       matchModels: parseStringArray(record['match-models'] ?? record.matchModels),
       targetModel,
+      targetThinkingEffort: targetThinkingEffort.trim().toLowerCase(),
       bypassApiKeys: parseStringArray(record['bypass-api-keys'] ?? record.bypassApiKeys),
     };
   });
@@ -479,14 +490,17 @@ function serializeModelRewriteRulesForYaml(rules: ModelRewriteRule[]): Array<Rec
     .map((rule) => {
       const matchModels = parseStringArray(rule.matchModels);
       const targetModel = rule.targetModel.trim();
+      const targetThinkingEffort = String(rule.targetThinkingEffort ?? '').trim().toLowerCase();
       const bypassApiKeys = parseStringArray(rule.bypassApiKeys);
-      return {
+      const serialized: Record<string, unknown> = {
         'match-models': matchModels,
         'target-model': targetModel,
         'bypass-api-keys': bypassApiKeys,
       };
+      if (targetThinkingEffort) serialized['target-thinking-effort'] = targetThinkingEffort;
+      return serialized;
     })
-    .filter((rule) => rule['match-models'].length > 0 && Boolean(rule['target-model']));
+    .filter((rule) => Array.isArray(rule['match-models']) && rule['match-models'].length > 0 && Boolean(rule['target-model']));
 }
 function serializePayloadRulesForYaml(rules: PayloadRule[]): Array<Record<string, unknown>> {
   return rules
@@ -626,7 +640,9 @@ export function useVisualConfig() {
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
         wsAuth: Boolean(parsed['ws-auth']),
         thinkingPolicyCodexEnabled: Boolean(codexThinkingPolicy?.enabled),
-        thinkingPolicyCodexDefaultEffort: 'high',
+        thinkingPolicyCodexDefaultEffort: parseCodexThinkingDefaultEffort(
+          codexThinkingPolicy?.['default-effort']
+        ),
         thinkingPolicyCodexXhighApiKeysText: parseStringListText(codexThinkingPolicy?.['xhigh-api-keys']),
         modelRewriteEnabled: Boolean(modelRewrite?.enabled),
         modelRewriteRules: parseModelRewriteRules(modelRewrite?.rules),

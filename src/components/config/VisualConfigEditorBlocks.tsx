@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/Select';
 import { useNotificationStore } from '@/stores';
 import styles from './VisualConfigEditor.module.scss';
 import { copyToClipboard } from '@/utils/clipboard';
+import type { ModelInfo } from '@/utils/models';
 import type {
   ModelRewriteRule,
   PayloadFilterRule,
@@ -40,6 +41,17 @@ function formatApiKeySelectLabel(apiKey: string, remark?: string): string {
   return trimmedRemark ? `${maskedKey}(${trimmedRemark})` : maskedKey;
 }
 
+const MODEL_REWRITE_THINKING_EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
+
+function normalizeModelNameForLookup(model: string): string {
+  return String(model ?? '').trim().replace(/\([^()]*\)$/, '').trim().toLowerCase();
+}
+
+function formatModelOptionLabel(model: ModelInfo): string {
+  if (model.alias && model.alias !== model.name) return `${model.name} (${model.alias})`;
+  return model.name;
+}
+
 export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
   entries,
@@ -55,6 +67,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   inputLabel,
   inputPlaceholder,
   inputHint,
+  selectEntries,
+  emptySelectLabel,
   showGenerate = true,
   showRemark = false,
 }: {
@@ -72,6 +86,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   inputLabel?: string;
   inputPlaceholder?: string;
   inputHint?: string;
+  selectEntries?: VisualApiKeyEntry[];
+  emptySelectLabel?: string;
   showGenerate?: boolean;
   showRemark?: boolean;
 }) {
@@ -100,6 +116,21 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           })),
     [apiKeys, entries, showRemark]
   );
+  const selectOptions = useMemo(
+    () =>
+      (selectEntries ?? [])
+        .map((entry) => ({
+          value: entry.apiKey.trim(),
+          label: formatApiKeySelectLabel(entry.apiKey, entry.remark),
+        }))
+        .filter((option) => option.value),
+    [selectEntries]
+  );
+  const availableSelectOptions = useMemo(() => {
+    if (!selectEntries) return [];
+    const selected = new Set(apiKeyEntries.map((entry) => entry.apiKey.trim()).filter(Boolean));
+    return selectOptions.filter((option) => !selected.has(option.value));
+  }, [apiKeyEntries, selectEntries, selectOptions]);
   const [apiKeyIds, setApiKeyIds] = useState(() => apiKeys.map(() => makeClientId()));
   const renderApiKeyIds = useMemo(() => {
     if (showRemark) return apiKeyEntries.map((entry) => entry.id || makeClientId());
@@ -164,6 +195,18 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     updateApiKeyEntries(apiKeyEntries.filter((_, i) => i !== index));
   };
 
+  const handleSelectAdd = (apiKey: string) => {
+    const trimmed = apiKey.trim();
+    if (!trimmed || apiKeyEntries.some((entry) => entry.apiKey.trim() === trimmed)) return;
+    const nextEntry: VisualApiKeyEntry = {
+      id: makeClientId(),
+      apiKey: trimmed,
+      remark: '',
+    };
+    setApiKeyIds([...renderApiKeyIds, makeClientId()]);
+    updateApiKeyEntries([...apiKeyEntries, nextEntry]);
+  };
+
   const handleSave = () => {
     const trimmed = inputValue.trim();
     if (!trimmed) {
@@ -214,9 +257,26 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           </label>
           <span className={styles.apiKeysCount}>{apiKeyEntries.length}</span>
         </div>
-        <Button size="sm" onClick={openAddModal} disabled={disabled}>
-          {addLabel ?? t('config_management.visual.api_keys.add')}
-        </Button>
+        {selectEntries ? (
+          <div className={styles.apiKeysHeaderSelect}>
+            <Select
+              value=""
+              options={availableSelectOptions}
+              onChange={handleSelectAdd}
+              placeholder={
+                availableSelectOptions.length > 0
+                  ? (addLabel ?? t('config_management.visual.api_keys.add'))
+                  : (emptySelectLabel ?? addLabel ?? t('config_management.visual.api_keys.add'))
+              }
+              disabled={disabled || availableSelectOptions.length === 0}
+              ariaLabel={addLabel ?? t('config_management.visual.api_keys.add')}
+            />
+          </div>
+        ) : (
+          <Button size="sm" onClick={openAddModal} disabled={disabled}>
+            {addLabel ?? t('config_management.visual.api_keys.add')}
+          </Button>
+        )}
       </div>
 
       {apiKeyEntries.length === 0 ? (
@@ -427,7 +487,7 @@ const StringListEditor = memo(function StringListEditor({
             onChange={addSelectedOption}
             placeholder={
               optionList.length > 0
-                ? ''
+                ? (selectPlaceholder ?? placeholder)
                 : (emptyOptionsLabel ?? selectPlaceholder ?? placeholder)
             }
             disabled={disabled || optionList.length === 0}
@@ -470,16 +530,37 @@ const StringListEditor = memo(function StringListEditor({
 export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
   value,
   apiKeyEntries,
+  modelOptions,
   disabled,
   onChange,
 }: {
   value: ModelRewriteRule[];
   apiKeyEntries?: VisualApiKeyEntry[];
+  modelOptions?: ModelInfo[];
   disabled?: boolean;
   onChange: (next: ModelRewriteRule[]) => void;
 }) {
   const { t } = useTranslation();
   const rules = value.length ? value : [];
+  const modelSelectOptions = useMemo(
+    () =>
+      (modelOptions ?? [])
+        .map((model) => ({ value: model.name.trim(), label: formatModelOptionLabel(model) }))
+        .filter((option) => option.value),
+    [modelOptions]
+  );
+  const modelLevelsByName = useMemo(() => {
+    const map = new Map<string, string[]>();
+    (modelOptions ?? []).forEach((model) => {
+      const key = normalizeModelNameForLookup(model.name);
+      if (!key) return;
+      const levels = (model.supportedReasoningLevels ?? [])
+        .map((level) => level.trim().toLowerCase())
+        .filter(Boolean);
+      if (levels.length) map.set(key, levels);
+    });
+    return map;
+  }, [modelOptions]);
   const apiKeyOptions = useMemo(
     () =>
       (apiKeyEntries ?? [])
@@ -494,11 +575,26 @@ export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
   const addRule = () =>
     onChange([
       ...rules,
-      { id: makeClientId(), matchModels: [''], targetModel: '', bypassApiKeys: [] },
+      { id: makeClientId(), matchModels: [''], targetModel: '', targetThinkingEffort: '', bypassApiKeys: [] },
     ]);
   const removeRule = (ruleIndex: number) => onChange(rules.filter((_, i) => i !== ruleIndex));
   const updateRule = (ruleIndex: number, patch: Partial<ModelRewriteRule>) =>
     onChange(rules.map((rule, i) => (i === ruleIndex ? { ...rule, ...patch } : rule)));
+  const getThinkingEffortOptions = (targetModel: string, currentEffort: string) => {
+    const supported = modelLevelsByName.get(normalizeModelNameForLookup(targetModel)) ?? MODEL_REWRITE_THINKING_EFFORTS;
+    const values = supported.length ? supported : MODEL_REWRITE_THINKING_EFFORTS;
+    const current = currentEffort.trim().toLowerCase();
+    const merged = current && !values.includes(current) ? [...values, current] : values;
+    return [
+      { value: '', label: t('config_management.visual.model_rewrite.target_thinking_effort_keep') },
+      ...merged.map((effort) => ({ value: effort, label: effort })),
+    ];
+  };
+  const getTargetModelOptions = (targetModel: string) => {
+    const trimmed = targetModel.trim();
+    if (!trimmed || modelSelectOptions.some((option) => option.value === trimmed)) return modelSelectOptions;
+    return [...modelSelectOptions, { value: trimmed, label: trimmed }];
+  };
 
   return (
     <div className={styles.ruleEditor}>
@@ -537,6 +633,9 @@ export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
               disabled={disabled}
               placeholder={t('config_management.visual.model_rewrite.match_model_placeholder')}
               inputAriaLabel={t('config_management.visual.model_rewrite.match_models')}
+              options={modelSelectOptions.length ? modelSelectOptions : undefined}
+              selectPlaceholder={t('config_management.visual.model_rewrite.model_select_placeholder')}
+              emptyOptionsLabel={t('config_management.visual.model_rewrite.model_select_empty')}
               onChange={(matchModels) => updateRule(ruleIndex, { matchModels })}
             />
           </div>
@@ -549,13 +648,45 @@ export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
                 </span>
               </div>
             </div>
-            <input
-              className="input"
-              placeholder={t('config_management.visual.model_rewrite.target_model_placeholder')}
-              value={rule.targetModel}
-              onChange={(e) => updateRule(ruleIndex, { targetModel: e.target.value })}
+            {modelSelectOptions.length ? (
+              <Select
+                value={rule.targetModel}
+                options={getTargetModelOptions(rule.targetModel)}
+                onChange={(targetModel) => updateRule(ruleIndex, { targetModel })}
+                placeholder={t('config_management.visual.model_rewrite.target_model_placeholder')}
+                disabled={disabled}
+                ariaLabel={t('config_management.visual.model_rewrite.target_model')}
+                dropdownWidth="content"
+              />
+            ) : (
+              <input
+                className="input"
+                placeholder={t('config_management.visual.model_rewrite.target_model_placeholder')}
+                value={rule.targetModel}
+                onChange={(e) => updateRule(ruleIndex, { targetModel: e.target.value })}
+                disabled={disabled}
+              />
+            )}
+          </div>
+
+          <div className={styles.ruleGroup}>
+            <div className={styles.ruleGroupHeader}>
+              <div className={styles.ruleGroupTitle}>
+                <span className={styles.ruleGroupLabel}>
+                  {t('config_management.visual.model_rewrite.target_thinking_effort')}
+                </span>
+              </div>
+            </div>
+            <Select
+              value={rule.targetThinkingEffort ?? ''}
+              options={getThinkingEffortOptions(rule.targetModel, rule.targetThinkingEffort ?? '')}
+              onChange={(targetThinkingEffort) => updateRule(ruleIndex, { targetThinkingEffort })}
               disabled={disabled}
+              ariaLabel={t('config_management.visual.model_rewrite.target_thinking_effort')}
             />
+            <div className="hint">
+              {t('config_management.visual.model_rewrite.target_thinking_effort_hint')}
+            </div>
           </div>
 
           <div className={styles.ruleGroup}>

@@ -13,7 +13,7 @@ import { IconCheck, IconChevronDown, IconChevronUp, IconRefreshCw, IconSearch } 
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
 import { DiffModal } from '@/components/config/DiffModal';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
-import { useNotificationStore, useAuthStore, useThemeStore } from '@/stores';
+import { useNotificationStore, useAuthStore, useThemeStore, useModelsStore } from '@/stores';
 import { configFileApi } from '@/services/api/configFile';
 import styles from './ConfigPage.module.scss';
 
@@ -34,7 +34,10 @@ export function ConfigPage() {
   const showNotification = useNotificationStore((state) => state.showNotification);
   const showConfirmation = useNotificationStore((state) => state.showConfirmation);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
+  const apiBase = useAuthStore((state) => state.apiBase);
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
+  const models = useModelsStore((state) => state.models);
+  const fetchModelsFromStore = useModelsStore((state) => state.fetchModels);
 
   const {
     visualValues,
@@ -100,6 +103,17 @@ export function ConfigPage() {
   useEffect(() => {
     loadConfig();
   }, [loadConfig]);
+
+  useEffect(() => {
+    if (activeTab !== 'visual' || connectionStatus !== 'connected' || !apiBase) return;
+    const primaryApiKey =
+      visualValues.apiKeyEntries.find((entry) => entry.apiKey.trim())?.apiKey.trim() ||
+      visualValues.apiKeysText.split('\n').map((line) => line.trim()).find(Boolean) ||
+      undefined;
+    fetchModelsFromStore(apiBase, primaryApiKey).catch(() => {
+      // Model dropdowns fall back to manual input when /models is unavailable.
+    });
+  }, [activeTab, apiBase, connectionStatus, fetchModelsFromStore, visualValues.apiKeyEntries, visualValues.apiKeysText]);
 
   useEffect(() => {
     if (activeTab !== 'visual' || !visualParseError) return;
@@ -483,6 +497,7 @@ export function ConfigPage() {
         <VisualConfigEditor
           values={visualValues}
           validationErrors={visualValidationErrors}
+          modelOptions={models}
           disabled={disableControls || loading}
           onChange={setVisualValues}
         />

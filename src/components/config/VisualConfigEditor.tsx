@@ -8,6 +8,9 @@ import { ConfigSection } from '@/components/config/ConfigSection';
 import { FrontendRequestTimeoutSection } from '@/components/config/FrontendRequestTimeoutSection';
 import styles from './VisualConfigEditor.module.scss';
 import type {
+  ModelInfo,
+} from '@/utils/models';
+import type {
   ModelRewriteRule,
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
@@ -29,6 +32,7 @@ interface VisualConfigEditorProps {
   validationErrors?: VisualConfigValidationErrors;
   disabled?: boolean;
   onChange: (values: Partial<VisualConfigValues>) => void;
+  modelOptions?: ModelInfo[];
 }
 
 function getValidationMessage(
@@ -170,6 +174,7 @@ export function VisualConfigEditor({
   validationErrors,
   disabled = false,
   onChange,
+  modelOptions = [],
 }: VisualConfigEditorProps) {
   const { t } = useTranslation();
   const routingStrategyLabelId = useId();
@@ -371,6 +376,7 @@ export function VisualConfigEditor({
           <ModelRewriteRulesEditor
             value={values.modelRewriteRules}
             apiKeyEntries={values.apiKeyEntries}
+            modelOptions={modelOptions}
             disabled={disabled}
             onChange={handleModelRewriteRulesChange}
           />
@@ -535,12 +541,22 @@ export function VisualConfigEditor({
               <Select
                 value={values.thinkingPolicyCodexDefaultEffort}
                 options={[
+                  { value: 'low', label: t('config_management.visual.sections.thinking_policy.effort_low') },
+                  { value: 'medium', label: t('config_management.visual.sections.thinking_policy.effort_medium') },
                   { value: 'high', label: t('config_management.visual.sections.thinking_policy.effort_high') },
                 ]}
                 id={`${thinkingPolicyEffortLabelId}-select`}
                 disabled={disabled}
                 ariaLabelledBy={thinkingPolicyEffortLabelId}
-                onChange={() => onChange({ thinkingPolicyCodexDefaultEffort: 'high' })}
+                onChange={(thinkingPolicyCodexDefaultEffort) =>
+                  onChange({
+                    thinkingPolicyCodexDefaultEffort:
+                      thinkingPolicyCodexDefaultEffort === 'low' ||
+                      thinkingPolicyCodexDefaultEffort === 'medium'
+                        ? thinkingPolicyCodexDefaultEffort
+                        : 'high',
+                  })
+                }
               />
             </div>
 
@@ -560,6 +576,8 @@ export function VisualConfigEditor({
                 inputLabel={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_input_label')}
                 inputPlaceholder={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_placeholder')}
                 inputHint={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_input_hint')}
+                selectEntries={values.apiKeyEntries}
+                emptySelectLabel={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_no_options')}
                 showGenerate={false}
               />
             </div>
