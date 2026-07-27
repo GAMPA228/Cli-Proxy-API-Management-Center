@@ -27,6 +27,7 @@ interface ModelBucket {
   success_count: number;
   failure_count: number;
   total_tokens: number;
+  tokens: UsageDetailTokens;
   details: Array<Record<string, unknown>>;
 }
 
@@ -35,6 +36,7 @@ interface ApiBucket {
   success_count: number;
   failure_count: number;
   total_tokens: number;
+  tokens: UsageDetailTokens;
   models: Record<string, ModelBucket>;
 }
 
@@ -78,6 +80,7 @@ const ensureApiBucket = (apis: Record<string, ApiBucket>, apiName: string): ApiB
       success_count: 0,
       failure_count: 0,
       total_tokens: 0,
+      tokens: normalizeTokens(undefined),
       models: {}
     };
   }
@@ -91,6 +94,7 @@ const ensureModelBucket = (apiBucket: ApiBucket, modelName: string): ModelBucket
       success_count: 0,
       failure_count: 0,
       total_tokens: 0,
+      tokens: normalizeTokens(undefined),
       details: []
     };
   }
@@ -102,6 +106,7 @@ const applyModelAggregate = (target: ModelBucket, aggregate: UsageAggregateModel
   target.success_count = Math.max(toNumber(aggregate?.success_count), 0);
   target.failure_count = Math.max(toNumber(aggregate?.failure_count), 0);
   target.total_tokens = Math.max(toNumber(aggregate?.total_tokens), toNumber(aggregate?.tokens?.total_tokens), 0);
+  target.tokens = normalizeTokens(aggregate?.tokens);
 };
 
 const makeSyntheticDetail = (
@@ -152,6 +157,7 @@ function buildUsageFromAggregate(aggregate: UsageAggregatePayload, range: UsageT
     apiBucket.success_count = Math.max(toNumber(apiAggregate?.success_count), 0);
     apiBucket.failure_count = Math.max(toNumber(apiAggregate?.failure_count), 0);
     apiBucket.total_tokens = Math.max(toNumber(apiAggregate?.total_tokens), toNumber(apiAggregate?.tokens?.total_tokens), 0);
+    apiBucket.tokens = normalizeTokens(apiAggregate?.tokens);
 
     const models = apiAggregate?.models && typeof apiAggregate.models === 'object' ? apiAggregate.models : {};
     Object.entries(models).forEach(([modelNameRaw, modelAggregate]) => {

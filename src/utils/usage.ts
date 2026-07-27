@@ -78,6 +78,9 @@ export interface ApiStats {
   successCount: number;
   failureCount: number;
   totalTokens: number;
+  inputTokens: number;
+  cachedTokens: number;
+  cacheHitRate: number | null;
   totalCost: number;
   models: Record<string, { requests: number; successCount: number; failureCount: number; tokens: number }>;
 }
@@ -891,6 +894,25 @@ export function getApiStats(
     let derivedSuccessCount = 0;
     let derivedFailureCount = 0;
     let totalCost = 0;
+    const apiTokens = isRecord(apiData.tokens) ? apiData.tokens : null;
+    const hasAggregateTokenBreakdown = Boolean(
+      apiTokens &&
+      (
+        typeof apiTokens.input_tokens === 'number' ||
+        typeof apiTokens.cached_tokens === 'number' ||
+        typeof apiTokens.cache_tokens === 'number'
+      )
+    );
+    let inputTokens = hasAggregateTokenBreakdown
+      ? Math.max(Number(apiTokens?.input_tokens) || 0, 0)
+      : 0;
+    let cachedTokens = hasAggregateTokenBreakdown
+      ? Math.max(
+          Number(apiTokens?.cached_tokens) || 0,
+          Number(apiTokens?.cache_tokens) || 0,
+          0
+        )
+      : 0;
 
     const modelsData = isRecord(apiData.models) ? apiData.models : {};
     Object.entries(modelsData).forEach(([modelName, modelData]) => {
@@ -907,7 +929,7 @@ export function getApiStats(
       }
 
       const price = modelPrices[modelName];
-      if (details.length > 0 && (!hasExplicitCounts || price)) {
+      if (details.length > 0 && (!hasExplicitCounts || price || !hasAggregateTokenBreakdown)) {
         details.forEach((detail) => {
           const detailRecord = isRecord(detail) ? detail : null;
           if (!hasExplicitCounts) {
@@ -922,6 +944,15 @@ export function getApiStats(
             totalCost += calculateCost(
               { ...(detailRecord as unknown as UsageDetail), __modelName: modelName },
               modelPrices
+            );
+          }
+
+          if (!hasAggregateTokenBreakdown && detailRecord && isRecord(detailRecord.tokens)) {
+            inputTokens += Math.max(Number(detailRecord.tokens.input_tokens) || 0, 0);
+            cachedTokens += Math.max(
+              Number(detailRecord.tokens.cached_tokens) || 0,
+              Number(detailRecord.tokens.cache_tokens) || 0,
+              0
             );
           }
         });
@@ -952,12 +983,22 @@ export function getApiStats(
       successCount,
       failureCount,
       totalTokens: Number(apiData.total_tokens) || 0,
+      inputTokens,
+      cachedTokens,
+      cacheHitRate: calculateCacheHitRate(inputTokens, cachedTokens),
       totalCost,
       models
     });
   });
 
   return result;
+}
+
+export function calculateCacheHitRate(inputTokens: number, cachedTokens: number): number | null {
+  const normalizedInput = Math.max(Number(inputTokens) || 0, 0);
+  if (normalizedInput <= 0) return null;
+  const normalizedCached = Math.max(Number(cachedTokens) || 0, 0);
+  return Math.min((normalizedCached / normalizedInput) * 100, 100);
 }
 
 /**

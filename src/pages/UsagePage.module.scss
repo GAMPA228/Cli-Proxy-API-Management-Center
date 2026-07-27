@@ -745,27 +745,31 @@
 }
 
 .apiDetailsTableWithCost .apiDetailsColEndpoint {
-  width: 22%;
+  width: 20%;
 }
 
 .apiDetailsTableWithCost .apiDetailsColRequests {
-  width: 24%;
+  width: 20%;
 }
 
 .apiDetailsTableWithCost .apiDetailsColTokens {
-  width: 17%;
+  width: 14%;
 }
 
 .apiDetailsTableWithCost .apiDetailsColRate {
-  width: 11%;
-}
-
-.apiDetailsTableWithCost .apiDetailsColCost {
   width: 10%;
 }
 
+.apiDetailsTableWithCost .apiDetailsColCacheRate {
+  width: 12%;
+}
+
+.apiDetailsTableWithCost .apiDetailsColCost {
+  width: 9%;
+}
+
 .apiDetailsTableWithCost .apiDetailsColModels {
-  width: 8%;
+  width: 7%;
 }
 
 .apiDetailsTableWithCost .apiDetailsColAction {
@@ -773,18 +777,22 @@
 }
 
 .apiDetailsTableNoCost .apiDetailsColEndpoint {
-  width: 24%;
+  width: 22%;
 }
 
 .apiDetailsTableNoCost .apiDetailsColRequests {
-  width: 28%;
+  width: 23%;
 }
 
 .apiDetailsTableNoCost .apiDetailsColTokens {
-  width: 20%;
+  width: 16%;
 }
 
 .apiDetailsTableNoCost .apiDetailsColRate {
+  width: 11%;
+}
+
+.apiDetailsTableNoCost .apiDetailsColCacheRate {
   width: 12%;
 }
 

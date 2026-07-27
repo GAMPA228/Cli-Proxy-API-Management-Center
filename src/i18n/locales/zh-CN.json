@@ -1063,6 +1063,8 @@
     "tokens_count": "Token数量",
     "models": "模型统计",
     "success_rate": "成功率",
+    "cache_hit_rate": "缓存命中率",
+    "cache_hit_rate_hint": "缓存 Token {{cached}} / 输入 Token {{input}}",
     "total_cost": "总花费",
     "total_cost_hint": "基于已设置的模型单价",
     "model_price_title": "模型价格",

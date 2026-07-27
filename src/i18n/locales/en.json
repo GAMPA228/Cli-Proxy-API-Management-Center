@@ -1063,6 +1063,8 @@
     "tokens_count": "Token Count",
     "models": "Model Statistics",
     "success_rate": "Success Rate",
+    "cache_hit_rate": "Cache Hit Rate",
+    "cache_hit_rate_hint": "Cached tokens {{cached}} / input tokens {{input}}",
     "total_cost": "Total Cost",
     "total_cost_hint": "Based on configured model pricing",
     "model_price_title": "Model Pricing",

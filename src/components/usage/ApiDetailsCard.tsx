@@ -11,7 +11,7 @@ export interface ApiDetailsCardProps {
   hasPrices: boolean;
 }
 
-type ApiSortKey = 'endpoint' | 'requests' | 'tokens' | 'cost';
+type ApiSortKey = 'endpoint' | 'requests' | 'tokens' | 'cacheHitRate' | 'cost';
 type SortDir = 'asc' | 'desc';
 
 export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardProps) {
@@ -51,6 +51,10 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
         case 'endpoint': return dir * a.endpoint.localeCompare(b.endpoint);
         case 'requests': return dir * (a.totalRequests - b.totalRequests);
         case 'tokens': return dir * (a.totalTokens - b.totalTokens);
+        case 'cacheHitRate':
+          if (a.cacheHitRate === null) return b.cacheHitRate === null ? 0 : 1;
+          if (b.cacheHitRate === null) return -1;
+          return dir * (a.cacheHitRate - b.cacheHitRate);
         case 'cost': return dir * (a.totalCost - b.totalCost);
         default: return 0;
       }
@@ -102,6 +106,7 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
                   <col className={styles.apiDetailsColRequests} />
                   <col className={styles.apiDetailsColTokens} />
                   <col className={styles.apiDetailsColRate} />
+                  <col className={styles.apiDetailsColCacheRate} />
                   {hasPrices ? <col className={styles.apiDetailsColCost} /> : null}
                   <col className={styles.apiDetailsColModels} />
                   <col className={styles.apiDetailsColAction} />
@@ -136,6 +141,15 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
                       </button>
                     </th>
                     <th>{t('usage_stats.success_rate')}</th>
+                    <th className={styles.sortableHeader} aria-sort={ariaSort('cacheHitRate')}>
+                      <button
+                        type="button"
+                        className={styles.sortHeaderButton}
+                        onClick={() => handleSort('cacheHitRate')}
+                      >
+                        {t('usage_stats.cache_hit_rate')}{arrow('cacheHitRate')}
+                      </button>
+                    </th>
                     {hasPrices && (
                       <th className={styles.sortableHeader} aria-sort={ariaSort('cost')}>
                         <button
@@ -188,6 +202,20 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
                               {successRate.toFixed(1)}%
                             </span>
                           </td>
+                          <td className={styles.tableCellMono}>
+                            <span
+                              title={
+                                api.cacheHitRate === null
+                                  ? undefined
+                                  : t('usage_stats.cache_hit_rate_hint', {
+                                      cached: formatCompactNumber(api.cachedTokens),
+                                      input: formatCompactNumber(api.inputTokens)
+                                    })
+                              }
+                            >
+                              {api.cacheHitRate === null ? '--' : `${api.cacheHitRate.toFixed(1)}%`}
+                            </span>
+                          </td>
                           {hasPrices && (
                             <td className={styles.tableCellMono}>{api.totalCost > 0 ? formatUsd(api.totalCost) : '--'}</td>
                           )}
@@ -210,7 +238,7 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
                         </tr>
                         {isExpanded && (
                           <tr className={styles.apiExpandedRow}>
-                            <td colSpan={hasPrices ? 7 : 6}>
+                            <td colSpan={hasPrices ? 8 : 7}>
                               <div id={panelId} className={styles.apiModelsInline}>
                                 {Object.entries(api.models).map(([model, stats]) => (
                                   <div key={model} className={styles.apiModelChip}>
