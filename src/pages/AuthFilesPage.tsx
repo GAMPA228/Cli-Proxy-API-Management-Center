@@ -133,11 +133,27 @@ const resolvePlanTypeLabel = (t: TFunction, rawPlanType: string): string => {
   return t(`auth_files.plan_type_${normalized}`, { defaultValue: rawPlanType });
 };
 
-const resolveAuthFilePlanLabel = (
+interface AuthFilePlanInfo {
+  label: string;
+  isPremium: boolean;
+}
+
+const PREMIUM_AUTH_FILE_PLAN_TYPES = new Set([
+  'pro',
+  'prolite',
+  'pro5x',
+  'pro20x',
+  'max5',
+  'max5x',
+  'max20',
+  'max20x'
+]);
+
+const resolveAuthFilePlanInfo = (
   t: TFunction,
   file: AuthFileItem,
   quotaPlanType?: string | null
-): string | null => {
+): AuthFilePlanInfo | null => {
   const provider = resolveAuthProvider(file);
   const metadata =
     file && typeof file.metadata === 'object' && file.metadata !== null
@@ -165,7 +181,13 @@ const resolveAuthFilePlanLabel = (
   }
 
   const rawPlanType = candidates.find((value) => Boolean(value?.trim())) ?? null;
-  return rawPlanType ? resolvePlanTypeLabel(t, rawPlanType) : null;
+  if (!rawPlanType) return null;
+
+  const compactPlanType = normalizeStatusToken(rawPlanType).replace(/[\s_-]+/g, '');
+  return {
+    label: resolvePlanTypeLabel(t, rawPlanType),
+    isPremium: PREMIUM_AUTH_FILE_PLAN_TYPES.has(compactPlanType)
+  };
 };
 
 const localizeKnownStatusMessage = (t: TFunction, message: string): string => {
@@ -1156,7 +1178,7 @@ export function AuthFilesPage() {
                       : quotaType === 'claude'
                         ? (claudeQuota[file.name] as ClaudeQuotaState | undefined)?.planType
                         : null;
-                  const planLabel = !isRuntimeOnly ? resolveAuthFilePlanLabel(t, file, quotaPlanType) : null;
+                  const planInfo = !isRuntimeOnly ? resolveAuthFilePlanInfo(t, file, quotaPlanType) : null;
 
                   return (
                     <tr
@@ -1199,8 +1221,14 @@ export function AuthFilesPage() {
                         </span>
                       </td>
                       <td className={`${styles.authTableCenterCell} ${styles.authTableCellPlan}`}>
-                        {planLabel ? (
-                          <span className={styles.authTablePlanBadge}>{planLabel}</span>
+                        {planInfo ? (
+                          <span
+                            className={`${styles.authTablePlanBadge} ${
+                              planInfo.isPremium ? styles.premiumPlanValue : ''
+                            }`}
+                          >
+                            {planInfo.label}
+                          </span>
                         ) : (
                           <span className={styles.authTablePlanEmpty}>-</span>
                         )}
