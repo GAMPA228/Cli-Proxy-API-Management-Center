@@ -23,16 +23,12 @@ export interface ChartConfigOptions {
   isMobile: boolean;
 }
 
-/**
- * Build chart options with theme and responsive awareness
- */
-export function buildChartOptions({
+function buildCommonChartOptions({
   period,
   labels,
   isDark,
   isMobile
-}: ChartConfigOptions): ChartOptions<'line'> {
-  const pointRadius = isMobile && period === 'hour' ? 0 : isMobile ? 2 : 4;
+}: ChartConfigOptions) {
   const tickFontSize = isMobile ? 10 : 12;
   const maxTickLabelCount = isMobile ? (period === 'hour' ? 8 : 6) : period === 'hour' ? 12 : 10;
   const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(17, 24, 39, 0.06)';
@@ -47,7 +43,7 @@ export function buildChartOptions({
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
-      mode: 'index',
+      mode: 'index' as const,
       intersect: false
     },
     plugins: {
@@ -79,7 +75,7 @@ export function buildChartOptions({
           minRotation: 0,
           autoSkip: true,
           maxTicksLimit: maxTickLabelCount,
-          callback: (value) => {
+          callback: (value: string | number) => {
             const index = typeof value === 'number' ? value : Number(value);
             const raw =
               Number.isFinite(index) && labels[index] ? labels[index] : typeof value === 'string' ? value : '';
@@ -116,7 +112,19 @@ export function buildChartOptions({
           font: { size: tickFontSize }
         }
       }
-    },
+    }
+  };
+}
+
+/**
+ * Build line-chart options with theme and responsive awareness.
+ */
+export function buildChartOptions(options: ChartConfigOptions): ChartOptions<'line'> {
+  const { period, isMobile } = options;
+  const pointRadius = isMobile && period === 'hour' ? 0 : isMobile ? 2 : 4;
+
+  return {
+    ...buildCommonChartOptions(options),
     elements: {
       line: {
         tension: 0.35,
@@ -126,6 +134,29 @@ export function buildChartOptions({
         borderWidth: 2,
         radius: pointRadius,
         hoverRadius: 4
+      }
+    }
+  };
+}
+
+/**
+ * Build grouped bar-chart options with theme and responsive awareness.
+ */
+export function buildBarChartOptions(options: ChartConfigOptions): ChartOptions<'bar'> {
+  return {
+    ...buildCommonChartOptions(options),
+    datasets: {
+      bar: {
+        categoryPercentage: 0.72,
+        barPercentage: 0.86,
+        maxBarThickness: 48
+      }
+    },
+    elements: {
+      bar: {
+        borderWidth: 1,
+        borderRadius: 4,
+        borderSkipped: false
       }
     }
   };

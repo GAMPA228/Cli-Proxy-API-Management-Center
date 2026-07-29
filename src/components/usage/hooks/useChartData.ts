@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import type { ChartOptions } from 'chart.js';
+import type { ChartData as ChartJsData, ChartOptions } from 'chart.js';
 import { buildChartData, type ChartData } from '@/utils/usage';
-import { buildChartOptions } from '@/utils/usage/chartConfig';
+import { buildBarChartOptions, buildChartOptions } from '@/utils/usage/chartConfig';
 import type { UsagePayload } from './useUsageData';
 
 export interface UseChartDataOptions {
@@ -17,9 +17,9 @@ export interface UseChartDataReturn {
   setRequestsPeriod: (period: 'hour' | 'day') => void;
   tokensPeriod: 'hour' | 'day';
   setTokensPeriod: (period: 'hour' | 'day') => void;
-  requestsChartData: ChartData;
+  requestsChartData: ChartJsData<'bar', number[], string>;
   tokensChartData: ChartData;
-  requestsChartOptions: ChartOptions<'line'>;
+  requestsChartOptions: ChartOptions<'bar'>;
   tokensChartOptions: ChartOptions<'line'>;
 }
 
@@ -33,9 +33,24 @@ export function useChartData({
   const [requestsPeriod, setRequestsPeriod] = useState<'hour' | 'day'>('day');
   const [tokensPeriod, setTokensPeriod] = useState<'hour' | 'day'>('day');
 
-  const requestsChartData = useMemo(() => {
+  const requestsChartData = useMemo<ChartJsData<'bar', number[], string>>(() => {
     if (!usage) return { labels: [], datasets: [] };
-    return buildChartData(usage, requestsPeriod, 'requests', chartLines, { hourWindowHours });
+    const lineData = buildChartData(usage, requestsPeriod, 'requests', chartLines, {
+      hourWindowHours
+    });
+
+    return {
+      labels: lineData.labels,
+      datasets: lineData.datasets.map((dataset) => ({
+        label: dataset.label,
+        data: dataset.data,
+        borderColor: dataset.borderColor,
+        backgroundColor: dataset.borderColor,
+        borderWidth: 1,
+        borderRadius: 4,
+        borderSkipped: false
+      }))
+    };
   }, [usage, requestsPeriod, chartLines, hourWindowHours]);
 
   const tokensChartData = useMemo(() => {
@@ -45,9 +60,9 @@ export function useChartData({
 
   const requestsChartOptions = useMemo(
     () =>
-      buildChartOptions({
+      buildBarChartOptions({
         period: requestsPeriod,
-        labels: requestsChartData.labels,
+        labels: requestsChartData.labels ?? [],
         isDark,
         isMobile
       }),
