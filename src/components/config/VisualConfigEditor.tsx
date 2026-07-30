@@ -6,6 +6,7 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconChevronDown, IconChevronUp, IconInfo } from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { FrontendRequestTimeoutSection } from '@/components/config/FrontendRequestTimeoutSection';
+import { ServiceTierPolicySection } from '@/components/config/ServiceTierPolicySection';
 import styles from './VisualConfigEditor.module.scss';
 import type {
   ModelInfo,
@@ -584,6 +585,13 @@ export function VisualConfigEditor({
           </SectionGrid>
         </div>
       </ConfigSection>
+
+      <ServiceTierPolicySection
+        values={values}
+        modelOptions={modelOptions}
+        disabled={disabled}
+        onChange={onChange}
+      />
 
       <ConfigSection title={t('config_management.visual.sections.streaming.title')} description={t('config_management.visual.sections.streaming.description')}>
           <div className={styles.sectionStack}>

@@ -11,8 +11,14 @@ import type {
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
   CodexThinkingDefaultEffort,
+  CodexServiceTierAuthorizedMode,
+  CodexServiceTierUnauthorizedAction,
 } from '@/types/visualConfig';
-import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
+import {
+  DEFAULT_CODEX_SERVICE_TIER_REJECT_MESSAGE,
+  DEFAULT_VISUAL_VALUES,
+  makeClientId,
+} from '@/types/visualConfig';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -86,6 +92,23 @@ function parseCodexThinkingDefaultEffort(raw: unknown): CodexThinkingDefaultEffo
   const effort = raw.trim().toLowerCase();
   if (effort === 'low' || effort === 'medium' || effort === 'high') return effort;
   return 'high';
+}
+
+function parseCodexServiceTierAuthorizedMode(raw: unknown): CodexServiceTierAuthorizedMode {
+  return typeof raw === 'string' && raw.trim().toLowerCase() === 'force-priority'
+    ? 'force-priority'
+    : 'request-only';
+}
+
+function parseCodexServiceTierUnauthorizedAction(raw: unknown): CodexServiceTierUnauthorizedAction {
+  return typeof raw === 'string' && raw.trim().toLowerCase() === 'reject' ? 'reject' : 'strip';
+}
+
+function parseStringList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => (typeof item === 'string' ? item.trim() : String(item ?? '').trim()))
+    .filter(Boolean);
 }
 
 function parseLines(value: string): string[] {
@@ -602,6 +625,8 @@ export function useVisualConfig() {
       const streaming = asRecord(parsed.streaming);
       const thinkingPolicy = asRecord(parsed['thinking-policy']);
       const codexThinkingPolicy = asRecord(thinkingPolicy?.codex);
+      const serviceTierPolicy = asRecord(parsed['service-tier-policy']);
+      const codexServiceTierPolicy = asRecord(serviceTierPolicy?.codex);
       const modelRewrite = asRecord(parsed['model-rewrite']);
       const apiKeysStorage = resolveApiKeysStorage(parsed);
 
@@ -644,6 +669,22 @@ export function useVisualConfig() {
           codexThinkingPolicy?.['default-effort']
         ),
         thinkingPolicyCodexXhighApiKeysText: parseStringListText(codexThinkingPolicy?.['xhigh-api-keys']),
+        serviceTierPolicyCodexEnabled: Boolean(codexServiceTierPolicy?.enabled),
+        serviceTierPolicyCodexAllowedModels: parseStringList(codexServiceTierPolicy?.['allowed-models']),
+        serviceTierPolicyCodexAllowedApiKeysText: parseStringListText(
+          codexServiceTierPolicy?.['allowed-api-keys']
+        ),
+        serviceTierPolicyCodexAuthorizedMode: parseCodexServiceTierAuthorizedMode(
+          codexServiceTierPolicy?.['authorized-mode']
+        ),
+        serviceTierPolicyCodexUnauthorizedAction: parseCodexServiceTierUnauthorizedAction(
+          codexServiceTierPolicy?.['unauthorized-action']
+        ),
+        serviceTierPolicyCodexRejectMessage:
+          typeof codexServiceTierPolicy?.['reject-message'] === 'string' &&
+          codexServiceTierPolicy['reject-message'].trim()
+            ? codexServiceTierPolicy['reject-message']
+            : DEFAULT_CODEX_SERVICE_TIER_REJECT_MESSAGE,
         modelRewriteEnabled: Boolean(modelRewrite?.enabled),
         modelRewriteRules: parseModelRewriteRules(modelRewrite?.rules),
 
@@ -803,6 +844,42 @@ export function useVisualConfig() {
           }
           deleteIfMapEmpty(doc, ['thinking-policy', 'codex']);
           deleteIfMapEmpty(doc, ['thinking-policy']);
+        }
+
+        const serviceTierAllowedModels = values.serviceTierPolicyCodexAllowedModels
+          .map((model) => model.trim())
+          .filter(Boolean);
+        const serviceTierAllowedAPIKeys = parseLines(values.serviceTierPolicyCodexAllowedApiKeysText);
+        const serviceTierPolicyDefined =
+          docHas(doc, ['service-tier-policy']) ||
+          values.serviceTierPolicyCodexEnabled ||
+          serviceTierAllowedModels.length > 0 ||
+          serviceTierAllowedAPIKeys.length > 0 ||
+          values.serviceTierPolicyCodexAuthorizedMode !== 'request-only' ||
+          values.serviceTierPolicyCodexUnauthorizedAction !== 'strip' ||
+          values.serviceTierPolicyCodexRejectMessage.trim() !== DEFAULT_CODEX_SERVICE_TIER_REJECT_MESSAGE;
+        if (serviceTierPolicyDefined) {
+          ensureMapInDoc(doc, ['service-tier-policy']);
+          ensureMapInDoc(doc, ['service-tier-policy', 'codex']);
+          setBooleanInDoc(
+            doc,
+            ['service-tier-policy', 'codex', 'enabled'],
+            values.serviceTierPolicyCodexEnabled
+          );
+          doc.setIn(['service-tier-policy', 'codex', 'allowed-models'], serviceTierAllowedModels);
+          doc.setIn(['service-tier-policy', 'codex', 'allowed-api-keys'], serviceTierAllowedAPIKeys);
+          doc.setIn(
+            ['service-tier-policy', 'codex', 'authorized-mode'],
+            values.serviceTierPolicyCodexAuthorizedMode
+          );
+          doc.setIn(
+            ['service-tier-policy', 'codex', 'unauthorized-action'],
+            values.serviceTierPolicyCodexUnauthorizedAction
+          );
+          doc.setIn(
+            ['service-tier-policy', 'codex', 'reject-message'],
+            values.serviceTierPolicyCodexRejectMessage.trim() || DEFAULT_CODEX_SERVICE_TIER_REJECT_MESSAGE
+          );
         }
 
         const modelRewriteRules = serializeModelRewriteRulesForYaml(values.modelRewriteRules);

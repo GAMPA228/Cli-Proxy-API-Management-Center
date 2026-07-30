@@ -38,6 +38,9 @@ type RequestEventRow = {
   timestampLabel: string;
   model: string;
   reasoningEffort: string;
+  serviceTier: string;
+  appliedServiceTier: string;
+  responseServiceTier: string;
   clientIP: string;
   apiKey: string;
   apiKeyLabel: string;
@@ -117,6 +120,11 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
     },
     failed: row.failed === true,
     reasoning_effort: typeof row.reasoning_effort === 'string' ? row.reasoning_effort : '',
+    service_tier: typeof row.service_tier === 'string' ? row.service_tier : '',
+    applied_service_tier:
+      typeof row.applied_service_tier === 'string' ? row.applied_service_tier : '',
+    response_service_tier:
+      typeof row.response_service_tier === 'string' ? row.response_service_tier : '',
     __modelName: typeof row.model === 'string' ? row.model : '',
     __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
   };
@@ -271,6 +279,9 @@ export function RequestEventsDetailsCard({
       const sourceType = sourceInfo.type;
       const model = String(detail.__modelName ?? '').trim() || '-';
       const reasoningEffort = String(detail.reasoning_effort ?? '').trim();
+      const serviceTier = String(detail.service_tier ?? '').trim();
+      const appliedServiceTier = String(detail.applied_service_tier ?? '').trim();
+      const responseServiceTier = String(detail.response_service_tier ?? '').trim();
       const clientIP = String(detail.client_ip ?? '').trim() || '-';
       const apiKey = String(detail.api ?? '').trim();
       const apiKeyLabel = formatRequestApiKeyLabel(apiKey, apiKeyRemarks);
@@ -293,6 +304,9 @@ export function RequestEventsDetailsCard({
         timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
         model,
         reasoningEffort,
+        serviceTier,
+        appliedServiceTier,
+        responseServiceTier,
         clientIP,
         apiKey,
         apiKeyLabel,
@@ -401,6 +415,9 @@ export function RequestEventsDetailsCard({
         const keywordMatched =
           !normalizedSearchKeyword ||
           row.model.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.serviceTier.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.appliedServiceTier.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.responseServiceTier.toLowerCase().includes(normalizedSearchKeyword) ||
           row.clientIP.toLowerCase().includes(normalizedSearchKeyword) ||
           row.apiKey.toLowerCase().includes(normalizedSearchKeyword) ||
           row.apiKeyLabel.toLowerCase().includes(normalizedSearchKeyword) ||
@@ -452,6 +469,9 @@ export function RequestEventsDetailsCard({
       'client_ip',
       'api_key',
       'reasoning_effort',
+      'service_tier',
+      'applied_service_tier',
+      'response_service_tier',
       'source_type',
       'source',
       'source_raw',
@@ -471,6 +491,9 @@ export function RequestEventsDetailsCard({
         row.clientIP,
         row.apiKeyLabel,
         row.reasoningEffort,
+        row.serviceTier,
+        row.appliedServiceTier,
+        row.responseServiceTier,
         row.sourceType,
         row.source,
         row.sourceRaw,
@@ -501,6 +524,9 @@ export function RequestEventsDetailsCard({
       client_ip: row.clientIP,
       api_key: row.apiKeyLabel,
       reasoning_effort: row.reasoningEffort,
+      service_tier: row.serviceTier,
+      applied_service_tier: row.appliedServiceTier,
+      response_service_tier: row.responseServiceTier,
       source_type: row.sourceType,
       source: row.source,
       source_raw: row.sourceRaw,
@@ -685,13 +711,48 @@ export function RequestEventsDetailsCard({
                     </td>
                     <td
                       className={`${styles.modelCell} ${styles.tableCellLeft}`}
-                      title={row.reasoningEffort ? `${row.model} · ${row.reasoningEffort}` : row.model}
+                      title={[
+                        row.model,
+                        row.reasoningEffort
+                          ? `${t('usage_stats.request_events_reasoning')}: ${row.reasoningEffort}`
+                          : '',
+                        row.serviceTier
+                          ? `${t('usage_stats.request_events_requested_tier')}: ${row.serviceTier}`
+                          : '',
+                        row.appliedServiceTier
+                          ? `${t('usage_stats.request_events_applied_tier')}: ${row.appliedServiceTier}`
+                          : '',
+                        row.responseServiceTier
+                          ? `${t('usage_stats.request_events_response_tier')}: ${row.responseServiceTier}`
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     >
                       <span className={styles.modelCellStack}>
                         <span className={styles.truncateText}>{row.model}</span>
-                        {row.reasoningEffort && (
-                          <span className={styles.reasoningEffortBadge}>{row.reasoningEffort}</span>
-                        )}
+                        <span className={styles.requestMetadataBadges}>
+                          {row.reasoningEffort && (
+                            <span className={styles.reasoningEffortBadge}>{row.reasoningEffort}</span>
+                          )}
+                          {[row.serviceTier, row.appliedServiceTier, row.responseServiceTier].some(
+                            (tier) => tier.toLowerCase() === 'fast' || tier.toLowerCase() === 'priority'
+                          ) && (
+                            <>
+                              <span className={styles.serviceTierBadge}>
+                                {t('usage_stats.request_events_requested_tier_short')}:{row.serviceTier || '-'}
+                              </span>
+                              <span className={styles.serviceTierBadge}>
+                                {t('usage_stats.request_events_applied_tier_short')}:{row.appliedServiceTier || '-'}
+                              </span>
+                              {row.responseServiceTier && (
+                                <span className={styles.serviceTierBadge}>
+                                  {t('usage_stats.request_events_response_tier_short')}:{row.responseServiceTier}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </span>
                       </span>
                     </td>
                     <td

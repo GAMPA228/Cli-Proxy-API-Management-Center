@@ -83,6 +83,12 @@
   flex-shrink: 0;
 }
 
+.toggleDescription {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .toggleHint {
   position: relative;
   display: inline-flex;
@@ -371,6 +377,16 @@
 .actionsEnd {
   display: flex;
   justify-content: flex-end;
+}
+
+.serviceTierNotice {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--border-color));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--primary-color) 9%, var(--bg-secondary));
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .ruleEditor {

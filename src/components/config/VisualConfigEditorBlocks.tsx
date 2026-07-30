@@ -421,7 +421,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   );
 });
 
-const StringListEditor = memo(function StringListEditor({
+export const StringListEditor = memo(function StringListEditor({
   value,
   disabled,
   placeholder,

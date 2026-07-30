@@ -65,6 +65,10 @@ export interface StreamingConfig {
 }
 
 export type CodexThinkingDefaultEffort = 'low' | 'medium' | 'high';
+export type CodexServiceTierAuthorizedMode = 'request-only' | 'force-priority';
+export type CodexServiceTierUnauthorizedAction = 'strip' | 'reject';
+
+export const DEFAULT_CODEX_SERVICE_TIER_REJECT_MESSAGE = 'Fast 模式未授权，请联系管理员';
 
 export type VisualConfigValues = {
   host: string;
@@ -95,6 +99,12 @@ export type VisualConfigValues = {
   thinkingPolicyCodexEnabled: boolean;
   thinkingPolicyCodexDefaultEffort: CodexThinkingDefaultEffort;
   thinkingPolicyCodexXhighApiKeysText: string;
+  serviceTierPolicyCodexEnabled: boolean;
+  serviceTierPolicyCodexAllowedModels: string[];
+  serviceTierPolicyCodexAllowedApiKeysText: string;
+  serviceTierPolicyCodexAuthorizedMode: CodexServiceTierAuthorizedMode;
+  serviceTierPolicyCodexUnauthorizedAction: CodexServiceTierUnauthorizedAction;
+  serviceTierPolicyCodexRejectMessage: string;
   modelRewriteEnabled: boolean;
   modelRewriteRules: ModelRewriteRule[];
   payloadDefaultRules: PayloadRule[];
@@ -137,6 +147,12 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   thinkingPolicyCodexEnabled: false,
   thinkingPolicyCodexDefaultEffort: 'high',
   thinkingPolicyCodexXhighApiKeysText: '',
+  serviceTierPolicyCodexEnabled: false,
+  serviceTierPolicyCodexAllowedModels: [],
+  serviceTierPolicyCodexAllowedApiKeysText: '',
+  serviceTierPolicyCodexAuthorizedMode: 'request-only',
+  serviceTierPolicyCodexUnauthorizedAction: 'strip',
+  serviceTierPolicyCodexRejectMessage: DEFAULT_CODEX_SERVICE_TIER_REJECT_MESSAGE,
   modelRewriteEnabled: false,
   modelRewriteRules: [],
   payloadDefaultRules: [],

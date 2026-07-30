@@ -41,6 +41,9 @@ export interface UsageDetailRow {
   source?: string;
   auth_index?: string | number | null;
   reasoning_effort?: string;
+  service_tier?: string;
+  applied_service_tier?: string;
+  response_service_tier?: string;
   tokens?: UsageDetailTokens;
   failed?: boolean;
 }

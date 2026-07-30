@@ -60,6 +60,9 @@ export interface UsageDetail {
   };
   failed: boolean;
   reasoning_effort?: string;
+  service_tier?: string;
+  applied_service_tier?: string;
+  response_service_tier?: string;
   __modelName?: string;
   __timestampMs?: number;
   __requestCount?: number;
