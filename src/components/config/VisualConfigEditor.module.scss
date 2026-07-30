@@ -379,6 +379,49 @@
   justify-content: flex-end;
 }
 
+.apiKeyGroupFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.apiKeyGroupSelectionList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.apiKeyGroupSelectionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 86%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--bg-primary) 96%, transparent);
+}
+
+.apiKeyGroupSelectionText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.apiKeyGroupSelectionText strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.apiKeyGroupSelectionText span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
 .serviceTierNotice {
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--border-color));

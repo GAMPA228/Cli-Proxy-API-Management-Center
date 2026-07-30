@@ -6,7 +6,7 @@ import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import type { VisualConfigValues } from '@/types/visualConfig';
 import type { ModelInfo } from '@/utils/models';
-import { ApiKeysCardEditor, StringListEditor } from './VisualConfigEditorBlocks';
+import { ApiKeyGroupSelector, ApiKeysCardEditor, StringListEditor } from './VisualConfigEditorBlocks';
 import styles from './VisualConfigEditor.module.scss';
 
 interface ServiceTierPolicySectionProps {
@@ -97,6 +97,19 @@ export function ServiceTierPolicySection({
           </div>
 
           <div className={styles.fullWidthGridItem}>
+            <ApiKeyGroupSelector
+              value={values.serviceTierPolicyCodexAllowedGroups}
+              groups={values.apiKeyGroups}
+              label={t('config_management.visual.sections.service_tier_policy.allowed_groups')}
+              hint={t('config_management.visual.sections.service_tier_policy.allowed_groups_hint')}
+              disabled={disabled}
+              onChange={(serviceTierPolicyCodexAllowedGroups) =>
+                onChange({ serviceTierPolicyCodexAllowedGroups })
+              }
+            />
+          </div>
+
+          <div className={styles.fullWidthGridItem}>
             <ApiKeysCardEditor
               value={values.serviceTierPolicyCodexAllowedApiKeysText}
               disabled={disabled}
@@ -115,6 +128,7 @@ export function ServiceTierPolicySection({
               selectEntries={values.apiKeyEntries}
               emptySelectLabel={t('config_management.visual.sections.service_tier_policy.allowed_api_keys_no_options')}
               showGenerate={false}
+              showEdit={false}
             />
           </div>
 

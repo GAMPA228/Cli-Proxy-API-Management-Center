@@ -7,6 +7,7 @@ import type {
   PayloadParamValueType,
   PayloadRule,
   VisualApiKeyEntry,
+  VisualApiKeyGroup,
   VisualConfigValues,
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
@@ -116,6 +117,35 @@ function parseLines(value: string): string[] {
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function parseApiKeyGroups(raw: unknown): VisualApiKeyGroup[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      const record = asRecord(item) ?? {};
+      const groupId = String(record.id ?? '').trim();
+      if (!groupId) return null;
+      return {
+        id: makeClientId(),
+        groupId,
+        name: String(record.name ?? groupId).trim() || groupId,
+        description: String(record.description ?? '').trim(),
+        apiKeys: parseStringList(record['api-keys'] ?? record.apiKeys),
+      };
+    })
+    .filter((group): group is VisualApiKeyGroup => group !== null);
+}
+
+function serializeApiKeyGroups(groups: VisualApiKeyGroup[]): Array<Record<string, unknown>> {
+  return groups
+    .map((group) => ({
+      id: group.groupId.trim().toLowerCase(),
+      name: group.name.trim() || group.groupId.trim(),
+      ...(group.description.trim() ? { description: group.description.trim() } : {}),
+      'api-keys': parseStringArray(group.apiKeys),
+    }))
+    .filter((group) => Boolean(group.id));
 }
 
 function replaceApiKeyValue(entry: unknown, apiKey: string): unknown {
@@ -504,6 +534,7 @@ function parseModelRewriteRules(rules: unknown): ModelRewriteRule[] {
       targetModel,
       targetThinkingEffort: targetThinkingEffort.trim().toLowerCase(),
       bypassApiKeys: parseStringArray(record['bypass-api-keys'] ?? record.bypassApiKeys),
+      bypassGroups: parseStringArray(record['bypass-groups'] ?? record.bypassGroups),
     };
   });
 }
@@ -515,11 +546,13 @@ function serializeModelRewriteRulesForYaml(rules: ModelRewriteRule[]): Array<Rec
       const targetModel = rule.targetModel.trim();
       const targetThinkingEffort = String(rule.targetThinkingEffort ?? '').trim().toLowerCase();
       const bypassApiKeys = parseStringArray(rule.bypassApiKeys);
+      const bypassGroups = parseStringArray(rule.bypassGroups);
       const serialized: Record<string, unknown> = {
         'match-models': matchModels,
         'target-model': targetModel,
         'bypass-api-keys': bypassApiKeys,
       };
+      if (bypassGroups.length > 0) serialized['bypass-groups'] = bypassGroups;
       if (targetThinkingEffort) serialized['target-thinking-effort'] = targetThinkingEffort;
       return serialized;
     })
@@ -652,6 +685,7 @@ export function useVisualConfig() {
         authDir: typeof parsed['auth-dir'] === 'string' ? parsed['auth-dir'] : '',
         apiKeysText: apiKeysStorage.text,
         apiKeyEntries: apiKeysStorage.entries,
+        apiKeyGroups: parseApiKeyGroups(parsed['api-key-groups']),
 
         debug: Boolean(parsed.debug),
         commercialMode: Boolean(parsed['commercial-mode']),
@@ -669,10 +703,14 @@ export function useVisualConfig() {
           codexThinkingPolicy?.['default-effort']
         ),
         thinkingPolicyCodexXhighApiKeysText: parseStringListText(codexThinkingPolicy?.['xhigh-api-keys']),
+        thinkingPolicyCodexXhighGroups: parseStringList(codexThinkingPolicy?.['xhigh-groups']),
         serviceTierPolicyCodexEnabled: Boolean(codexServiceTierPolicy?.enabled),
         serviceTierPolicyCodexAllowedModels: parseStringList(codexServiceTierPolicy?.['allowed-models']),
         serviceTierPolicyCodexAllowedApiKeysText: parseStringListText(
           codexServiceTierPolicy?.['allowed-api-keys']
+        ),
+        serviceTierPolicyCodexAllowedGroups: parseStringList(
+          codexServiceTierPolicy?.['allowed-groups']
         ),
         serviceTierPolicyCodexAuthorizedMode: parseCodexServiceTierAuthorizedMode(
           codexServiceTierPolicy?.['authorized-mode']
@@ -814,6 +852,13 @@ export function useVisualConfig() {
           }
         }
 
+        const apiKeyGroups = serializeApiKeyGroups(values.apiKeyGroups);
+        if (apiKeyGroups.length > 0) {
+          doc.setIn(['api-key-groups'], apiKeyGroups);
+        } else if (docHas(doc, ['api-key-groups'])) {
+          doc.deleteIn(['api-key-groups']);
+        }
+
         setBooleanInDoc(doc, ['debug'], values.debug);
 
         setBooleanInDoc(doc, ['commercial-mode'], values.commercialMode);
@@ -828,10 +873,12 @@ export function useVisualConfig() {
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 
         const codexXhighApiKeys = parseLines(values.thinkingPolicyCodexXhighApiKeysText);
+        const codexXhighGroups = parseStringArray(values.thinkingPolicyCodexXhighGroups);
         if (
           docHas(doc, ['thinking-policy']) ||
           values.thinkingPolicyCodexEnabled ||
-          codexXhighApiKeys.length > 0
+          codexXhighApiKeys.length > 0 ||
+          codexXhighGroups.length > 0
         ) {
           ensureMapInDoc(doc, ['thinking-policy']);
           ensureMapInDoc(doc, ['thinking-policy', 'codex']);
@@ -842,6 +889,11 @@ export function useVisualConfig() {
           } else if (docHas(doc, ['thinking-policy', 'codex', 'xhigh-api-keys'])) {
             doc.deleteIn(['thinking-policy', 'codex', 'xhigh-api-keys']);
           }
+          if (codexXhighGroups.length > 0) {
+            doc.setIn(['thinking-policy', 'codex', 'xhigh-groups'], codexXhighGroups);
+          } else if (docHas(doc, ['thinking-policy', 'codex', 'xhigh-groups'])) {
+            doc.deleteIn(['thinking-policy', 'codex', 'xhigh-groups']);
+          }
           deleteIfMapEmpty(doc, ['thinking-policy', 'codex']);
           deleteIfMapEmpty(doc, ['thinking-policy']);
         }
@@ -850,11 +902,13 @@ export function useVisualConfig() {
           .map((model) => model.trim())
           .filter(Boolean);
         const serviceTierAllowedAPIKeys = parseLines(values.serviceTierPolicyCodexAllowedApiKeysText);
+        const serviceTierAllowedGroups = parseStringArray(values.serviceTierPolicyCodexAllowedGroups);
         const serviceTierPolicyDefined =
           docHas(doc, ['service-tier-policy']) ||
           values.serviceTierPolicyCodexEnabled ||
           serviceTierAllowedModels.length > 0 ||
           serviceTierAllowedAPIKeys.length > 0 ||
+          serviceTierAllowedGroups.length > 0 ||
           values.serviceTierPolicyCodexAuthorizedMode !== 'request-only' ||
           values.serviceTierPolicyCodexUnauthorizedAction !== 'strip' ||
           values.serviceTierPolicyCodexRejectMessage.trim() !== DEFAULT_CODEX_SERVICE_TIER_REJECT_MESSAGE;
@@ -868,6 +922,11 @@ export function useVisualConfig() {
           );
           doc.setIn(['service-tier-policy', 'codex', 'allowed-models'], serviceTierAllowedModels);
           doc.setIn(['service-tier-policy', 'codex', 'allowed-api-keys'], serviceTierAllowedAPIKeys);
+          if (serviceTierAllowedGroups.length > 0) {
+            doc.setIn(['service-tier-policy', 'codex', 'allowed-groups'], serviceTierAllowedGroups);
+          } else if (docHas(doc, ['service-tier-policy', 'codex', 'allowed-groups'])) {
+            doc.deleteIn(['service-tier-policy', 'codex', 'allowed-groups']);
+          }
           doc.setIn(
             ['service-tier-policy', 'codex', 'authorized-mode'],
             values.serviceTierPolicyCodexAuthorizedMode

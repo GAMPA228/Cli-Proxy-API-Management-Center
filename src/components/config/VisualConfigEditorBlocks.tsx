@@ -17,6 +17,7 @@ import type {
   PayloadParamValueType,
   PayloadRule,
   VisualApiKeyEntry,
+  VisualApiKeyGroup,
 } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
 import {
@@ -71,6 +72,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   emptySelectLabel,
   showGenerate = true,
   showRemark = false,
+  showEdit = true,
 }: {
   value: string;
   entries?: VisualApiKeyEntry[];
@@ -90,6 +92,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   emptySelectLabel?: string;
   showGenerate?: boolean;
   showRemark?: boolean;
+  showEdit?: boolean;
 }) {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -112,9 +115,10 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
         : apiKeys.map((apiKey) => ({
             id: '',
             apiKey,
-            remark: '',
+            remark:
+              selectEntries?.find((entry) => entry.apiKey.trim() === apiKey)?.remark.trim() ?? '',
           })),
-    [apiKeys, entries, showRemark]
+    [apiKeys, entries, selectEntries, showRemark]
   );
   const selectOptions = useMemo(
     () =>
@@ -312,6 +316,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                   >
                     <IconCopy size={16} />
                   </Button>
+                  {showEdit && (
                   <Button
                     variant="secondary"
                     size="sm"
@@ -323,6 +328,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                   >
                     <IconPencil size={16} />
                   </Button>
+                  )}
                   <Button
                     variant="danger"
                     size="sm"
@@ -527,15 +533,116 @@ export const StringListEditor = memo(function StringListEditor({
   );
 });
 
+export const ApiKeyGroupSelector = memo(function ApiKeyGroupSelector({
+  value,
+  groups,
+  label,
+  hint,
+  disabled,
+  onChange,
+}: {
+  value: string[];
+  groups: VisualApiKeyGroup[];
+  label: string;
+  hint?: string;
+  disabled?: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const { t } = useTranslation();
+  const selected = value.map((item) => item.trim()).filter(Boolean);
+  const groupMap = useMemo(
+    () => new Map(groups.map((group) => [group.groupId.trim().toLowerCase(), group])),
+    [groups]
+  );
+  const selectedSet = new Set(selected.map((item) => item.toLowerCase()));
+  const options = groups
+    .filter((group) => !selectedSet.has(group.groupId.trim().toLowerCase()))
+    .map((group) => ({
+      value: group.groupId,
+      label: `${group.name || group.groupId} (${group.apiKeys.length})`,
+    }));
+
+  const addGroup = (groupId: string) => {
+    const trimmed = groupId.trim();
+    if (!trimmed || selectedSet.has(trimmed.toLowerCase())) return;
+    onChange([...selected, trimmed]);
+  };
+
+  return (
+    <div className={`form-group ${styles.compactFormGroup}`}>
+      <div className={styles.apiKeysHeader}>
+        <div className={styles.apiKeysMeta}>
+          <label className={styles.apiKeysLabel}>{label}</label>
+          <span className={styles.apiKeysCount}>{selected.length}</span>
+        </div>
+        <div className={styles.apiKeysHeaderSelect}>
+          <Select
+            value=""
+            options={options}
+            onChange={addGroup}
+            placeholder={
+              options.length > 0
+                ? t('config_management.visual.api_key_groups.select_group')
+                : t('config_management.visual.api_key_groups.no_selectable_groups')
+            }
+            disabled={disabled || options.length === 0}
+            ariaLabel={label}
+          />
+        </div>
+      </div>
+
+      {selected.length === 0 ? (
+        <div className={styles.apiKeysEmpty}>
+          {t('config_management.visual.api_key_groups.no_selected_groups')}
+        </div>
+      ) : (
+        <div className={styles.apiKeyGroupSelectionList}>
+          {selected.map((groupId) => {
+            const group = groupMap.get(groupId.toLowerCase());
+            return (
+              <div key={groupId} className={styles.apiKeyGroupSelectionItem}>
+                <div className={styles.apiKeyGroupSelectionText}>
+                  <strong>{group?.name || groupId}</strong>
+                  <span>
+                    {group
+                      ? t('config_management.visual.api_key_groups.member_count', {
+                          count: group.apiKeys.length,
+                        })
+                      : t('config_management.visual.api_key_groups.missing_group')}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={styles.payloadRowActionButton}
+                  onClick={() => onChange(selected.filter((item) => item !== groupId))}
+                  disabled={disabled}
+                  title={t('config_management.visual.common.delete')}
+                  aria-label={t('config_management.visual.common.delete')}
+                >
+                  <IconTrash2 size={16} />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {hint && <div className="hint">{hint}</div>}
+    </div>
+  );
+});
+
 export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
   value,
   apiKeyEntries,
+  apiKeyGroups,
   modelOptions,
   disabled,
   onChange,
 }: {
   value: ModelRewriteRule[];
   apiKeyEntries?: VisualApiKeyEntry[];
+  apiKeyGroups?: VisualApiKeyGroup[];
   modelOptions?: ModelInfo[];
   disabled?: boolean;
   onChange: (next: ModelRewriteRule[]) => void;
@@ -575,7 +682,14 @@ export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
   const addRule = () =>
     onChange([
       ...rules,
-      { id: makeClientId(), matchModels: [''], targetModel: '', targetThinkingEffort: '', bypassApiKeys: [] },
+      {
+        id: makeClientId(),
+        matchModels: [''],
+        targetModel: '',
+        targetThinkingEffort: '',
+        bypassApiKeys: [],
+        bypassGroups: [],
+      },
     ]);
   const removeRule = (ruleIndex: number) => onChange(rules.filter((_, i) => i !== ruleIndex));
   const updateRule = (ruleIndex: number, patch: Partial<ModelRewriteRule>) =>
@@ -687,6 +801,17 @@ export const ModelRewriteRulesEditor = memo(function ModelRewriteRulesEditor({
             <div className="hint">
               {t('config_management.visual.model_rewrite.target_thinking_effort_hint')}
             </div>
+          </div>
+
+          <div className={styles.ruleGroup}>
+            <ApiKeyGroupSelector
+              value={rule.bypassGroups ?? []}
+              groups={apiKeyGroups ?? []}
+              label={t('config_management.visual.model_rewrite.bypass_groups')}
+              hint={t('config_management.visual.model_rewrite.bypass_groups_hint')}
+              disabled={disabled}
+              onChange={(bypassGroups) => updateRule(ruleIndex, { bypassGroups })}
+            />
           </div>
 
           <div className={styles.ruleGroup}>

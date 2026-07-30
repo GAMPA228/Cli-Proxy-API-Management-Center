@@ -50,6 +50,15 @@ export type ModelRewriteRule = {
   targetModel: string;
   targetThinkingEffort: string;
   bypassApiKeys: string[];
+  bypassGroups: string[];
+};
+
+export type VisualApiKeyGroup = {
+  id: string;
+  groupId: string;
+  name: string;
+  description: string;
+  apiKeys: string[];
 };
 
 export type VisualApiKeyEntry = {
@@ -83,6 +92,7 @@ export type VisualConfigValues = {
   authDir: string;
   apiKeysText: string;
   apiKeyEntries: VisualApiKeyEntry[];
+  apiKeyGroups: VisualApiKeyGroup[];
   debug: boolean;
   commercialMode: boolean;
   loggingToFile: boolean;
@@ -99,9 +109,11 @@ export type VisualConfigValues = {
   thinkingPolicyCodexEnabled: boolean;
   thinkingPolicyCodexDefaultEffort: CodexThinkingDefaultEffort;
   thinkingPolicyCodexXhighApiKeysText: string;
+  thinkingPolicyCodexXhighGroups: string[];
   serviceTierPolicyCodexEnabled: boolean;
   serviceTierPolicyCodexAllowedModels: string[];
   serviceTierPolicyCodexAllowedApiKeysText: string;
+  serviceTierPolicyCodexAllowedGroups: string[];
   serviceTierPolicyCodexAuthorizedMode: CodexServiceTierAuthorizedMode;
   serviceTierPolicyCodexUnauthorizedAction: CodexServiceTierUnauthorizedAction;
   serviceTierPolicyCodexRejectMessage: string;
@@ -131,6 +143,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   authDir: '',
   apiKeysText: '',
   apiKeyEntries: [],
+  apiKeyGroups: [],
   debug: false,
   commercialMode: false,
   loggingToFile: false,
@@ -147,9 +160,11 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   thinkingPolicyCodexEnabled: false,
   thinkingPolicyCodexDefaultEffort: 'high',
   thinkingPolicyCodexXhighApiKeysText: '',
+  thinkingPolicyCodexXhighGroups: [],
   serviceTierPolicyCodexEnabled: false,
   serviceTierPolicyCodexAllowedModels: [],
   serviceTierPolicyCodexAllowedApiKeysText: '',
+  serviceTierPolicyCodexAllowedGroups: [],
   serviceTierPolicyCodexAuthorizedMode: 'request-only',
   serviceTierPolicyCodexUnauthorizedAction: 'strip',
   serviceTierPolicyCodexRejectMessage: DEFAULT_CODEX_SERVICE_TIER_REJECT_MESSAGE,

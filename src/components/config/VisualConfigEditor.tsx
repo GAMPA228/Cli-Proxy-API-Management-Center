@@ -6,6 +6,7 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconChevronDown, IconChevronUp, IconInfo } from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { FrontendRequestTimeoutSection } from '@/components/config/FrontendRequestTimeoutSection';
+import { ApiKeyGroupsSection } from '@/components/config/ApiKeyGroupsSection';
 import { ServiceTierPolicySection } from '@/components/config/ServiceTierPolicySection';
 import styles from './VisualConfigEditor.module.scss';
 import type {
@@ -22,6 +23,7 @@ import type {
   VisualConfigValues,
 } from '@/types/visualConfig';
 import {
+  ApiKeyGroupSelector,
   ApiKeysCardEditor,
   ModelRewriteRulesEditor,
   PayloadFilterRulesEditor,
@@ -365,6 +367,8 @@ export function VisualConfigEditor({
           </div>
       </ConfigSection>
 
+      <ApiKeyGroupsSection values={values} disabled={disabled} onChange={onChange} />
+
       <ConfigSection title={t('config_management.visual.sections.model_rewrite.title')} description={t('config_management.visual.sections.model_rewrite.description')}>
         <div className={styles.sectionStack}>
           <ToggleRow
@@ -377,6 +381,7 @@ export function VisualConfigEditor({
           <ModelRewriteRulesEditor
             value={values.modelRewriteRules}
             apiKeyEntries={values.apiKeyEntries}
+            apiKeyGroups={values.apiKeyGroups}
             modelOptions={modelOptions}
             disabled={disabled}
             onChange={handleModelRewriteRulesChange}
@@ -562,6 +567,19 @@ export function VisualConfigEditor({
             </div>
 
             <div className={styles.fullWidthGridItem}>
+              <ApiKeyGroupSelector
+                value={values.thinkingPolicyCodexXhighGroups}
+                groups={values.apiKeyGroups}
+                label={t('config_management.visual.sections.thinking_policy.xhigh_groups')}
+                hint={t('config_management.visual.sections.thinking_policy.xhigh_groups_hint')}
+                disabled={disabled}
+                onChange={(thinkingPolicyCodexXhighGroups) =>
+                  onChange({ thinkingPolicyCodexXhighGroups })
+                }
+              />
+            </div>
+
+            <div className={styles.fullWidthGridItem}>
               <ApiKeysCardEditor
                 value={values.thinkingPolicyCodexXhighApiKeysText}
                 disabled={disabled}
@@ -580,6 +598,7 @@ export function VisualConfigEditor({
                 selectEntries={values.apiKeyEntries}
                 emptySelectLabel={t('config_management.visual.sections.thinking_policy.xhigh_api_keys_no_options')}
                 showGenerate={false}
+                showEdit={false}
               />
             </div>
           </SectionGrid>
