@@ -1097,6 +1097,8 @@
     "request_events_client_ip": "请求 IP",
     "request_events_api_key": "请求 API Key",
     "request_events_reasoning": "思考深度",
+    "request_events_speed": "速率",
+    "request_events_speed_no_response": "未回传",
     "request_events_requested_tier": "客户端请求档位",
     "request_events_applied_tier": "实际发送档位",
     "request_events_response_tier": "上游响应档位",

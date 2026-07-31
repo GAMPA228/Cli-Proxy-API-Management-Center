@@ -99,6 +99,84 @@ const formatRequestApiKeyLabel = (value: unknown, apiKeyRemarks?: ApiKeyRemarkMa
   return appendApiKeyRemark(masked, raw, apiKeyRemarks);
 };
 
+type ServiceTierTone = 'fast' | 'default' | 'downgraded' | 'unknown';
+
+const normalizeServiceTier = (value: string): string => {
+  const normalized = value.trim().toLowerCase();
+  return normalized === 'priority' || normalized === 'fast' ? 'fast' : normalized;
+};
+
+const formatServiceTier = (value: string): string => {
+  const normalized = normalizeServiceTier(value);
+  if (normalized === 'fast') return 'Fast';
+  if (normalized === 'default') return 'Default';
+  if (normalized === 'auto') return 'Auto';
+  return value.trim() || '-';
+};
+
+const resolveServiceTierDisplay = (
+  requested: string,
+  applied: string,
+  response: string,
+  noResponseLabel: string
+): { label: string; tone: ServiceTierTone } => {
+  const requestedTier = normalizeServiceTier(requested);
+  const appliedTier = normalizeServiceTier(applied);
+  const responseTier = normalizeServiceTier(response);
+  const fastRequested = requestedTier === 'fast' || appliedTier === 'fast';
+
+  if (responseTier === 'fast') return { label: 'Fast', tone: 'fast' };
+  if (fastRequested && responseTier) {
+    return { label: `Fast → ${formatServiceTier(response)}`, tone: 'downgraded' };
+  }
+  if (fastRequested) return { label: `Fast → ${noResponseLabel}`, tone: 'unknown' };
+  if (responseTier) return { label: formatServiceTier(response), tone: 'default' };
+  if (appliedTier) return { label: formatServiceTier(applied), tone: 'default' };
+  if (requestedTier) return { label: formatServiceTier(requested), tone: 'default' };
+  return { label: '-', tone: 'default' };
+};
+
+interface ServiceTierCellProps {
+  requested: string;
+  applied: string;
+  response: string;
+  requestedLabel: string;
+  appliedLabel: string;
+  responseLabel: string;
+  noResponseLabel: string;
+}
+
+function ServiceTierCell({
+  requested,
+  applied,
+  response,
+  requestedLabel,
+  appliedLabel,
+  responseLabel,
+  noResponseLabel
+}: ServiceTierCellProps) {
+  const display = resolveServiceTierDisplay(requested, applied, response, noResponseLabel);
+  const toneClass =
+    display.tone === 'fast'
+      ? styles.serviceTierBadgeFast
+      : display.tone === 'downgraded'
+        ? styles.serviceTierBadgeDowngraded
+        : display.tone === 'unknown'
+          ? styles.serviceTierBadgeUnknown
+          : styles.serviceTierBadgeDefault;
+  const title = [
+    `${requestedLabel}: ${requested || '-'}`,
+    `${appliedLabel}: ${applied || '-'}`,
+    `${responseLabel}: ${response || '-'}`
+  ].join(' · ');
+
+  return (
+    <td className={styles.tableCellStatus} title={title}>
+      <span className={`${styles.serviceTierBadge} ${toneClass}`}>{display.label}</span>
+    </td>
+  );
+}
+
 const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
   const timestamp = typeof row.timestamp === 'string' ? row.timestamp : '';
   if (!timestamp) return null;
@@ -674,6 +752,7 @@ export function RequestEventsDetailsCard({
               <colgroup>
                 <col className={styles.requestEventsColTime} />
                 <col className={styles.requestEventsColModel} />
+                <col className={styles.requestEventsColSpeed} />
                 <col className={styles.requestEventsColClientIP} />
                 <col className={styles.requestEventsColAPIKey} />
                 <col className={styles.requestEventsColSourceType} />
@@ -690,6 +769,7 @@ export function RequestEventsDetailsCard({
                 <tr>
                   <th>{t('usage_stats.request_events_timestamp')}</th>
                   <th>{t('usage_stats.model_name')}</th>
+                  <th>{t('usage_stats.request_events_speed')}</th>
                   <th>{t('usage_stats.request_events_client_ip')}</th>
                   <th>{t('usage_stats.request_events_api_key')}</th>
                   <th>{t('usage_stats.request_events_source_type')}</th>
@@ -716,15 +796,6 @@ export function RequestEventsDetailsCard({
                         row.reasoningEffort
                           ? `${t('usage_stats.request_events_reasoning')}: ${row.reasoningEffort}`
                           : '',
-                        row.serviceTier
-                          ? `${t('usage_stats.request_events_requested_tier')}: ${row.serviceTier}`
-                          : '',
-                        row.appliedServiceTier
-                          ? `${t('usage_stats.request_events_applied_tier')}: ${row.appliedServiceTier}`
-                          : '',
-                        row.responseServiceTier
-                          ? `${t('usage_stats.request_events_response_tier')}: ${row.responseServiceTier}`
-                          : '',
                       ]
                         .filter(Boolean)
                         .join(' · ')}
@@ -735,26 +806,18 @@ export function RequestEventsDetailsCard({
                           {row.reasoningEffort && (
                             <span className={styles.reasoningEffortBadge}>{row.reasoningEffort}</span>
                           )}
-                          {[row.serviceTier, row.appliedServiceTier, row.responseServiceTier].some(
-                            (tier) => tier.toLowerCase() === 'fast' || tier.toLowerCase() === 'priority'
-                          ) && (
-                            <>
-                              <span className={styles.serviceTierBadge}>
-                                {t('usage_stats.request_events_requested_tier_short')}:{row.serviceTier || '-'}
-                              </span>
-                              <span className={styles.serviceTierBadge}>
-                                {t('usage_stats.request_events_applied_tier_short')}:{row.appliedServiceTier || '-'}
-                              </span>
-                              {row.responseServiceTier && (
-                                <span className={styles.serviceTierBadge}>
-                                  {t('usage_stats.request_events_response_tier_short')}:{row.responseServiceTier}
-                                </span>
-                              )}
-                            </>
-                          )}
                         </span>
                       </span>
                     </td>
+                    <ServiceTierCell
+                      requested={row.serviceTier}
+                      applied={row.appliedServiceTier}
+                      response={row.responseServiceTier}
+                      requestedLabel={t('usage_stats.request_events_requested_tier')}
+                      appliedLabel={t('usage_stats.request_events_applied_tier')}
+                      responseLabel={t('usage_stats.request_events_response_tier')}
+                      noResponseLabel={t('usage_stats.request_events_speed_no_response')}
+                    />
                     <td
                       className={`${styles.requestEventsClientIP} ${styles.tableCellMono}`}
                       title={row.clientIP}

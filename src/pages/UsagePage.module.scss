@@ -657,18 +657,43 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 20px;
+  max-width: 100%;
   padding: 2px 7px;
   border-radius: $radius-full;
-  border: 1px solid rgba(245, 158, 11, 0.42);
-  background: rgba(245, 158, 11, 0.13);
-  color: #fbbf24;
+  border: 1px solid transparent;
   font-size: 10px;
   font-weight: 700;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   line-height: 1.2;
+  white-space: nowrap;
+}
+
+.serviceTierBadgeFast {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.42);
+}
+
+.serviceTierBadgeDefault {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+.serviceTierBadgeDowngraded {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.13);
+  border-color: rgba(245, 158, 11, 0.42);
+}
+
+.serviceTierBadgeUnknown {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(59, 130, 246, 0.38);
 }
 
 .tableCellLeft {
@@ -1580,7 +1605,7 @@
 }
 
 .requestEventsTable {
-  min-width: 1460px;
+  min-width: 1580px;
 }
 
 .requestEventsColTime {
@@ -1589,6 +1614,10 @@
 
 .requestEventsColModel {
   width: 11%;
+}
+
+.requestEventsColSpeed {
+  width: 9%;
 }
 
 .requestEventsColClientIP {
