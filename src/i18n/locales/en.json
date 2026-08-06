@@ -709,6 +709,7 @@
     "reset_credit_number": "Reset #{{index}}",
     "reset_credits_expiry_failed": "Failed to load manual reset expiry times: {{message}}",
     "reset_credits_invalid_payload": "Invalid manual reset expiry response",
+    "reset_credits_upstream_blocked": "OpenAI security verification blocked the query (HTTP {{status}}). Try again later or check the server egress network",
     "reset_button": "Reset quota",
     "reset_confirm_title": "Reset Codex quota",
     "reset_confirm_message": "This will consume 1 manual reset to reset the Codex quota for \"{{name}}\". Continue?",

@@ -182,7 +182,7 @@ export const CLAUDE_USAGE_WINDOW_KEYS = [
 // Codex API configuration
 export const CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
 export const CODEX_RATE_LIMIT_RESET_CREDITS_URL =
-  'https://chatgpt.com/backend-api/codex/rate-limit-reset-credits';
+  'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits';
 export const CODEX_RATE_LIMIT_RESET_CREDITS_CONSUME_URL =
   'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume';
 

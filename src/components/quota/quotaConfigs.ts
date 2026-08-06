@@ -441,10 +441,18 @@ const fetchCodexResetCredits = async (
     );
 
     if (result.statusCode < 200 || result.statusCode >= 300) {
+      const bodyText = result.bodyText.trim();
+      const isHtmlChallenge =
+        /^(?:<!doctype\s+html|<html|<head|<body)\b/i.test(bodyText) ||
+        /(?:cf_chl|challenge-platform|cdn-cgi\/challenge)/i.test(bodyText);
       return {
         availableCount: null,
         credits: [],
-        error: getApiCallErrorMessage(result),
+        error: isHtmlChallenge
+          ? t('codex_quota.reset_credits_upstream_blocked', {
+              status: result.statusCode || '-',
+            })
+          : getApiCallErrorMessage(result),
       };
     }
 

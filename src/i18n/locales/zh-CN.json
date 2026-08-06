@@ -709,6 +709,7 @@
     "reset_credit_number": "第 {{index}} 次",
     "reset_credits_expiry_failed": "主动重置过期时间获取失败：{{message}}",
     "reset_credits_invalid_payload": "主动重置过期时间响应格式无效",
+    "reset_credits_upstream_blocked": "OpenAI 安全验证拦截了查询请求（HTTP {{status}}），请稍后重试或检查服务器出口网络",
     "reset_button": "重置额度",
     "reset_confirm_title": "重置 Codex 额度",
     "reset_confirm_message": "将消耗 1 次主动重置次数来重置 \"{{name}}\" 的 Codex 额度。是否继续？",
