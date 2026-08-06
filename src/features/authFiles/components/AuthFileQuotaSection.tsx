@@ -1,6 +1,8 @@
 import { useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { Button } from '@/components/ui/Button';
+import { IconRefreshCw } from '@/components/ui/icons';
 import {
   ANTIGRAVITY_CONFIG,
   CLAUDE_CONFIG,
@@ -41,10 +43,11 @@ export type AuthFileQuotaSectionProps = {
   quotaType: QuotaProviderType;
   disableControls: boolean;
   compact?: boolean;
+  refreshOnly?: boolean;
 };
 
 export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
-  const { file, quotaType, disableControls, compact = false } = props;
+  const { file, quotaType, disableControls, compact = false, refreshOnly = false } = props;
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
 
@@ -109,6 +112,25 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
 
   const quotaStatus = quota?.status ?? 'idle';
   const canRefreshQuota = !disableControls && !file.disabled;
+
+  if (refreshOnly) {
+    const isRefreshing = quotaStatus === 'loading';
+    return (
+      <Button
+        variant="secondary"
+        size="sm"
+        className={styles.authTableQuotaRefreshButton}
+        onClick={() => void refreshQuotaForFile()}
+        disabled={!canRefreshQuota || isRefreshing}
+        loading={isRefreshing}
+        title={t('common.refresh')}
+        aria-label={t('common.refresh')}
+      >
+        {!isRefreshing ? <IconRefreshCw size={15} /> : null}
+      </Button>
+    );
+  }
+
   const quotaErrorMessage = resolveQuotaErrorMessage(
     t,
     quota?.errorStatus,

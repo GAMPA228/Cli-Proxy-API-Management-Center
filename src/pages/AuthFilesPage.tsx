@@ -19,6 +19,7 @@ import {
   IconCode,
   IconDownload,
   IconInfo,
+  IconRefreshCw,
   IconTrash2,
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
@@ -472,7 +473,6 @@ export function AuthFilesPage() {
     uploading,
     batchDownloading,
     deleting,
-    deletingAll,
     statusUpdating,
     priorityUpdating,
     fileInputRef,
@@ -480,7 +480,6 @@ export function AuthFilesPage() {
     handleUploadClick,
     handleFileChange,
     handleDelete,
-    handleDeleteAll,
     handleDownload,
     handleBatchDownload,
     handleStatusToggle,
@@ -859,14 +858,6 @@ export function AuthFilesPage() {
     </div>
   );
 
-  const deleteAllButtonLabel = problemOnly
-    ? filter === 'all'
-      ? t('auth_files.delete_problem_button')
-      : t('auth_files.delete_problem_button_with_type', { type: getTypeLabel(t, filter) })
-    : filter === 'all'
-      ? t('auth_files.delete_all_button')
-      : `${t('common.delete')} ${getTypeLabel(t, filter)}`;
-
   return (
     <div className={styles.container}>
       <div className={styles.pageHeader}>
@@ -888,22 +879,6 @@ export function AuthFilesPage() {
               loading={uploading}
             >
               {t('auth_files.upload_button')}
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() =>
-                handleDeleteAll({
-                  filter,
-                  problemOnly,
-                  onResetFilterToAll: () => setFilter('all'),
-                  onResetProblemOnly: () => setProblemOnly(false),
-                })
-              }
-              disabled={disableControls || loading || deletingAll}
-              loading={deletingAll}
-            >
-              {deleteAllButtonLabel}
             </Button>
             <input
               ref={fileInputRef}
@@ -1064,6 +1039,7 @@ export function AuthFilesPage() {
                 <col className={styles.authTableColFailure} />
                 <col className={styles.authTableColStatus} />
                 <col className={styles.authTableColQuota} />
+                <col className={styles.authTableColQuotaRefresh} />
                 <col className={styles.authTableColHealth} />
                 <col className={styles.authTableColActions} />
               </colgroup>
@@ -1138,6 +1114,13 @@ export function AuthFilesPage() {
                     className={styles.authTableColQuota}
                   >
                     {t('auth_files.quota_column', { defaultValue: '额度' })}
+                  </th>
+                  <th
+                    className={styles.authTableColQuotaRefresh}
+                    title={t('common.refresh')}
+                    aria-label={t('common.refresh')}
+                  >
+                    <IconRefreshCw size={14} aria-hidden="true" />
                   </th>
                   <th
                     className={styles.authTableColHealth}
@@ -1328,6 +1311,20 @@ export function AuthFilesPage() {
                             quotaType={quotaType}
                             disableControls={disableControls}
                             compact
+                          />
+                        ) : (
+                          <span className={styles.authTableQuotaEmpty}>-</span>
+                        )}
+                      </td>
+                      <td
+                        className={`${styles.authTableCenterCell} ${styles.authTableCellQuotaRefresh}`}
+                      >
+                        {quotaType ? (
+                          <AuthFileQuotaSection
+                            file={file}
+                            quotaType={quotaType}
+                            disableControls={disableControls}
+                            refreshOnly
                           />
                         ) : (
                           <span className={styles.authTableQuotaEmpty}>-</span>

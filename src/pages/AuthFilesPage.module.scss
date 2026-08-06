@@ -132,6 +132,11 @@
   width: 196px;
 }
 
+.authTableColQuotaRefresh {
+  width: 52px;
+  text-align: center;
+}
+
 .authTableColActions {
   width: 292px;
 }
@@ -232,6 +237,22 @@
 .authTableCellQuota {
   width: 196px;
   min-width: 196px;
+}
+
+.authTableCellQuotaRefresh {
+  width: 52px;
+  max-width: 52px;
+}
+
+.authTableQuotaRefreshButton:global(.btn.btn-sm) {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  margin: 0 auto;
+  padding: 0;
+  border-radius: 6px;
+  gap: 0;
 }
 
 .authTableNameTrigger {
