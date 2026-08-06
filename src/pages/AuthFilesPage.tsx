@@ -14,6 +14,8 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { CountTooltipCell } from '@/components/providers/CountTooltipCell';
 import {
   IconBot,
+  IconChevronDown,
+  IconChevronUp,
   IconCode,
   IconDownload,
   IconInfo,
@@ -472,6 +474,7 @@ export function AuthFilesPage() {
     deleting,
     deletingAll,
     statusUpdating,
+    priorityUpdating,
     fileInputRef,
     loadFiles,
     handleUploadClick,
@@ -481,6 +484,7 @@ export function AuthFilesPage() {
     handleDownload,
     handleBatchDownload,
     handleStatusToggle,
+    handlePriorityChange,
     toggleSelect,
     batchSetStatus,
     batchDelete,
@@ -1236,7 +1240,46 @@ export function AuthFilesPage() {
                       <td
                         className={`provider-table-cell-numeric ${styles.authTableCenterCell} ${styles.authTableCellSize}`}
                       >
-                        {priorityValue === null ? '-' : priorityValue}
+                        {isRuntimeOnly ? (
+                          priorityValue === null ? '-' : priorityValue
+                        ) : (
+                          <div
+                            className={styles.priorityControl}
+                            aria-busy={priorityUpdating[file.name] === true}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={styles.priorityStepButton}
+                              onClick={() => void handlePriorityChange(file, 1)}
+                              title={t('auth_files.priority_increase')}
+                              aria-label={t('auth_files.priority_increase')}
+                              disabled={
+                                disableControls ||
+                                priorityUpdating[file.name] === true ||
+                                (priorityValue !== null && priorityValue >= Number.MAX_SAFE_INTEGER)
+                              }
+                            >
+                              <IconChevronUp size={15} />
+                            </Button>
+                            <span className={styles.priorityControlValue}>{priorityValue ?? 0}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={styles.priorityStepButton}
+                              onClick={() => void handlePriorityChange(file, -1)}
+                              title={t('auth_files.priority_decrease')}
+                              aria-label={t('auth_files.priority_decrease')}
+                              disabled={
+                                disableControls ||
+                                priorityUpdating[file.name] === true ||
+                                (priorityValue !== null && priorityValue <= Number.MIN_SAFE_INTEGER)
+                              }
+                            >
+                              <IconChevronDown size={15} />
+                            </Button>
+                          </div>
+                        )}
                       </td>
                       <td
                         className={`provider-table-cell-nowrap ${styles.authTableCenterCell} ${styles.authTableCellModified}`}

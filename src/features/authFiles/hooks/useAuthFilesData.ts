@@ -12,6 +12,7 @@ import {
   getTypeLabel,
   hasAuthFileStatusMessage,
   isRuntimeOnlyAuthFile,
+  parsePriorityValue,
 } from '@/features/authFiles/constants';
 
 type DeleteAllOptions = {
@@ -32,6 +33,7 @@ export type UseAuthFilesDataResult = {
   deleting: string | null;
   deletingAll: boolean;
   statusUpdating: Record<string, boolean>;
+  priorityUpdating: Record<string, boolean>;
   fileInputRef: RefObject<HTMLInputElement | null>;
   loadFiles: () => Promise<void>;
   handleUploadClick: () => void;
@@ -41,6 +43,7 @@ export type UseAuthFilesDataResult = {
   handleDownload: (name: string) => Promise<void>;
   handleBatchDownload: (names: string[]) => Promise<void>;
   handleStatusToggle: (item: AuthFileItem, enabled: boolean) => Promise<void>;
+  handlePriorityChange: (item: AuthFileItem, delta: -1 | 1) => Promise<void>;
   toggleSelect: (name: string) => void;
   selectAllVisible: (visibleFiles: AuthFileItem[]) => void;
   deselectAll: () => void;
@@ -81,6 +84,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
+  const [priorityUpdating, setPriorityUpdating] = useState<Record<string, boolean>>({});
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -510,6 +514,40 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [showNotification, t]
   );
 
+  const handlePriorityChange = useCallback(
+    async (item: AuthFileItem, delta: -1 | 1) => {
+      const name = item.name;
+      const previousPriority = item.priority;
+      const currentPriority = parsePriorityValue(previousPriority) ?? 0;
+      const nextPriority = currentPriority + delta;
+
+      if (!Number.isSafeInteger(nextPriority)) return;
+
+      setPriorityUpdating((prev) => ({ ...prev, [name]: true }));
+      setFiles((prev) =>
+        prev.map((file) => (file.name === name ? { ...file, priority: nextPriority } : file))
+      );
+
+      try {
+        await authFilesApi.patchFields(name, { priority: nextPriority });
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : '';
+        setFiles((prev) =>
+          prev.map((file) => (file.name === name ? { ...file, priority: previousPriority } : file))
+        );
+        showNotification(`${t('notification.update_failed')}: ${errorMessage}`, 'error');
+      } finally {
+        setPriorityUpdating((prev) => {
+          if (!prev[name]) return prev;
+          const next = { ...prev };
+          delete next[name];
+          return next;
+        });
+      }
+    },
+    [showNotification, t]
+  );
+
   const batchSetStatus = useCallback(
     async (names: string[], enabled: boolean) => {
       const uniqueNames = Array.from(new Set(names));
@@ -658,6 +696,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     deleting,
     deletingAll,
     statusUpdating,
+    priorityUpdating,
     fileInputRef,
     loadFiles,
     handleUploadClick,
@@ -667,6 +706,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     handleDownload,
     handleBatchDownload,
     handleStatusToggle,
+    handlePriorityChange,
     toggleSelect,
     selectAllVisible,
     deselectAll,

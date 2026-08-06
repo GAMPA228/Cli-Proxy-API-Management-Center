@@ -634,6 +634,8 @@
     "priority_label": "Приоритет (priority)",
     "priority_placeholder": "например: 10 или -1",
     "priority_hint": "Только целые числа. Некорректные значения игнорируются. Чем больше число, тем выше приоритет.",
+    "priority_increase": "Повысить приоритет",
+    "priority_decrease": "Понизить приоритет",
     "excluded_models_label": "Исключённые модели (excluded_models)",
     "excluded_models_placeholder": "Через запятую или с новой строки, например: model-a, gpt-5-*, *-preview",
     "excluded_models_hint": "Сохраняется как массив; значения trim/нижний регистр/без дублей/с сортировкой.",

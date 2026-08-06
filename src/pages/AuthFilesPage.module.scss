@@ -159,7 +159,7 @@
 }
 
 .authTableColSize {
-  width: 78px;
+  width: 108px;
 }
 
 .authTableColModified {
@@ -176,7 +176,37 @@
 }
 
 .authTableCellSize {
-  width: 78px;
+  width: 108px;
+}
+
+.priorityControl {
+  display: inline-grid;
+  grid-template-columns: 24px minmax(0, 38px) 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 90px;
+}
+
+.priorityStepButton:global(.btn.btn-sm) {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 4px;
+  gap: 0;
+}
+
+.priorityControlValue {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
 
 .authTableCellPlan {

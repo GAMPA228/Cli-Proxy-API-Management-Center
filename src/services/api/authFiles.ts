@@ -8,6 +8,7 @@ import type { OAuthModelAliasEntry } from '@/types';
 
 type StatusError = { status?: number };
 type AuthFileStatusResponse = { status: string; disabled: boolean };
+type AuthFileFieldsResponse = { status: string };
 
 export const AUTH_FILE_INVALID_JSON_OBJECT_ERROR = 'AUTH_FILE_INVALID_JSON_OBJECT';
 
@@ -134,6 +135,9 @@ export const authFilesApi = {
 
   setStatus: (name: string, disabled: boolean) =>
     apiClient.patch<AuthFileStatusResponse>('/auth-files/status', { name, disabled }),
+
+  patchFields: (name: string, fields: Record<string, unknown>) =>
+    apiClient.patch<AuthFileFieldsResponse>('/auth-files/fields', { ...fields, name }),
 
   upload: (file: File) => {
     const formData = new FormData();

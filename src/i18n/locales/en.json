@@ -634,6 +634,8 @@
     "priority_label": "Priority (priority)",
     "priority_placeholder": "e.g. 10 or -1",
     "priority_hint": "Integers only. Invalid values are ignored. Larger value means higher priority.",
+    "priority_increase": "Increase priority",
+    "priority_decrease": "Decrease priority",
     "excluded_models_label": "Excluded models (excluded_models)",
     "excluded_models_placeholder": "Comma or newline separated, e.g. model-a, gpt-5-*, *-preview",
     "excluded_models_hint": "Saved as an array and normalized by trim/lowercase/dedup/sort.",
