@@ -68,9 +68,13 @@ import {
   formatShanghaiDateTime,
   formatKimiResetHint,
   buildAntigravityQuotaGroups,
+  buildCodexResetCreditsCacheKey,
   buildGeminiCliQuotaBuckets,
   buildKimiQuotaRows,
+  cacheCodexResetCredits,
+  clearCodexResetCreditsCache,
   createStatusError,
+  getOrLoadCodexResetCredits,
   getStatusFromError,
   isAntigravityFile,
   isClaudeFile,
@@ -81,6 +85,7 @@ import {
   isRuntimeOnlyAuthFile,
 } from '@/utils/quota';
 import { normalizeAuthIndex } from '@/utils/usage';
+import type { CodexResetCreditsData } from '@/utils/quota/codexResetCreditsCache';
 import type { QuotaRenderHelpers } from './QuotaCard';
 import styles from '@/pages/QuotaPage.module.scss';
 
@@ -94,12 +99,6 @@ const geminiCliSupplementaryCache = new Map<
   string,
   { requestId: number; tierLabel: string | null; tierId: string | null; creditBalance: number | null }
 >();
-
-type CodexResetCreditsData = {
-  availableCount: number | null;
-  credits: CodexRateLimitResetCredit[];
-  error: string;
-};
 
 type CodexQuotaData = {
   planType: string | null;
@@ -419,7 +418,7 @@ const buildCodexQuotaWindows = (payload: CodexUsagePayload, t: TFunction): Codex
   return windows;
 };
 
-const fetchCodexResetCredits = async (
+const requestCodexResetCredits = async (
   authIndex: string,
   requestHeader: Record<string, string>,
   t: TFunction
@@ -479,6 +478,18 @@ const fetchCodexResetCredits = async (
   }
 };
 
+const fetchCodexResetCredits = async (
+  authIndex: string,
+  accountId: string,
+  requestHeader: Record<string, string>,
+  t: TFunction
+): Promise<CodexResetCreditsData> => {
+  const cacheKey = buildCodexResetCreditsCacheKey(authIndex, accountId);
+  return getOrLoadCodexResetCredits(cacheKey, () =>
+    requestCodexResetCredits(authIndex, requestHeader, t)
+  );
+};
+
 const fetchCodexQuota = async (
   file: AuthFileItem,
   t: TFunction
@@ -521,7 +532,16 @@ const fetchCodexQuota = async (
   const usageResetCreditsAvailableCount = normalizeNumberValue(
     resetCredits?.available_count ?? resetCredits?.availableCount
   );
-  const resetCreditsData = await fetchCodexResetCredits(authIndex, requestHeader, t);
+  let resetCreditsData: CodexResetCreditsData;
+  if (usageResetCreditsAvailableCount === 0) {
+    resetCreditsData = { availableCount: 0, credits: [], error: '' };
+    cacheCodexResetCredits(
+      buildCodexResetCreditsCacheKey(authIndex, accountId),
+      resetCreditsData
+    );
+  } else {
+    resetCreditsData = await fetchCodexResetCredits(authIndex, accountId, requestHeader, t);
+  }
   const resetCreditsCountFromDetails =
     resetCreditsData.credits.length > 0 ? resetCreditsData.credits.length : null;
   const rateLimitResetCreditsAvailableCount =
@@ -581,6 +601,8 @@ const consumeCodexRateLimitResetCredit = async (
   if (result.statusCode < 200 || result.statusCode >= 300) {
     throw createStatusError(getApiCallErrorMessage(result), result.statusCode);
   }
+
+  clearCodexResetCreditsCache(buildCodexResetCreditsCacheKey(authIndex, accountId));
 };
 
 const resetCodexQuota = async (
