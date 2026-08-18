@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ConfigSection } from '@/components/config/ConfigSection';
@@ -68,6 +69,14 @@ function UpstreamAuthSelector({
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownRect, setDropdownRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
   const selected = useMemo(
     () => Array.from(new Set(value.map((item) => item.trim()).filter(Boolean))),
     [value]
@@ -97,13 +106,48 @@ function UpstreamAuthSelector({
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (!pickerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearch('');
-      }
+      const target = event.target as Node;
+      if (pickerRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      setIsOpen(false);
+      setSearch('');
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    const updateDropdownPosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = 12;
+      const gap = 4;
+      const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+      const spaceAbove = rect.top - viewportPadding - gap;
+      const openAbove = spaceBelow < 220 && spaceAbove > spaceBelow;
+      const availableHeight = openAbove ? spaceAbove : spaceBelow;
+      const maxHeight = Math.max(72, Math.min(300, availableHeight));
+      const width = Math.min(rect.width, window.innerWidth - viewportPadding * 2);
+      const left = Math.min(
+        Math.max(viewportPadding, rect.left),
+        window.innerWidth - width - viewportPadding
+      );
+      const top = openAbove
+        ? Math.max(viewportPadding, rect.top - gap - maxHeight)
+        : rect.bottom + gap;
+
+      setDropdownRect({ top, left, width, maxHeight });
+    };
+
+    updateDropdownPosition();
+    window.addEventListener('resize', updateDropdownPosition);
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+    };
   }, [isOpen]);
 
   const addAuth = (authID: string) => {
@@ -122,6 +166,7 @@ function UpstreamAuthSelector({
       </div>
       <div className={styles.upstreamAuthPicker} ref={pickerRef}>
         <button
+          ref={triggerRef}
           type="button"
           className={styles.upstreamAuthTrigger}
           onClick={() => {
@@ -142,57 +187,72 @@ function UpstreamAuthSelector({
             className={isOpen ? styles.upstreamAuthChevronOpen : styles.upstreamAuthChevron}
           />
         </button>
-        {isOpen && !loading && !loadFailed && (
-          <div className={styles.upstreamAuthDropdown}>
-            <input
-              className={`input ${styles.upstreamAuthSearch}`}
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  setIsOpen(false);
-                  setSearch('');
-                }
-              }}
-              placeholder={t('config_management.visual.api_key_groups.search_upstream_accounts')}
-              autoFocus
-            />
-            {options.length > 0 ? (
-              <div className={styles.upstreamAuthOptions} role="listbox">
-                {options.map((file) => {
-                  const id = authFileID(file);
-                  const unavailable = file.disabled === true || file.unavailable === true;
-                  const status = String(file.status ?? '').trim();
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      className={styles.upstreamAuthOption}
-                      onClick={() => addAuth(id)}
-                      disabled={disabled}
-                      role="option"
-                      aria-selected="false"
-                    >
-                      <strong>{authFileLabel(file)}</strong>
-                      <span>
-                        {id}
-                        {status ? ` · ${status}` : ''}
-                        {unavailable
-                          ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}`
-                          : ''}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className={styles.upstreamAuthEmpty}>
-                {t('config_management.visual.api_key_groups.no_matching_accounts')}
-              </div>
-            )}
-          </div>
-        )}
+        {isOpen && !loading && !loadFailed && dropdownRect && typeof document !== 'undefined'
+          ? createPortal(
+              <div
+                ref={dropdownRef}
+                className={styles.upstreamAuthDropdown}
+                style={{
+                  position: 'fixed',
+                  top: `${dropdownRect.top}px`,
+                  left: `${dropdownRect.left}px`,
+                  width: `${dropdownRect.width}px`,
+                  maxHeight: `${dropdownRect.maxHeight}px`,
+                }}
+              >
+                <input
+                  className={`input ${styles.upstreamAuthSearch}`}
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      setIsOpen(false);
+                      setSearch('');
+                    }
+                  }}
+                  placeholder={t(
+                    'config_management.visual.api_key_groups.search_upstream_accounts'
+                  )}
+                  autoFocus
+                />
+                {options.length > 0 ? (
+                  <div className={styles.upstreamAuthOptions} role="listbox">
+                    {options.map((file) => {
+                      const id = authFileID(file);
+                      const unavailable = file.disabled === true || file.unavailable === true;
+                      const status = String(file.status ?? '').trim();
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          className={styles.upstreamAuthOption}
+                          onClick={() => addAuth(id)}
+                          disabled={disabled}
+                          role="option"
+                          aria-selected="false"
+                        >
+                          <strong>{authFileLabel(file)}</strong>
+                          <span>
+                            {id}
+                            {status ? ` · ${status}` : ''}
+                            {unavailable
+                              ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}`
+                              : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={styles.upstreamAuthEmpty}>
+                    {t('config_management.visual.api_key_groups.no_matching_accounts')}
+                  </div>
+                )}
+              </div>,
+              document.body
+            )
+          : null}
       </div>
       {loading && <div className="hint">{t('common.loading')}</div>}
       {loadFailed && (

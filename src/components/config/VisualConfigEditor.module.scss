@@ -475,12 +475,12 @@
 }
 
 .upstreamAuthDropdown {
-  position: absolute;
-  z-index: 120;
-  top: calc(100% + 4px);
-  left: 0;
-  width: 100%;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   padding: 6px;
+  overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--bg-primary);
@@ -492,11 +492,30 @@
 }
 
 .upstreamAuthOptions {
-  max-height: 210px;
+  min-height: 0;
+  max-height: 250px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.upstreamAuthOptions::-webkit-scrollbar {
+  width: 7px;
+}
+
+.upstreamAuthOptions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.upstreamAuthOptions::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--border-color);
+  background-clip: padding-box;
 }
 
 .upstreamAuthOption {
