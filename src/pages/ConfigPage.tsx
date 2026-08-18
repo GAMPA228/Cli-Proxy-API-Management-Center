@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { IconCheck, IconChevronDown, IconChevronUp, IconRefreshCw, IconSearch } from '@/components/ui/icons';
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
 import { DiffModal } from '@/components/config/DiffModal';
-import { useVisualConfig } from '@/hooks/useVisualConfig';
+import { normalizeVisualYamlForDiff, useVisualConfig } from '@/hooks/useVisualConfig';
 import { useNotificationStore, useAuthStore, useThemeStore, useModelsStore } from '@/stores';
 import { configFileApi } from '@/services/api/configFile';
 import styles from './ConfigPage.module.scss';
@@ -180,15 +180,10 @@ export function ConfigPage() {
       const nextMergedYaml =
         activeTab === 'source' ? content : applyVisualChangesToYaml(latestServerYaml);
 
-      // In visual mode, applyVisualChangesToYaml re-serializes YAML via parseDocument → toString,
-      // which may reformat comments/whitespace. Normalize the server YAML through the same pipeline
-      // so the diff only shows actual value changes, not cosmetic reformatting.
+      // Normalize through the same comment-preserving pipeline so the diff only shows value changes.
       let diffOriginal = latestServerYaml;
       if (activeTab !== 'source') {
-        try {
-          const doc = parseDocument(latestServerYaml);
-          diffOriginal = doc.toString({ indent: 2, lineWidth: 120, minContentWidth: 0 });
-        } catch { /* keep raw on parse failure */ }
+        diffOriginal = normalizeVisualYamlForDiff(latestServerYaml);
       }
 
       if (diffOriginal === nextMergedYaml) {

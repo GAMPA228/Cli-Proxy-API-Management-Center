@@ -268,6 +268,11 @@ function resolveApiKeysStorage(parsed: Record<string, unknown>): {
 type YamlDocument = ReturnType<typeof parseDocument>;
 type YamlPath = string[];
 
+type YamlContentParts = {
+  body: string;
+  trailingComments: string;
+};
+
 type ApiKeysStorageMode = 'legacy' | 'auth-provider';
 type ApiKeysEntryMode = 'string' | 'object';
 
@@ -285,6 +290,50 @@ const DEFAULT_API_KEYS_STORAGE_METADATA: ApiKeysStorageMetadata = {
   originalEntries: [],
   syncLegacy: false,
 };
+
+function splitTrailingYamlComments(content: string): YamlContentParts {
+  const lines = content.split(/\r\n|\n|\r/);
+  let bodyEnd = lines.length - 1;
+  while (bodyEnd >= 0) {
+    const trimmed = lines[bodyEnd].trim();
+    if (trimmed !== '' && !trimmed.startsWith('#')) break;
+    bodyEnd -= 1;
+  }
+
+  const trailingLines = lines.slice(bodyEnd + 1);
+  if (!trailingLines.some((line) => line.trimStart().startsWith('#'))) {
+    return { body: content, trailingComments: '' };
+  }
+
+  const body = lines.slice(0, bodyEnd + 1).join('\n');
+  try {
+    if (JSON.stringify(parseYaml(body)) !== JSON.stringify(parseYaml(content))) {
+      return { body: content, trailingComments: '' };
+    }
+  } catch {
+    return { body: content, trailingComments: '' };
+  }
+
+  return { body, trailingComments: trailingLines.join('\n') };
+}
+
+function appendTrailingYamlComments(serialized: string, trailingComments: string): string {
+  return trailingComments ? `${serialized}${trailingComments}` : serialized;
+}
+
+export function normalizeVisualYamlForDiff(content: string): string {
+  try {
+    const yamlParts = splitTrailingYamlComments(content);
+    const doc = parseDocument(yamlParts.body);
+    if (doc.errors.length > 0) return content;
+    return appendTrailingYamlComments(
+      doc.toString({ indent: 2, lineWidth: 120, minContentWidth: 0 }),
+      yamlParts.trailingComments
+    );
+  } catch {
+    return content;
+  }
+}
 
 function docHas(doc: YamlDocument, path: YamlPath): boolean {
   return doc.hasIn(path);
@@ -766,7 +815,8 @@ export function useVisualConfig() {
   const applyVisualChangesToYaml = useCallback(
     (currentYaml: string): string => {
       try {
-        const doc = parseDocument(currentYaml);
+        const yamlParts = splitTrailingYamlComments(currentYaml);
+        const doc = parseDocument(yamlParts.body);
         if (doc.errors.length > 0) return currentYaml;
         if (!isMap(doc.contents)) {
           doc.contents = doc.createNode({}) as unknown as typeof doc.contents;
@@ -1040,7 +1090,10 @@ export function useVisualConfig() {
           deleteIfMapEmpty(doc, ['payload']);
         }
 
-        return doc.toString({ indent: 2, lineWidth: 120, minContentWidth: 0 });
+        return appendTrailingYamlComments(
+          doc.toString({ indent: 2, lineWidth: 120, minContentWidth: 0 }),
+          yamlParts.trailingComments
+        );
       } catch {
         return currentYaml;
       }
