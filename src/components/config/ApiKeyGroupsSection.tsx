@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ConfigSection } from '@/components/config/ConfigSection';
-import { IconTrash2 } from '@/components/ui/icons';
+import { IconChevronDown, IconTrash2 } from '@/components/ui/icons';
 import { authFilesApi } from '@/services/api/authFiles';
 import type { AuthFileItem } from '@/types/authFile';
 import type { VisualApiKeyGroup, VisualConfigValues } from '@/types/visualConfig';
@@ -27,19 +27,25 @@ function createGroupId(): string {
 const authFileID = (file: AuthFileItem): string => String(file.id ?? file.name ?? '').trim();
 
 const isCodexAuthFile = (file: AuthFileItem): boolean => {
-  const provider = String(file.provider ?? file.type ?? '').trim().toLowerCase();
+  const provider = String(file.provider ?? file.type ?? '')
+    .trim()
+    .toLowerCase();
   return provider === 'codex';
 };
 
 const authFileLabel = (file: AuthFileItem): string => {
-  const primary = String(file.email ?? file.account ?? file.label ?? file.name ?? file.id ?? '').trim();
+  const primary = String(
+    file.email ?? file.account ?? file.label ?? file.name ?? file.id ?? ''
+  ).trim();
   const secondary = [
     file.label,
     file.name,
     file.accountType ?? file['account_type'] ?? file['plan_type'] ?? file['plan'],
   ]
     .map((value) => String(value ?? '').trim())
-    .filter((value, index, values) => value && value !== primary && values.indexOf(value) === index);
+    .filter(
+      (value, index, values) => value && value !== primary && values.indexOf(value) === index
+    );
   return [primary || authFileID(file), ...secondary].join(' · ');
 };
 
@@ -60,6 +66,8 @@ function UpstreamAuthSelector({
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const selected = useMemo(
     () => Array.from(new Set(value.map((item) => item.trim()).filter(Boolean))),
     [value]
@@ -67,9 +75,7 @@ function UpstreamAuthSelector({
   const fileMap = useMemo(
     () =>
       new Map<string, AuthFileItem>(
-        files
-          .map((file) => [authFileID(file), file] as const)
-          .filter(([id]) => Boolean(id))
+        files.map((file) => [authFileID(file), file] as const).filter(([id]) => Boolean(id))
       ),
     [files]
   );
@@ -88,6 +94,18 @@ function UpstreamAuthSelector({
     [files, normalizedSearch, selectedSet]
   );
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!pickerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
   const addAuth = (authID: string) => {
     if (!authID || selectedSet.has(authID)) return;
     onChange([...selected, authID]);
@@ -102,51 +120,86 @@ function UpstreamAuthSelector({
         </label>
         <span className={styles.apiKeysCount}>{selected.length}</span>
       </div>
-      <input
-        className="input"
-        type="search"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder={t('config_management.visual.api_key_groups.search_upstream_accounts')}
-        disabled={disabled || loading || loadFailed}
-      />
-      {!loading && !loadFailed && options.length > 0 && (
-        <div className={styles.upstreamAuthOptions} role="listbox">
-          {options.map((file) => {
-            const id = authFileID(file);
-            const unavailable = file.disabled === true || file.unavailable === true;
-            const status = String(file.status ?? '').trim();
-            return (
-              <button
-                key={id}
-                type="button"
-                className={styles.upstreamAuthOption}
-                onClick={() => addAuth(id)}
-                disabled={disabled}
-                role="option"
-                aria-selected="false"
-              >
-                <strong>{authFileLabel(file)}</strong>
-                <span>
-                  {id}
-                  {status ? ` · ${status}` : ''}
-                  {unavailable
-                    ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}`
-                    : ''}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className={styles.upstreamAuthPicker} ref={pickerRef}>
+        <button
+          type="button"
+          className={styles.upstreamAuthTrigger}
+          onClick={() => {
+            setIsOpen((open) => !open);
+            setSearch('');
+          }}
+          disabled={disabled || loading || loadFailed || (options.length === 0 && !isOpen)}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+        >
+          <span>
+            {loading
+              ? t('common.loading')
+              : t('config_management.visual.api_key_groups.select_upstream_account')}
+          </span>
+          <IconChevronDown
+            size={16}
+            className={isOpen ? styles.upstreamAuthChevronOpen : styles.upstreamAuthChevron}
+          />
+        </button>
+        {isOpen && !loading && !loadFailed && (
+          <div className={styles.upstreamAuthDropdown}>
+            <input
+              className={`input ${styles.upstreamAuthSearch}`}
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setIsOpen(false);
+                  setSearch('');
+                }
+              }}
+              placeholder={t('config_management.visual.api_key_groups.search_upstream_accounts')}
+              autoFocus
+            />
+            {options.length > 0 ? (
+              <div className={styles.upstreamAuthOptions} role="listbox">
+                {options.map((file) => {
+                  const id = authFileID(file);
+                  const unavailable = file.disabled === true || file.unavailable === true;
+                  const status = String(file.status ?? '').trim();
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={styles.upstreamAuthOption}
+                      onClick={() => addAuth(id)}
+                      disabled={disabled}
+                      role="option"
+                      aria-selected="false"
+                    >
+                      <strong>{authFileLabel(file)}</strong>
+                      <span>
+                        {id}
+                        {status ? ` · ${status}` : ''}
+                        {unavailable
+                          ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}`
+                          : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={styles.upstreamAuthEmpty}>
+                {t('config_management.visual.api_key_groups.no_matching_accounts')}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       {loading && <div className="hint">{t('common.loading')}</div>}
       {loadFailed && (
-        <div className="hint">{t('config_management.visual.api_key_groups.account_load_failed')}</div>
+        <div className="hint">
+          {t('config_management.visual.api_key_groups.account_load_failed')}
+        </div>
       )}
-      {!loading && !loadFailed && options.length === 0 && search.trim() && (
-        <div className="hint">{t('config_management.visual.api_key_groups.no_matching_accounts')}</div>
-      )}
-
       {selected.length === 0 ? (
         <div className={styles.apiKeysEmpty}>
           {t('config_management.visual.api_key_groups.accounts_unrestricted')}

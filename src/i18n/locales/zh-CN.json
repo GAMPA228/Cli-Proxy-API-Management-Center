@@ -1450,6 +1450,7 @@
         "members_hint": "从全局 API Key 列表选择，选项会显示掩码和备注，保存时使用真实 API Key。",
         "no_available_members": "暂无可选择的 API Key",
         "upstream_accounts": "允许使用的 Codex 账号",
+        "select_upstream_account": "选择 Codex 账号",
         "search_upstream_accounts": "搜索账号、邮箱或认证文件",
         "upstream_accounts_hint": "未选择时保持原有的全部账号调度；选择后，该组成员只会在这些账号内重试。",
         "accounts_unrestricted": "未限制上游账号",

@@ -1450,6 +1450,7 @@
         "members_hint": "Select from global API keys. Options show masked keys and remarks while saving the real key.",
         "no_available_members": "No API keys available",
         "upstream_accounts": "Allowed Codex accounts",
+        "select_upstream_account": "Select a Codex account",
         "search_upstream_accounts": "Search account, email, or auth file",
         "upstream_accounts_hint": "No selection preserves unrestricted scheduling. Once selected, members retry only within these accounts.",
         "accounts_unrestricted": "Upstream accounts are unrestricted",
