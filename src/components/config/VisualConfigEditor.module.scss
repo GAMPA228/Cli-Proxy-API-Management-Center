@@ -422,6 +422,47 @@
   font-size: 11px;
 }
 
+.upstreamAuthOptions {
+  max-height: 210px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+}
+
+.upstreamAuthOption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.upstreamAuthOption:hover,
+.upstreamAuthOption:focus-visible {
+  background: var(--bg-secondary);
+  outline: none;
+}
+
+.upstreamAuthOption strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.upstreamAuthOption span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
 .serviceTierNotice {
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--border-color));

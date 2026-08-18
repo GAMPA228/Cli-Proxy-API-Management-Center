@@ -1605,7 +1605,7 @@
 }
 
 .requestEventsTable {
-  min-width: 1580px;
+  min-width: 1780px;
 }
 
 .requestEventsColTime {
@@ -1634,6 +1634,10 @@
 
 .requestEventsColSourceAccount {
   width: 12%;
+}
+
+.requestEventsColProxy {
+  width: 13%;
 }
 
 .requestEventsColAuthIndex {
@@ -1726,6 +1730,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.requestEventsProxy {
+  min-width: 0;
+  max-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
 }
 
 .requestEventsResultSuccess {

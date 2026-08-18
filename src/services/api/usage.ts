@@ -39,7 +39,12 @@ export interface UsageDetailRow {
   latency_ms?: number;
   client_ip?: string;
   source?: string;
+  auth_id?: string;
   auth_index?: string | number | null;
+  proxy_mode?: string;
+  proxy_source?: string;
+  proxy_protocol?: string;
+  proxy_endpoint?: string;
   reasoning_effort?: string;
   service_tier?: string;
   applied_service_tier?: string;

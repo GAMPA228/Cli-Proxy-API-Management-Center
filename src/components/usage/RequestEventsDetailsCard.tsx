@@ -49,7 +49,13 @@ type RequestEventRow = {
   sourceRaw: string;
   source: string;
   sourceType: string;
+  authID: string;
   authIndex: string;
+  proxyMode: string;
+  proxySource: string;
+  proxyProtocol: string;
+  proxyEndpoint: string;
+  proxyDisplay: string;
   failed: boolean;
   inputTokens: number;
   outputTokens: number;
@@ -97,6 +103,27 @@ const formatRequestApiKeyLabel = (value: unknown, apiKeyRemarks?: ApiKeyRemarkMa
   if (!raw) return '-';
   const masked = raw.length > 9 ? `${raw.slice(0, 6)}...${raw.slice(-3)}` : raw;
   return appendApiKeyRemark(masked, raw, apiKeyRemarks);
+};
+
+const formatProxyDisplay = (
+  mode: string,
+  source: string,
+  protocol: string,
+  endpoint: string,
+  labels: { auth: string; global: string; direct: string; directAuth: string }
+): string => {
+  const normalizedMode = mode.trim().toLowerCase();
+  const normalizedSource = source.trim().toLowerCase();
+  if (normalizedMode === 'proxy' && endpoint.trim()) {
+    const sourceLabel = normalizedSource === 'auth' ? labels.auth : normalizedSource === 'global' ? labels.global : '';
+    return [protocol.trim().toUpperCase() || 'PROXY', endpoint.trim(), sourceLabel ? `(${sourceLabel})` : '']
+      .filter(Boolean)
+      .join(' · ');
+  }
+  if (normalizedMode === 'direct') {
+    return normalizedSource === 'auth' ? labels.directAuth : labels.direct;
+  }
+  return '-';
 };
 
 type ServiceTierTone = 'fast' | 'default' | 'downgraded' | 'unknown';
@@ -187,7 +214,12 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
     api: typeof row.api === 'string' ? row.api : '',
     client_ip: typeof row.client_ip === 'string' ? row.client_ip : '',
     source: typeof row.source === 'string' ? row.source : '',
+    auth_id: typeof row.auth_id === 'string' ? row.auth_id : '',
     auth_index: row.auth_index ?? null,
+    proxy_mode: typeof row.proxy_mode === 'string' ? row.proxy_mode : '',
+    proxy_source: typeof row.proxy_source === 'string' ? row.proxy_source : '',
+    proxy_protocol: typeof row.proxy_protocol === 'string' ? row.proxy_protocol : '',
+    proxy_endpoint: typeof row.proxy_endpoint === 'string' ? row.proxy_endpoint : '',
     tokens: {
       input_tokens: Math.max(toNumber(tokens.input_tokens), 0),
       output_tokens: Math.max(toNumber(tokens.output_tokens), 0),
@@ -347,6 +379,7 @@ export function RequestEventsDetailsCard({
         authIndexRaw === null || authIndexRaw === undefined || authIndexRaw === ''
           ? '-'
           : String(authIndexRaw);
+      const authID = String(detail.auth_id ?? '').trim();
       const sourceInfo = resolveSourceDisplay(sourceLookup, authIndexRaw, sourceInfoMap, authFileMap);
       const downstreamSource =
         sourceQuery && apiKeyRemarks[sourceQuery]
@@ -361,6 +394,16 @@ export function RequestEventsDetailsCard({
       const appliedServiceTier = String(detail.applied_service_tier ?? '').trim();
       const responseServiceTier = String(detail.response_service_tier ?? '').trim();
       const clientIP = String(detail.client_ip ?? '').trim() || '-';
+      const proxyMode = String(detail.proxy_mode ?? '').trim();
+      const proxySource = String(detail.proxy_source ?? '').trim();
+      const proxyProtocol = String(detail.proxy_protocol ?? '').trim();
+      const proxyEndpoint = String(detail.proxy_endpoint ?? '').trim();
+      const proxyDisplay = formatProxyDisplay(proxyMode, proxySource, proxyProtocol, proxyEndpoint, {
+        auth: t('usage_stats.request_events_proxy_source_auth'),
+        global: t('usage_stats.request_events_proxy_source_global'),
+        direct: t('usage_stats.request_events_proxy_direct'),
+        directAuth: t('usage_stats.request_events_proxy_direct_auth'),
+      });
       const apiKey = String(detail.api ?? '').trim();
       const apiKeyLabel = formatRequestApiKeyLabel(apiKey, apiKeyRemarks);
       const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
@@ -393,7 +436,13 @@ export function RequestEventsDetailsCard({
         sourceRaw: downstreamSource ? appendApiKeyRemark(sourceLookup || '-', sourceQuery, apiKeyRemarks) : sourceLookup || '-',
         source,
         sourceType,
+        authID,
         authIndex,
+        proxyMode,
+        proxySource,
+        proxyProtocol,
+        proxyEndpoint,
+        proxyDisplay,
         failed: detail.failed === true,
         inputTokens,
         outputTokens,
@@ -437,7 +486,7 @@ export function RequestEventsDetailsCard({
         source: buildDisambiguatedSourceLabel(row),
       }))
       .sort((a, b) => b.timestampMs - a.timestampMs);
-  }, [apiKeyRemarks, authFileMap, detailsMode, downstreamSourceLabelMap, i18n.language, serverDetails, sourceInfoMap, usage]);
+  }, [apiKeyRemarks, authFileMap, detailsMode, downstreamSourceLabelMap, i18n.language, serverDetails, sourceInfoMap, t, usage]);
 
   const modelOptions = useMemo(() => {
     const models = new Set<string>(getModelNamesFromUsage(usage));
@@ -502,7 +551,13 @@ export function RequestEventsDetailsCard({
           row.sourceType.toLowerCase().includes(normalizedSearchKeyword) ||
           row.source.toLowerCase().includes(normalizedSearchKeyword) ||
           row.sourceRaw.toLowerCase().includes(normalizedSearchKeyword) ||
-          row.authIndex.toLowerCase().includes(normalizedSearchKeyword);
+          row.authID.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.authIndex.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.proxyDisplay.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.proxyMode.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.proxySource.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.proxyProtocol.toLowerCase().includes(normalizedSearchKeyword) ||
+          row.proxyEndpoint.toLowerCase().includes(normalizedSearchKeyword);
         return modelMatched && sourceMatched && authIndexMatched && keywordMatched;
       }),
     [effectiveAuthIndexFilter, effectiveModelFilter, effectiveSourceFilter, normalizedSearchKeyword, rows]
@@ -553,7 +608,12 @@ export function RequestEventsDetailsCard({
       'source_type',
       'source',
       'source_raw',
+      'auth_id',
       'auth_index',
+      'proxy_mode',
+      'proxy_source',
+      'proxy_protocol',
+      'proxy_endpoint',
       'result',
       'input_tokens',
       'output_tokens',
@@ -575,7 +635,12 @@ export function RequestEventsDetailsCard({
         row.sourceType,
         row.source,
         row.sourceRaw,
+        row.authID,
         row.authIndex,
+        row.proxyMode,
+        row.proxySource,
+        row.proxyProtocol,
+        row.proxyEndpoint,
         row.failed ? 'failed' : 'success',
         row.inputTokens,
         row.outputTokens,
@@ -608,7 +673,12 @@ export function RequestEventsDetailsCard({
       source_type: row.sourceType,
       source: row.source,
       source_raw: row.sourceRaw,
+      auth_id: row.authID,
       auth_index: row.authIndex,
+      proxy_mode: row.proxyMode,
+      proxy_source: row.proxySource,
+      proxy_protocol: row.proxyProtocol,
+      proxy_endpoint: row.proxyEndpoint,
       failed: row.failed,
       tokens: {
         input_tokens: row.inputTokens,
@@ -650,10 +720,10 @@ export function RequestEventsDetailsCard({
                 setPage(1);
               }}
               placeholder={t('usage_stats.request_events_search_placeholder', {
-                defaultValue: '搜索模型 / IP / API Key / 类型 / 账号 / 认证索引'
+                defaultValue: '搜索模型 / IP / API Key / 类型 / 账号 / 认证索引 / 代理出口'
               })}
               aria-label={t('usage_stats.request_events_search_placeholder', {
-                defaultValue: '搜索模型 / IP / API Key / 类型 / 账号 / 认证索引'
+                defaultValue: '搜索模型 / IP / API Key / 类型 / 账号 / 认证索引 / 代理出口'
               })}
             />
           </div>
@@ -757,6 +827,7 @@ export function RequestEventsDetailsCard({
                 <col className={styles.requestEventsColAPIKey} />
                 <col className={styles.requestEventsColSourceType} />
                 <col className={styles.requestEventsColSourceAccount} />
+                <col className={styles.requestEventsColProxy} />
                 <col className={styles.requestEventsColAuthIndex} />
                 <col className={styles.requestEventsColResult} />
                 <col className={styles.requestEventsColToken} />
@@ -774,6 +845,7 @@ export function RequestEventsDetailsCard({
                   <th>{t('usage_stats.request_events_api_key')}</th>
                   <th>{t('usage_stats.request_events_source_type')}</th>
                   <th>{t('usage_stats.request_events_source_account')}</th>
+                  <th>{t('usage_stats.request_events_proxy')}</th>
                   <th>{t('usage_stats.request_events_auth_index')}</th>
                   <th>{t('usage_stats.request_events_result')}</th>
                   <th>{t('usage_stats.input_tokens')}</th>
@@ -848,6 +920,12 @@ export function RequestEventsDetailsCard({
                       ) : (
                         <span className={styles.requestEventsSourceText}>-</span>
                       )}
+                    </td>
+                    <td
+                      className={`${styles.requestEventsProxy} ${styles.tableCellMono}`}
+                      title={row.proxyDisplay}
+                    >
+                      {row.proxyDisplay}
                     </td>
                     <td className={`${styles.requestEventsAuthIndex} ${styles.tableCellMono}`} title={row.authIndex}>
                       {row.authIndex}

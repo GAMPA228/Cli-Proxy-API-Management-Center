@@ -59,6 +59,7 @@ export type VisualApiKeyGroup = {
   name: string;
   description: string;
   apiKeys: string[];
+  upstreamAuthIds: string[];
 };
 
 export type VisualApiKeyEntry = {

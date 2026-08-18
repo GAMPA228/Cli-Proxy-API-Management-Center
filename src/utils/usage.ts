@@ -49,7 +49,12 @@ export interface UsageDetail {
   api?: string;
   client_ip?: string;
   source: string;
+  auth_id?: string;
   auth_index: string | number | null;
+  proxy_mode?: string;
+  proxy_source?: string;
+  proxy_protocol?: string;
+  proxy_endpoint?: string;
   tokens: {
     input_tokens: number;
     output_tokens: number;
@@ -557,11 +562,18 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           api: apiName,
           client_ip: typeof detailRaw.client_ip === 'string' ? detailRaw.client_ip : '',
           source: normalizeSource(detailRaw.source),
+          auth_id: typeof detailRaw.auth_id === 'string' ? detailRaw.auth_id : '',
           auth_index:
             (detailRaw?.auth_index ??
               detailRaw?.authIndex ??
               detailRaw?.AuthIndex ??
               null) as UsageDetail['auth_index'],
+          proxy_mode: typeof detailRaw.proxy_mode === 'string' ? detailRaw.proxy_mode : '',
+          proxy_source: typeof detailRaw.proxy_source === 'string' ? detailRaw.proxy_source : '',
+          proxy_protocol:
+            typeof detailRaw.proxy_protocol === 'string' ? detailRaw.proxy_protocol : '',
+          proxy_endpoint:
+            typeof detailRaw.proxy_endpoint === 'string' ? detailRaw.proxy_endpoint : '',
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,

@@ -1,7 +1,10 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { IconTrash2 } from '@/components/ui/icons';
+import { authFilesApi } from '@/services/api/authFiles';
+import type { AuthFileItem } from '@/types/authFile';
 import type { VisualApiKeyGroup, VisualConfigValues } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
 import { ApiKeysCardEditor } from './VisualConfigEditorBlocks';
@@ -21,8 +24,198 @@ function createGroupId(): string {
   return `group-${suffix || Date.now().toString(36)}`;
 }
 
+const authFileID = (file: AuthFileItem): string => String(file.id ?? file.name ?? '').trim();
+
+const isCodexAuthFile = (file: AuthFileItem): boolean => {
+  const provider = String(file.provider ?? file.type ?? '').trim().toLowerCase();
+  return provider === 'codex';
+};
+
+const authFileLabel = (file: AuthFileItem): string => {
+  const primary = String(file.email ?? file.account ?? file.label ?? file.name ?? file.id ?? '').trim();
+  const secondary = [
+    file.label,
+    file.name,
+    file.accountType ?? file['account_type'] ?? file['plan_type'] ?? file['plan'],
+  ]
+    .map((value) => String(value ?? '').trim())
+    .filter((value, index, values) => value && value !== primary && values.indexOf(value) === index);
+  return [primary || authFileID(file), ...secondary].join(' · ');
+};
+
+function UpstreamAuthSelector({
+  value,
+  files,
+  loading,
+  loadFailed,
+  disabled,
+  onChange,
+}: {
+  value: string[];
+  files: AuthFileItem[];
+  loading: boolean;
+  loadFailed: boolean;
+  disabled?: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const { t } = useTranslation();
+  const [search, setSearch] = useState('');
+  const selected = useMemo(
+    () => Array.from(new Set(value.map((item) => item.trim()).filter(Boolean))),
+    [value]
+  );
+  const fileMap = useMemo(
+    () =>
+      new Map<string, AuthFileItem>(
+        files
+          .map((file) => [authFileID(file), file] as const)
+          .filter(([id]) => Boolean(id))
+      ),
+    [files]
+  );
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const normalizedSearch = search.trim().toLowerCase();
+  const options = useMemo(
+    () =>
+      files.filter((file) => {
+        const id = authFileID(file);
+        if (!id || selectedSet.has(id)) return false;
+        if (!normalizedSearch) return true;
+        return `${id} ${authFileLabel(file)} ${file.status ?? ''}`
+          .toLowerCase()
+          .includes(normalizedSearch);
+      }),
+    [files, normalizedSearch, selectedSet]
+  );
+
+  const addAuth = (authID: string) => {
+    if (!authID || selectedSet.has(authID)) return;
+    onChange([...selected, authID]);
+    setSearch('');
+  };
+
+  return (
+    <div className={`form-group ${styles.compactFormGroup}`}>
+      <div className={styles.apiKeysMeta}>
+        <label className={styles.apiKeysLabel}>
+          {t('config_management.visual.api_key_groups.upstream_accounts')}
+        </label>
+        <span className={styles.apiKeysCount}>{selected.length}</span>
+      </div>
+      <input
+        className="input"
+        type="search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={t('config_management.visual.api_key_groups.search_upstream_accounts')}
+        disabled={disabled || loading || loadFailed}
+      />
+      {!loading && !loadFailed && options.length > 0 && (
+        <div className={styles.upstreamAuthOptions} role="listbox">
+          {options.map((file) => {
+            const id = authFileID(file);
+            const unavailable = file.disabled === true || file.unavailable === true;
+            const status = String(file.status ?? '').trim();
+            return (
+              <button
+                key={id}
+                type="button"
+                className={styles.upstreamAuthOption}
+                onClick={() => addAuth(id)}
+                disabled={disabled}
+                role="option"
+                aria-selected="false"
+              >
+                <strong>{authFileLabel(file)}</strong>
+                <span>
+                  {id}
+                  {status ? ` · ${status}` : ''}
+                  {unavailable
+                    ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}`
+                    : ''}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {loading && <div className="hint">{t('common.loading')}</div>}
+      {loadFailed && (
+        <div className="hint">{t('config_management.visual.api_key_groups.account_load_failed')}</div>
+      )}
+      {!loading && !loadFailed && options.length === 0 && search.trim() && (
+        <div className="hint">{t('config_management.visual.api_key_groups.no_matching_accounts')}</div>
+      )}
+
+      {selected.length === 0 ? (
+        <div className={styles.apiKeysEmpty}>
+          {t('config_management.visual.api_key_groups.accounts_unrestricted')}
+        </div>
+      ) : (
+        <div className={styles.apiKeyGroupSelectionList}>
+          {selected.map((authID) => {
+            const file = fileMap.get(authID);
+            const unavailable = file?.disabled === true || file?.unavailable === true;
+            const status = String(file?.status ?? '').trim();
+            return (
+              <div key={authID} className={styles.apiKeyGroupSelectionItem}>
+                <div className={styles.apiKeyGroupSelectionText}>
+                  <strong>{file ? authFileLabel(file) : authID}</strong>
+                  <span>
+                    {file
+                      ? `${authID}${status ? ` · ${status}` : ''}${unavailable ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}` : ''}`
+                      : t('config_management.visual.api_key_groups.missing_account')}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={styles.payloadRowActionButton}
+                  onClick={() => onChange(selected.filter((item) => item !== authID))}
+                  disabled={disabled}
+                  title={t('config_management.visual.common.delete')}
+                  aria-label={t('config_management.visual.common.delete')}
+                >
+                  <IconTrash2 size={16} />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="hint">
+        {t('config_management.visual.api_key_groups.upstream_accounts_hint')}
+      </div>
+    </div>
+  );
+}
+
 export function ApiKeyGroupsSection({ values, disabled, onChange }: ApiKeyGroupsSectionProps) {
   const { t } = useTranslation();
+  const [codexAuthFiles, setCodexAuthFiles] = useState<AuthFileItem[]>([]);
+  const [authFilesLoading, setAuthFilesLoading] = useState(true);
+  const [authFilesLoadFailed, setAuthFilesLoadFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    authFilesApi
+      .list()
+      .then((response) => {
+        if (cancelled) return;
+        const files = Array.isArray(response) ? response : response.files;
+        setCodexAuthFiles((Array.isArray(files) ? files : []).filter(isCodexAuthFile));
+        setAuthFilesLoadFailed(false);
+      })
+      .catch(() => {
+        if (!cancelled) setAuthFilesLoadFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setAuthFilesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const updateGroup = (index: number, patch: Partial<VisualApiKeyGroup>) => {
     onChange({
@@ -37,7 +230,14 @@ export function ApiKeyGroupsSection({ values, disabled, onChange }: ApiKeyGroups
     onChange({
       apiKeyGroups: [
         ...values.apiKeyGroups,
-        { id: makeClientId(), groupId, name: '', description: '', apiKeys: [] },
+        {
+          id: makeClientId(),
+          groupId,
+          name: '',
+          description: '',
+          apiKeys: [],
+          upstreamAuthIds: [],
+        },
       ],
     });
   };
@@ -164,6 +364,15 @@ export function ApiKeyGroupsSection({ values, disabled, onChange }: ApiKeyGroups
               emptySelectLabel={t('config_management.visual.api_key_groups.no_available_members')}
               showGenerate={false}
               showEdit={false}
+            />
+
+            <UpstreamAuthSelector
+              value={group.upstreamAuthIds}
+              files={codexAuthFiles}
+              loading={authFilesLoading}
+              loadFailed={authFilesLoadFailed}
+              disabled={disabled}
+              onChange={(upstreamAuthIds) => updateGroup(index, { upstreamAuthIds })}
             />
           </div>
         ))}

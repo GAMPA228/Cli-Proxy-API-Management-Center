@@ -132,6 +132,9 @@ function parseApiKeyGroups(raw: unknown): VisualApiKeyGroup[] {
         name: String(record.name ?? groupId).trim() || groupId,
         description: String(record.description ?? '').trim(),
         apiKeys: parseStringList(record['api-keys'] ?? record.apiKeys),
+        upstreamAuthIds: parseStringList(
+          record['upstream-auth-ids'] ?? record.upstreamAuthIds
+        ),
       };
     })
     .filter((group): group is VisualApiKeyGroup => group !== null);
@@ -144,6 +147,9 @@ function serializeApiKeyGroups(groups: VisualApiKeyGroup[]): Array<Record<string
       name: group.name.trim() || group.groupId.trim(),
       ...(group.description.trim() ? { description: group.description.trim() } : {}),
       'api-keys': parseStringArray(group.apiKeys),
+      ...(parseStringArray(group.upstreamAuthIds).length
+        ? { 'upstream-auth-ids': parseStringArray(group.upstreamAuthIds) }
+        : {}),
     }))
     .filter((group) => Boolean(group.id));
 }
