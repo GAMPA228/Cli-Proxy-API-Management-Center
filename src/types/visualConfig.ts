@@ -6,6 +6,7 @@ export type PayloadParamValidationErrorCode =
 
 export type VisualConfigFieldPath =
   | 'port'
+  | 'managementUiProxyNodesUrl'
   | 'logsMaxTotalSizeMb'
   | 'requestRetry'
   | 'maxRetryInterval'
@@ -13,7 +14,10 @@ export type VisualConfigFieldPath =
   | 'streaming.bootstrapRetries'
   | 'streaming.nonstreamKeepaliveInterval';
 
-export type VisualConfigValidationErrorCode = 'port_range' | 'non_negative_integer';
+export type VisualConfigValidationErrorCode =
+  | 'port_range'
+  | 'non_negative_integer'
+  | 'absolute_http_url';
 
 export type VisualConfigValidationErrors = Partial<
   Record<VisualConfigFieldPath, VisualConfigValidationErrorCode>
@@ -90,6 +94,7 @@ export type VisualConfigValues = {
   rmSecretKey: string;
   rmDisableControlPanel: boolean;
   rmPanelRepo: string;
+  managementUiProxyNodesUrl: string;
   authDir: string;
   apiKeysText: string;
   apiKeyEntries: VisualApiKeyEntry[];
@@ -141,6 +146,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmSecretKey: '',
   rmDisableControlPanel: false,
   rmPanelRepo: '',
+  managementUiProxyNodesUrl: '',
   authDir: '',
   apiKeysText: '',
   apiKeyEntries: [],

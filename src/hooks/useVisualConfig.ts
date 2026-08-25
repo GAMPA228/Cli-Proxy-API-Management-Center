@@ -407,11 +407,26 @@ function getPortError(value: string): 'port_range' | undefined {
   return parsed >= 1 && parsed <= 65535 ? undefined : 'port_range';
 }
 
+function getAbsoluteHttpUrlError(value: string): 'absolute_http_url' | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  try {
+    const parsed = new URL(trimmed);
+    const validProtocol = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return validProtocol && !parsed.username && !parsed.password
+      ? undefined
+      : 'absolute_http_url';
+  } catch {
+    return 'absolute_http_url';
+  }
+}
+
 export function getVisualConfigValidationErrors(
   values: VisualConfigValues
 ): VisualConfigValidationErrors {
   return {
     port: getPortError(values.port),
+    managementUiProxyNodesUrl: getAbsoluteHttpUrlError(values.managementUiProxyNodesUrl),
     logsMaxTotalSizeMb: getNonNegativeIntegerError(values.logsMaxTotalSizeMb),
     requestRetry: getNonNegativeIntegerError(values.requestRetry),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
@@ -707,6 +722,7 @@ export function useVisualConfig() {
       const parsed = asRecord(parsedRaw) ?? {};
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
+      const managementUi = asRecord(parsed['management-ui']);
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const routing = asRecord(parsed.routing);
       const payload = asRecord(parsed.payload);
@@ -736,6 +752,10 @@ export function useVisualConfig() {
             : typeof remoteManagement?.['panel-repo'] === 'string'
               ? remoteManagement['panel-repo']
               : '',
+        managementUiProxyNodesUrl:
+          typeof managementUi?.['proxy-nodes-url'] === 'string'
+            ? managementUi['proxy-nodes-url']
+            : '',
 
         authDir: typeof parsed['auth-dir'] === 'string' ? parsed['auth-dir'] : '',
         apiKeysText: apiKeysStorage.text,
@@ -859,6 +879,16 @@ export function useVisualConfig() {
             doc.deleteIn(['remote-management', 'panel-repo']);
           }
           deleteIfMapEmpty(doc, ['remote-management']);
+        }
+
+        if (docHas(doc, ['management-ui']) || values.managementUiProxyNodesUrl.trim()) {
+          ensureMapInDoc(doc, ['management-ui']);
+          setStringInDoc(
+            doc,
+            ['management-ui', 'proxy-nodes-url'],
+            values.managementUiProxyNodesUrl
+          );
+          deleteIfMapEmpty(doc, ['management-ui']);
         }
 
         setStringInDoc(doc, ['auth-dir'], values.authDir);

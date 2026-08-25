@@ -426,6 +426,18 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   }
   config.wsAuth = normalizeBoolean(raw['ws-auth'] ?? raw.wsAuth);
   config.forceModelPrefix = normalizeBoolean(raw['force-model-prefix'] ?? raw.forceModelPrefix);
+  const managementUi = raw['management-ui'] ?? raw.managementUi;
+  if (isRecord(managementUi)) {
+    const proxyNodesUrl = managementUi['proxy-nodes-url'] ?? managementUi.proxyNodesUrl;
+    config.managementUi = {
+      proxyNodesUrl:
+        typeof proxyNodesUrl === 'string'
+          ? proxyNodesUrl
+          : proxyNodesUrl === undefined || proxyNodesUrl === null
+            ? undefined
+            : String(proxyNodesUrl),
+    };
+  }
   const routing = raw.routing;
   const strategyRaw = isRecord(routing)
     ? (routing.strategy ?? routing['strategy'])

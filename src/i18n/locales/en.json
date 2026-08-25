@@ -118,7 +118,16 @@
     "usage_stats": "Usage Statistics",
     "config_management": "Config Panel",
     "logs": "Logs Viewer",
-    "system_info": "Management Center Info"
+    "system_info": "Management Center Info",
+    "proxy_nodes": "Proxy Nodes"
+  },
+  "proxy_nodes": {
+    "title": "Proxy Nodes",
+    "loading": "Loading proxy nodes page...",
+    "refresh": "Refresh embedded page",
+    "open_external": "Open in a new window",
+    "not_configured": "Proxy nodes page is not configured",
+    "not_configured_description": "Set the proxy nodes page URL in the Remote Management section of the Config Panel."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1295,7 +1304,9 @@
           "disable_panel_desc": "Disable the built-in web control panel",
           "secret_key": "Management Key",
           "secret_key_placeholder": "Set management key",
-          "panel_repo": "Panel Repository"
+          "panel_repo": "Panel Repository",
+          "proxy_nodes_url": "Proxy Nodes Page URL",
+          "proxy_nodes_url_hint": "When set, Proxy Nodes appears in the sidebar and embeds this page in the management center."
         },
         "auth": {
           "title": "Authentication Configuration",
@@ -1541,6 +1552,7 @@
         "validation_blocked": "Fix validation errors before saving",
         "port_range": "Enter a valid port between 1 and 65535",
         "non_negative_integer": "Enter a non-negative whole number",
+        "absolute_http_url": "Enter a complete HTTP or HTTPS URL without embedded credentials",
         "payload_invalid_number": "Enter a valid number",
         "payload_invalid_boolean": "Choose true or false",
         "payload_invalid_json": "Enter valid JSON"

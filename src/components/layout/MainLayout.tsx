@@ -22,6 +22,7 @@ import {
   IconSidebarProviders,
   IconSidebarQuota,
   IconSidebarSystem,
+  IconSidebarProxyNodes,
   IconSidebarUsage,
 } from '@/components/ui/icons';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
@@ -48,6 +49,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   config: <IconSidebarConfig size={18} />,
   logs: <IconSidebarLogs size={18} />,
   system: <IconSidebarSystem size={18} />,
+  proxyNodes: <IconSidebarProxyNodes size={18} />,
 };
 
 // Header action icons - smaller size for header buttons
@@ -236,6 +238,7 @@ export function MainLayout() {
   const fullBrandName = 'CLI Proxy API Management Center';
   const abbrBrandName = t('title.abbr');
   const isLogsPage = location.pathname.startsWith('/logs');
+  const isEmbeddedPage = location.pathname.startsWith('/proxy-nodes');
 
   // 将顶栏高度写入 CSS 变量，确保侧栏/内容区计算一致，防止滚动时抖动
   useLayoutEffect(() => {
@@ -433,6 +436,9 @@ export function MainLayout() {
       ? [{ path: '/logs', label: t('nav.logs'), icon: sidebarIcons.logs }]
       : []),
     { path: '/system', label: t('nav.system_info'), icon: sidebarIcons.system },
+    ...(config?.managementUi?.proxyNodesUrl?.trim()
+      ? [{ path: '/proxy-nodes', label: t('nav.proxy_nodes'), icon: sidebarIcons.proxyNodes }]
+      : []),
   ];
   const navOrder = navItems.map((item) => item.path);
   const getRouteOrder = (pathname: string) => {
@@ -713,8 +719,13 @@ export function MainLayout() {
           </div>
         </aside>
 
-        <div className={`content${isLogsPage ? ' content-logs' : ''}`} ref={contentRef}>
-          <main className={`main-content${isLogsPage ? ' main-content-logs' : ''}`}>
+        <div
+          className={`content${isLogsPage || isEmbeddedPage ? ' content-logs' : ''}`}
+          ref={contentRef}
+        >
+          <main
+            className={`main-content${isLogsPage || isEmbeddedPage ? ' main-content-logs' : ''}`}
+          >
             <PageTransition
               render={(location) => <MainRoutes location={location} />}
               getRouteOrder={getRouteOrder}

@@ -193,6 +193,10 @@ export function VisualConfigEditor({
   const isNonstreamKeepaliveDisabled =
     values.streaming.nonstreamKeepaliveInterval === '' || values.streaming.nonstreamKeepaliveInterval === '0';
   const portError = getValidationMessage(t, validationErrors?.port);
+  const proxyNodesUrlError = getValidationMessage(
+    t,
+    validationErrors?.managementUiProxyNodesUrl
+  );
   const logsMaxSizeError = getValidationMessage(t, validationErrors?.logsMaxTotalSizeMb);
   const requestRetryError = getValidationMessage(t, validationErrors?.requestRetry);
   const maxRetryIntervalError = getValidationMessage(t, validationErrors?.maxRetryInterval);
@@ -341,6 +345,15 @@ export function VisualConfigEditor({
                 value={values.rmPanelRepo}
                 onChange={(e) => onChange({ rmPanelRepo: e.target.value })}
                 disabled={disabled}
+              />
+              <Input
+                label={t('config_management.visual.sections.remote.proxy_nodes_url')}
+                placeholder="https://nodes.example.com/"
+                value={values.managementUiProxyNodesUrl}
+                onChange={(e) => onChange({ managementUiProxyNodesUrl: e.target.value })}
+                disabled={disabled}
+                hint={t('config_management.visual.sections.remote.proxy_nodes_url_hint')}
+                error={proxyNodesUrlError}
               />
             </SectionGrid>
           </div>

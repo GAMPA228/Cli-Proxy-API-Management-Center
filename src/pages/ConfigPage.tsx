@@ -13,7 +13,13 @@ import { IconCheck, IconChevronDown, IconChevronUp, IconRefreshCw, IconSearch } 
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
 import { DiffModal } from '@/components/config/DiffModal';
 import { normalizeVisualYamlForDiff, useVisualConfig } from '@/hooks/useVisualConfig';
-import { useNotificationStore, useAuthStore, useThemeStore, useModelsStore } from '@/stores';
+import {
+  useNotificationStore,
+  useAuthStore,
+  useThemeStore,
+  useModelsStore,
+  useConfigStore,
+} from '@/stores';
 import { configFileApi } from '@/services/api/configFile';
 import styles from './ConfigPage.module.scss';
 
@@ -38,6 +44,7 @@ export function ConfigPage() {
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const models = useModelsStore((state) => state.models);
   const fetchModelsFromStore = useModelsStore((state) => state.fetchModels);
+  const fetchConfig = useConfigStore((state) => state.fetchConfig);
 
   const {
     visualValues,
@@ -141,6 +148,7 @@ export function ConfigPage() {
       setServerYaml(latestContent);
       setMergedYaml(latestContent);
       loadVisualValuesFromYaml(latestContent);
+      await fetchConfig(undefined, true).catch(() => undefined);
       showNotification(t('config_management.save_success'), 'success');
       if (commercialModeChanged) {
         showNotification(t('notification.commercial_mode_restart_required'), 'warning');

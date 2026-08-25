@@ -16,6 +16,10 @@ export interface DownstreamApiKeyEntry {
   remark?: string;
 }
 
+export interface ManagementUiConfig {
+  proxyNodesUrl?: string;
+}
+
 export interface Config {
   debug?: boolean;
   proxyUrl?: string;
@@ -28,6 +32,7 @@ export interface Config {
   wsAuth?: boolean;
   forceModelPrefix?: boolean;
   routingStrategy?: string;
+  managementUi?: ManagementUiConfig;
   apiKeys?: string[];
   apiKeyEntries?: DownstreamApiKeyEntry[];
   ampcode?: AmpcodeConfig;
@@ -52,6 +57,7 @@ export type RawConfigSection =
   | 'ws-auth'
   | 'force-model-prefix'
   | 'routing/strategy'
+  | 'management-ui'
   | 'api-keys'
   | 'ampcode'
   | 'gemini-api-key'

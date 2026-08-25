@@ -45,6 +45,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'ws-auth',
   'force-model-prefix',
   'routing/strategy',
+  'management-ui',
   'api-keys',
   'ampcode',
   'gemini-api-key',
@@ -80,6 +81,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.forceModelPrefix;
     case 'routing/strategy':
       return config.routingStrategy;
+    case 'management-ui':
+      return config.managementUi;
     case 'api-keys':
       return config.apiKeys;
     case 'ampcode':
@@ -198,6 +201,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'request-retry':
           nextConfig.requestRetry = value as Config['requestRetry'];
+          break;
+        case 'management-ui':
+          nextConfig.managementUi = value as Config['managementUi'];
           break;
         case 'quota-exceeded':
           nextConfig.quotaExceeded = value as Config['quotaExceeded'];

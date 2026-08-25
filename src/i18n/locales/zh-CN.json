@@ -118,7 +118,16 @@
     "usage_stats": "使用统计",
     "config_management": "配置面板",
     "logs": "日志查看",
-    "system_info": "中心信息"
+    "system_info": "中心信息",
+    "proxy_nodes": "代理节点"
+  },
+  "proxy_nodes": {
+    "title": "代理节点",
+    "loading": "正在加载代理节点页面...",
+    "refresh": "刷新嵌入页面",
+    "open_external": "在新窗口打开",
+    "not_configured": "尚未配置代理节点页面",
+    "not_configured_description": "请在配置面板的远程管理区域填写代理节点页面地址。"
   },
   "dashboard": {
     "title": "仪表盘",
@@ -1295,7 +1304,9 @@
           "disable_panel_desc": "禁用内置的 Web 控制面板",
           "secret_key": "管理密钥",
           "secret_key_placeholder": "设置管理密钥",
-          "panel_repo": "面板仓库"
+          "panel_repo": "面板仓库",
+          "proxy_nodes_url": "代理节点页面地址",
+          "proxy_nodes_url_hint": "填写后将在侧边栏显示“代理节点”，并在管理中心内嵌入该页面。"
         },
         "auth": {
           "title": "认证配置",
@@ -1541,6 +1552,7 @@
         "validation_blocked": "请先修复表单校验错误再保存",
         "port_range": "请输入 1 到 65535 之间的有效端口",
         "non_negative_integer": "请输入非负整数",
+        "absolute_http_url": "请输入不包含账号密码的完整 HTTP 或 HTTPS 地址",
         "payload_invalid_number": "请输入有效数字",
         "payload_invalid_boolean": "请选择 true 或 false",
         "payload_invalid_json": "请输入有效的 JSON"
