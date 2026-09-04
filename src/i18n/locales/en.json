@@ -114,6 +114,7 @@
     "auth_files": "Auth Files",
     "oauth": "OAuth Login",
     "quota_management": "Quota Management",
+    "quota_estimator": "Quota Capacity",
     "api_key_quotas": "API Key Quotas",
     "usage_stats": "Usage Statistics",
     "config_management": "Config Panel",
@@ -1565,6 +1566,34 @@
         "add": "Add"
       }
     }
+  },
+  "quota_estimator": {
+    "title": "Quota Capacity",
+    "description": "Estimate the remaining USD-equivalent capacity of each Codex credential from real requests and quota percentage changes.",
+    "disclaimer": "Values are workload-equivalent estimates, not OpenAI cash balances. At least two increasing quota samples are required; estimates stabilize as evidence grows.",
+    "passive_hint": "Only real traffic through this server is observed. No model probes are sent and no additional quota is consumed.",
+    "total_accounts": "Codex accounts",
+    "estimated_accounts": "Estimated",
+    "total_remaining": "Primary remaining",
+    "account_overview": "Account capacity overview",
+    "search_placeholder": "Search account, email, or auth file",
+    "account": "Credential",
+    "plan": "Plan",
+    "primary_window": "5-hour / primary",
+    "weekly_window": "Weekly quota",
+    "cycle_usage": "Current cycle spend",
+    "full_capacity": "Full-cycle value",
+    "confidence": "Confidence",
+    "confidence_high": "High",
+    "confidence_medium": "Medium",
+    "confidence_low": "Low",
+    "confidence_insufficient": "Insufficient",
+    "awaiting_sample": "Awaiting real request sample",
+    "awaiting_estimate": "Pending",
+    "reset_at": "Resets {{time}}",
+    "missing_prices": "These models have no configured price and are excluded from USD estimates: {{models}}. Add them under model prices in Usage Statistics.",
+    "empty": "No Codex credentials or quota samples",
+    "search_empty": "No matching accounts"
   },
   "quota_management": {
     "title": "Quota Management",

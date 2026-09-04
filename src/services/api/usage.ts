@@ -110,6 +110,57 @@ export interface UsageAggregateQuery {
   range?: string;
 }
 
+export interface QuotaEstimatorPrice {
+  prompt: number;
+  completion: number;
+  cache: number;
+}
+
+export interface QuotaEstimatorWindow {
+  scope: 'primary' | 'weekly' | string;
+  used_percent: number;
+  remaining_percent: number;
+  reset_at: string;
+  window_minutes: number;
+  last_observed_at: string;
+  current_cycle_tokens: number;
+  current_cycle_cost_usd: number;
+  estimate_available: boolean;
+  full_window_tokens: number;
+  full_window_cost_usd: number;
+  remaining_tokens: number;
+  remaining_cost_usd: number;
+  cost_low: number;
+  cost_high: number;
+  sample_count: number;
+  percent_span: number;
+  confidence: 'insufficient' | 'low' | 'medium' | 'high' | string;
+  status: 'active' | 'expired' | string;
+}
+
+export interface QuotaEstimatorAccount {
+  account: string;
+  auth_id?: string;
+  auth_index?: string;
+  plan_type?: string;
+  latest_model?: string;
+  primary: QuotaEstimatorWindow;
+  secondary?: QuotaEstimatorWindow;
+}
+
+export interface QuotaEstimatorOverview {
+  generated_at: string;
+  value_unit: string;
+  accounts: QuotaEstimatorAccount[];
+  missing_price_models?: string[];
+}
+
+export interface QuotaEstimatorOptions {
+  prices?: Record<string, QuotaEstimatorPrice>;
+  fast_multiplier?: number;
+  apply_fast?: boolean;
+}
+
 const compactQuery = (query: object = {}) => {
   const params: Record<string, string | number> = {};
   Object.entries(query as Record<string, unknown>).forEach(([key, value]) => {
@@ -129,7 +180,7 @@ export const usageApi = {
    */
   getUsage: () =>
     apiClient.get<Record<string, unknown>>('/usage', {
-      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
+      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS),
     }),
   /**
    * 分页获取请求事件明细
@@ -137,7 +188,7 @@ export const usageApi = {
   getUsageDetails: (query: UsageDetailsQuery = {}) =>
     apiClient.get<UsageDetailsPage>('/usage/details', {
       params: compactQuery(query),
-      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
+      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS),
     }),
 
   /**
@@ -146,7 +197,15 @@ export const usageApi = {
   getUsageAggregate: (query: UsageAggregateQuery = {}) =>
     apiClient.get<UsageAggregatePayload>('/usage/aggregate', {
       params: compactQuery(query),
-      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
+      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS),
+    }),
+
+  /**
+   * 获取按 Codex 认证账号计算的额度容量估算。
+   */
+  getQuotaEstimator: (options: QuotaEstimatorOptions = {}) =>
+    apiClient.post<QuotaEstimatorOverview>('/usage/quota-estimator', options, {
+      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS),
     }),
 
   /**
@@ -154,7 +213,7 @@ export const usageApi = {
    */
   exportUsage: () =>
     apiClient.get<UsageExportPayload>('/usage/export', {
-      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
+      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS),
     }),
 
   /**
@@ -162,7 +221,7 @@ export const usageApi = {
    */
   importUsage: (payload: unknown) =>
     apiClient.post<UsageImportResponse>('/usage/import', payload, {
-      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
+      timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS),
     }),
 
   /**
@@ -172,11 +231,10 @@ export const usageApi = {
     let payload = usageData;
     if (!payload) {
       const response = await apiClient.get<Record<string, unknown>>('/usage', {
-        timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS)
+        timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS),
       });
       payload = response?.usage ?? response;
     }
     return computeKeyStats(payload);
-  }
+  },
 };
-

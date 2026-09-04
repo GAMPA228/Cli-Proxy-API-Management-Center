@@ -114,6 +114,7 @@
     "auth_files": "认证文件",
     "oauth": "OAuth 登录",
     "quota_management": "配额管理",
+    "quota_estimator": "额度容量预测",
     "api_key_quotas": "API Key 额度",
     "usage_stats": "使用统计",
     "config_management": "配置面板",
@@ -1565,6 +1566,34 @@
         "add": "添加"
       }
     }
+  },
+  "quota_estimator": {
+    "title": "额度容量预测",
+    "description": "根据真实 Codex 请求和额度百分比变化，估算每个认证账号当前剩余的美元等效容量。",
+    "disclaimer": "这里显示的是当前请求结构下的美元等价值估算，并不是 OpenAI 账户现金余额。估算需要至少两个额度递增样本，样本越多越稳定。",
+    "passive_hint": "只统计经过本服务的真实请求，不会主动请求模型或额外消耗额度。",
+    "total_accounts": "Codex 账号",
+    "estimated_accounts": "已有估算",
+    "total_remaining": "主额度预计剩余",
+    "account_overview": "账号容量概览",
+    "search_placeholder": "搜索账号、邮箱或认证文件",
+    "account": "认证账号",
+    "plan": "套餐",
+    "primary_window": "5 小时 / 主额度",
+    "weekly_window": "周额度",
+    "cycle_usage": "本周期已消耗",
+    "full_capacity": "完整周期估值",
+    "confidence": "可信度",
+    "confidence_high": "高",
+    "confidence_medium": "中",
+    "confidence_low": "低",
+    "confidence_insufficient": "样本不足",
+    "awaiting_sample": "等待真实请求样本",
+    "awaiting_estimate": "待估算",
+    "reset_at": "{{time}} 重置",
+    "missing_prices": "以下模型没有价格配置，对应请求暂未计入美元估算：{{models}}。请在“使用统计”的模型价格设置中补充。",
+    "empty": "暂无 Codex 认证账号或额度样本",
+    "search_empty": "没有匹配的账号"
   },
   "quota_management": {
     "title": "配额管理",

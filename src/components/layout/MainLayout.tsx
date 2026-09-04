@@ -24,6 +24,7 @@ import {
   IconSidebarSystem,
   IconSidebarProxyNodes,
   IconSidebarUsage,
+  IconDollarSign,
 } from '@/components/ui/icons';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
 import {
@@ -46,6 +47,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   quota: <IconSidebarQuota size={18} />,
   apiKeyQuota: <IconSidebarApiKeyQuota size={18} />,
   usage: <IconSidebarUsage size={18} />,
+  quotaEstimator: <IconDollarSign size={18} />,
   config: <IconSidebarConfig size={18} />,
   logs: <IconSidebarLogs size={18} />,
   system: <IconSidebarSystem size={18} />,
@@ -430,6 +432,11 @@ export function MainLayout() {
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
     { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota },
+    {
+      path: '/quota-estimator',
+      label: t('nav.quota_estimator'),
+      icon: sidebarIcons.quotaEstimator,
+    },
     { path: '/api-key-quotas', label: t('nav.api_key_quotas'), icon: sidebarIcons.apiKeyQuota },
     { path: '/usage', label: t('nav.usage_stats'), icon: sidebarIcons.usage },
     ...(config?.loggingToFile

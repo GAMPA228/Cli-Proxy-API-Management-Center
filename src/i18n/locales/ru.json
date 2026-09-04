@@ -114,6 +114,7 @@
     "auth_files": "Файлы аутентификации",
     "oauth": "OAuth вход",
     "quota_management": "Управление квотами",
+    "quota_estimator": "Ёмкость квоты",
     "api_key_quotas": "Квоты API Key",
     "usage_stats": "Статистика использования",
     "config_management": "Панель конфигурации",
@@ -1570,6 +1571,34 @@
         "add": "Добавить"
       }
     }
+  },
+  "quota_estimator": {
+    "title": "Ёмкость квоты",
+    "description": "Оценка оставшейся USD-ёмкости каждого Codex аккаунта по реальным запросам и изменению процента квоты.",
+    "disclaimer": "Это эквивалентная оценка для текущей нагрузки, а не денежный баланс OpenAI. Требуются как минимум два растущих образца квоты.",
+    "passive_hint": "Учитывается только реальный трафик через сервер; дополнительные запросы к моделям не выполняются.",
+    "total_accounts": "Аккаунты Codex",
+    "estimated_accounts": "С оценкой",
+    "total_remaining": "Остаток основной квоты",
+    "account_overview": "Обзор ёмкости аккаунтов",
+    "search_placeholder": "Поиск аккаунта, почты или файла",
+    "account": "Аккаунт",
+    "plan": "Тариф",
+    "primary_window": "5 часов / основная",
+    "weekly_window": "Недельная квота",
+    "cycle_usage": "Расход цикла",
+    "full_capacity": "Стоимость полного цикла",
+    "confidence": "Надёжность",
+    "confidence_high": "Высокая",
+    "confidence_medium": "Средняя",
+    "confidence_low": "Низкая",
+    "confidence_insufficient": "Недостаточно данных",
+    "awaiting_sample": "Ожидание реального запроса",
+    "awaiting_estimate": "Ожидание",
+    "reset_at": "Сброс {{time}}",
+    "missing_prices": "Для моделей нет цены и их запросы не включены в USD-оценку: {{models}}. Добавьте цены в статистике использования.",
+    "empty": "Нет аккаунтов Codex или образцов квоты",
+    "search_empty": "Совпадений не найдено"
   },
   "quota_management": {
     "title": "Управление квотами",
