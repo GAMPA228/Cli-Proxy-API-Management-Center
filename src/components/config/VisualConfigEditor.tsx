@@ -542,6 +542,16 @@ export function VisualConfigEditor({
           </div>
       </ConfigSection>
 
+      <ConfigSection title={t('config_management.visual.codex_identity')}>
+        <div className={styles.sectionStack}>
+          <ToggleRow
+            title={t('config_management.visual.codex_single_device')}
+            checked={values.codexSingleDevice === true}
+            disabled={disabled}
+            onChange={(codexSingleDevice) => onChange({ codexSingleDevice })}
+          />
+        </div>
+      </ConfigSection>
       <ConfigSection title={t('config_management.visual.sections.thinking_policy.title')} description={t('config_management.visual.sections.thinking_policy.description')}>
         <div className={styles.sectionStack}>
           <ToggleRow

@@ -1284,6 +1284,8 @@
       "source": "Редактор файла"
     },
     "visual": {
+      "codex_identity": "Идентификация Codex",
+      "codex_single_device": "Одно устройство, несколько окон",
       "sections": {
         "server": {
           "title": "Настройки сервера",

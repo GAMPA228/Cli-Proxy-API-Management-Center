@@ -113,6 +113,7 @@ export type VisualConfigValues = {
   routingStrategy: 'round-robin' | 'fill-first';
   wsAuth: boolean;
   thinkingPolicyCodexEnabled: boolean;
+  codexSingleDevice: boolean | null;
   thinkingPolicyCodexDefaultEffort: CodexThinkingDefaultEffort;
   thinkingPolicyCodexXhighApiKeysText: string;
   thinkingPolicyCodexXhighGroups: string[];
@@ -165,6 +166,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   routingStrategy: 'round-robin',
   wsAuth: false,
   thinkingPolicyCodexEnabled: false,
+  codexSingleDevice: null,
   thinkingPolicyCodexDefaultEffort: 'high',
   thinkingPolicyCodexXhighApiKeysText: '',
   thinkingPolicyCodexXhighGroups: [],

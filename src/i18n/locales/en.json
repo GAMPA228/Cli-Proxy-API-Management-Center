@@ -1281,6 +1281,8 @@
       "source": "Source File Editor"
     },
     "visual": {
+      "codex_identity": "Codex Identity",
+      "codex_single_device": "Single Device, Multiple Windows",
       "sections": {
         "server": {
           "title": "Server Configuration",

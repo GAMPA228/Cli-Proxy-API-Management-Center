@@ -1281,6 +1281,8 @@
       "source": "源文件编辑"
     },
     "visual": {
+      "codex_identity": "Codex 身份设置",
+      "codex_single_device": "单机多窗口",
       "sections": {
         "server": {
           "title": "服务器配置",

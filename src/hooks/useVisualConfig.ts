@@ -774,6 +774,9 @@ export function useVisualConfig() {
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
         wsAuth: Boolean(parsed['ws-auth']),
         thinkingPolicyCodexEnabled: Boolean(codexThinkingPolicy?.enabled),
+        codexSingleDevice: typeof asRecord(parsed.codex)?.['single-device'] === 'boolean'
+          ? asRecord(parsed.codex)!['single-device'] as boolean
+          : null,
         thinkingPolicyCodexDefaultEffort: parseCodexThinkingDefaultEffort(
           codexThinkingPolicy?.['default-effort']
         ),
@@ -959,6 +962,10 @@ export function useVisualConfig() {
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 
         const codexXhighApiKeys = parseLines(values.thinkingPolicyCodexXhighApiKeysText);
+        if (values.codexSingleDevice !== null) {
+          ensureMapInDoc(doc, ['codex']);
+          doc.setIn(['codex', 'single-device'], values.codexSingleDevice);
+        }
         const codexXhighGroups = parseStringArray(values.thinkingPolicyCodexXhighGroups);
         if (
           docHas(doc, ['thinking-policy']) ||
