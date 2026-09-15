@@ -39,6 +39,7 @@ type RequestEventRow = {
   model: string;
   reasoningEffort: string;
   serviceTier: string;
+  firstTokenMs: number | null;
   appliedServiceTier: string;
   responseServiceTier: string;
   clientIP: string;
@@ -212,6 +213,7 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
   return {
     timestamp,
     api: typeof row.api === 'string' ? row.api : '',
+    first_token_ms: row.first_token_ms,
     client_ip: typeof row.client_ip === 'string' ? row.client_ip : '',
     source: typeof row.source === 'string' ? row.source : '',
     auth_id: typeof row.auth_id === 'string' ? row.auth_id : '',
@@ -426,6 +428,10 @@ export function RequestEventsDetailsCard({
         model,
         reasoningEffort,
         serviceTier,
+        firstTokenMs:
+          typeof detail.first_token_ms === 'number' && Number.isFinite(detail.first_token_ms) && detail.first_token_ms >= 0
+            ? detail.first_token_ms
+            : null,
         appliedServiceTier,
         responseServiceTier,
         clientIP,
@@ -605,6 +611,7 @@ export function RequestEventsDetailsCard({
       'service_tier',
       'applied_service_tier',
       'response_service_tier',
+      'first_token_ms',
       'source_type',
       'source',
       'source_raw',
@@ -632,6 +639,7 @@ export function RequestEventsDetailsCard({
         row.serviceTier,
         row.appliedServiceTier,
         row.responseServiceTier,
+        row.firstTokenMs ?? '',
         row.sourceType,
         row.source,
         row.sourceRaw,
@@ -670,6 +678,7 @@ export function RequestEventsDetailsCard({
       service_tier: row.serviceTier,
       applied_service_tier: row.appliedServiceTier,
       response_service_tier: row.responseServiceTier,
+      first_token_ms: row.firstTokenMs,
       source_type: row.sourceType,
       source: row.source,
       source_raw: row.sourceRaw,
@@ -823,6 +832,7 @@ export function RequestEventsDetailsCard({
                 <col className={styles.requestEventsColTime} />
                 <col className={styles.requestEventsColModel} />
                 <col className={styles.requestEventsColSpeed} />
+                <col className={styles.requestEventsColTTFT} />
                 <col className={styles.requestEventsColClientIP} />
                 <col className={styles.requestEventsColAPIKey} />
                 <col className={styles.requestEventsColSourceType} />
@@ -841,6 +851,7 @@ export function RequestEventsDetailsCard({
                   <th>{t('usage_stats.request_events_timestamp')}</th>
                   <th>{t('usage_stats.model_name')}</th>
                   <th>{t('usage_stats.request_events_speed')}</th>
+                  <th>{t('usage_stats.request_events_ttft')}</th>
                   <th>{t('usage_stats.request_events_client_ip')}</th>
                   <th>{t('usage_stats.request_events_api_key')}</th>
                   <th>{t('usage_stats.request_events_source_type')}</th>
@@ -890,6 +901,13 @@ export function RequestEventsDetailsCard({
                       responseLabel={t('usage_stats.request_events_response_tier')}
                       noResponseLabel={t('usage_stats.request_events_speed_no_response')}
                     />
+                    <td className={styles.tableCellMono} style={{ whiteSpace: 'nowrap' }}>
+                      {row.firstTokenMs === null
+                        ? '-'
+                        : row.firstTokenMs < 1000
+                          ? `${row.firstTokenMs.toLocaleString(i18n.language)} ms`
+                          : `${(row.firstTokenMs / 1000).toLocaleString(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s`}
+                    </td>
                     <td
                       className={`${styles.requestEventsClientIP} ${styles.tableCellMono}`}
                       title={row.clientIP}

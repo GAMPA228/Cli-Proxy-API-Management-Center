@@ -1114,6 +1114,7 @@
     "request_events_api_key": "API Key запроса",
     "request_events_reasoning": "Уровень reasoning",
     "request_events_speed": "Скорость",
+    "request_events_ttft": "Время до первого токена",
     "request_events_speed_no_response": "нет ответа",
     "request_events_requested_tier": "Уровень, запрошенный клиентом",
     "request_events_applied_tier": "Отправленный upstream уровень",

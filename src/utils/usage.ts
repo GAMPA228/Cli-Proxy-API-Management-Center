@@ -45,6 +45,7 @@ export interface ApiKeyRemarkEntry {
 }
 
 export interface UsageDetail {
+  first_token_ms?: number | null;
   timestamp: string;
   api?: string;
   client_ip?: string;
@@ -560,6 +561,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
         details.push({
           timestamp,
           api: apiName,
+          first_token_ms: typeof detailRaw.first_token_ms === 'number' ? detailRaw.first_token_ms : null,
           client_ip: typeof detailRaw.client_ip === 'string' ? detailRaw.client_ip : '',
           source: normalizeSource(detailRaw.source),
           auth_id: typeof detailRaw.auth_id === 'string' ? detailRaw.auth_id : '',

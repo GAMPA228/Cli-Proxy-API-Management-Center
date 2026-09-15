@@ -37,6 +37,7 @@ export interface UsageDetailRow {
   model?: string;
   timestamp?: string;
   latency_ms?: number;
+  first_token_ms?: number | null;
   client_ip?: string;
   source?: string;
   auth_id?: string;

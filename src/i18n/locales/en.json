@@ -1111,6 +1111,7 @@
     "request_events_api_key": "Request API Key",
     "request_events_reasoning": "Reasoning effort",
     "request_events_speed": "Speed",
+    "request_events_ttft": "TTFT",
     "request_events_speed_no_response": "No response",
     "request_events_requested_tier": "Client-requested tier",
     "request_events_applied_tier": "Applied upstream tier",
