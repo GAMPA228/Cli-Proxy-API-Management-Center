@@ -150,3 +150,30 @@
 .footerBtn {
   min-width: 88px;
 }
+
+.headerRules {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.headerRule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 126px minmax(0, 1.2fr) 34px;
+  align-items: start;
+  gap: 8px;
+
+  > * {
+    min-width: 0;
+    margin-bottom: 0;
+  }
+}
+
+.headerRemove {
+  width: 34px;
+  height: 38px;
+  padding: 0;
+}
+.headerAdd {
+  align-self: flex-start;
+}
