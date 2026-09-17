@@ -7,10 +7,12 @@ import { IconCopy, IconDownload, IconRefreshCw, IconTrash2 } from '@/components/
 import { capturesApi, type CaptureStatus, type UpstreamCapture } from '@/services/api/captures';
 import { downloadBlob } from '@/utils/download';
 import { copyToClipboard } from '@/utils/clipboard';
+import { useNotificationStore } from '@/stores';
 import styles from './UpstreamCapture.module.scss';
 
 export function CaptureControls({ onRefresh }: { onRefresh: () => void }) {
   const { t } = useTranslation();
+  const showConfirmation = useNotificationStore((state) => state.showConfirmation);
   const [status, setStatus] = useState<CaptureStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -54,7 +56,6 @@ export function CaptureControls({ onRefresh }: { onRefresh: () => void }) {
   const seconds = status ? Math.max(0, Math.ceil((Date.parse(status.until) - now) / 1000)) : 0;
   const enabled = Boolean(status?.enabled && seconds > 0);
   const toggle = async (value: boolean) => {
-    if (value && !window.confirm(t('usage_stats.capture_confirm'))) return;
     if (changing.current) return;
     changing.current = true;
     revision.current++;
@@ -75,11 +76,22 @@ export function CaptureControls({ onRefresh }: { onRefresh: () => void }) {
       if (mounted.current) setBusy(false);
     }
   };
+  const requestToggle = (value: boolean) => {
+    if (!value) {
+      void toggle(false);
+      return;
+    }
+    showConfirmation({
+      title: t('usage_stats.capture_toggle'),
+      message: t('usage_stats.capture_confirm'),
+      onConfirm: () => toggle(true),
+    });
+  };
   return (
     <div className={styles.controls}>
       <ToggleSwitch
         checked={enabled}
-        onChange={(value) => void toggle(value)}
+        onChange={requestToggle}
         disabled={busy || !status}
         label={t('usage_stats.capture_toggle')}
       />
@@ -158,6 +170,8 @@ export function CaptureViewer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const showConfirmation = useNotificationStore((state) => state.showConfirmation);
+  const confirmationOpen = useNotificationStore((state) => state.confirmation.isOpen);
   const generation = useRef(0);
   const load = useCallback(async () => {
     if (!captureID) return;
@@ -240,14 +254,21 @@ export function CaptureViewer({
       blob: new Blob([body], { type: 'application/octet-stream' }),
     });
   };
-  const remove = async () => {
-    if (!captureID || !window.confirm(t('usage_stats.capture_delete_confirm'))) return;
-    try {
-      await capturesApi.remove(captureID);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('usage_stats.capture_unavailable'));
-    }
+  const remove = () => {
+    if (!captureID) return;
+    showConfirmation({
+      title: t('usage_stats.capture_delete'),
+      message: t('usage_stats.capture_delete_confirm'),
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await capturesApi.remove(captureID);
+          onClose();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : t('usage_stats.capture_unavailable'));
+        }
+      },
+    });
   };
   return (
     <Modal
@@ -255,6 +276,7 @@ export function CaptureViewer({
       title={t('usage_stats.capture_title')}
       onClose={onClose}
       width={1080}
+      closeDisabled={confirmationOpen}
     >
       <div className={styles.viewer}>
         <div className={styles.toolbar}>
