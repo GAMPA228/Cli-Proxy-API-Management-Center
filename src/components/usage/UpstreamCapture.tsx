@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { Select } from '@/components/ui/Select';
 import { IconCopy, IconDownload, IconRefreshCw, IconTrash2 } from '@/components/ui/icons';
 import { capturesApi, type CaptureStatus, type UpstreamCapture } from '@/services/api/captures';
 import { downloadBlob } from '@/utils/download';
@@ -15,6 +16,7 @@ export function CaptureControls({ onRefresh }: { onRefresh: () => void }) {
   const showConfirmation = useNotificationStore((state) => state.showConfirmation);
   const [status, setStatus] = useState<CaptureStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [duration, setDuration] = useState(10);
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
   const previousActive = useRef(0);
@@ -62,7 +64,7 @@ export function CaptureControls({ onRefresh }: { onRefresh: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const next = await capturesApi.toggle(value);
+      const next = await capturesApi.toggle(value, duration);
       if (mounted.current) {
         setStatus(next);
         setNow(Date.now());
@@ -83,7 +85,7 @@ export function CaptureControls({ onRefresh }: { onRefresh: () => void }) {
     }
     showConfirmation({
       title: t('usage_stats.capture_toggle'),
-      message: t('usage_stats.capture_confirm'),
+      message: t('usage_stats.capture_confirm', { seconds: duration }),
       onConfirm: () => toggle(true),
     });
   };
@@ -94,6 +96,18 @@ export function CaptureControls({ onRefresh }: { onRefresh: () => void }) {
         onChange={requestToggle}
         disabled={busy || !status}
         label={t('usage_stats.capture_toggle')}
+      />
+      <Select
+        value={String(enabled ? (status?.duration_seconds ?? duration) : duration)}
+        options={[10, 20, 30].map((value) => ({
+          value: String(value),
+          label: t('usage_stats.capture_seconds', { seconds: value }),
+        }))}
+        onChange={(value) => setDuration(Number(value))}
+        disabled={busy || enabled || !status}
+        ariaLabel={t('usage_stats.capture_duration')}
+        className={styles.duration}
+        fullWidth={false}
       />
       {enabled && <span className={styles.counter}>{seconds}s</span>}
       {status && status.captured > 0 && (

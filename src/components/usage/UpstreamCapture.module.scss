@@ -6,6 +6,10 @@
   margin-bottom: 16px;
   font-size: 13px;
 }
+.duration {
+  width: 100px;
+  flex-shrink: 0;
+}
 .counter {
   font-variant-numeric: tabular-nums;
   min-width: 32px;

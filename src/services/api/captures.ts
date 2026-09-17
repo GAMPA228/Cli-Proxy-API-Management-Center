@@ -2,6 +2,7 @@ import { apiClient } from './client';
 
 export interface CaptureStatus {
   enabled: boolean;
+  duration_seconds?: number;
   until: string;
   captured: number;
   dropped: number;
@@ -32,7 +33,8 @@ export interface UpstreamCapture {
 }
 export const capturesApi = {
   status: () => apiClient.get<CaptureStatus>('/usage/capture'),
-  toggle: (enabled: boolean) => apiClient.put<CaptureStatus>('/usage/capture', { enabled }),
+  toggle: (enabled: boolean, durationSeconds = 10) =>
+    apiClient.put<CaptureStatus>('/usage/capture', { enabled, duration_seconds: durationSeconds }),
   get: (id: string) =>
     apiClient.get<{ items: UpstreamCapture[] }>(`/usage/captures/${encodeURIComponent(id)}`),
   remove: (id: string) => apiClient.delete(`/usage/captures/${encodeURIComponent(id)}`),
