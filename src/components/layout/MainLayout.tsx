@@ -430,6 +430,7 @@ export function MainLayout() {
     { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
     { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
+    { path: '/request-header-rules', label: t('nav.request_header_rules'), icon: sidebarIcons.config },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
     { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota },
     {

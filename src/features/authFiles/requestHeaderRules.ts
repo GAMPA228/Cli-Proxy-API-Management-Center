@@ -1,4 +1,8 @@
 export type RequestHeaderRule = {
+  id?: string;
+  models?: string[];
+  duration_minutes?: number;
+  expires_at?: string;
   name: string;
   operation: 'default' | 'override' | 'delete';
   value?: string;
@@ -44,23 +48,6 @@ const protectedNames = new Set([
   'x-client-request-id',
 ]);
 
-export function parseRequestHeaderRules(value: unknown): RequestHeaderRule[] {
-  if (value == null) return [];
-  if (
-    !Array.isArray(value) ||
-    value.some(
-      (rule) =>
-        !rule ||
-        typeof rule !== 'object' ||
-        typeof rule.name !== 'string' ||
-        !['default', 'override', 'delete'].includes(rule.operation) ||
-        (rule.value !== undefined && typeof rule.value !== 'string')
-    )
-  )
-    throw new Error('Invalid request_header_rules');
-  return value.map((rule) => ({ ...rule }));
-}
-
 export function validateRequestHeaderRules(rules: RequestHeaderRule[]) {
   if (rules.length > 32) return { key: 'limit', row: 0 };
   const seen = new Set<string>();
@@ -71,8 +58,11 @@ export function validateRequestHeaderRules(rules: RequestHeaderRule[]) {
       return { key: 'invalid_name', row };
     if (protectedNames.has(name) || name.startsWith('sec-websocket-') || name.startsWith('proxy-'))
       return { key: 'protected', row };
-    if (seen.has(name)) return { key: 'duplicate', row };
-    seen.add(name);
+    for (const model of rule.models?.length ? rule.models : ['']) {
+      const scope = name + '\u0000' + model;
+      if (seen.has(scope)) return { key: 'duplicate', row };
+      seen.add(scope);
+    }
     if (
       rule.operation !== 'delete' &&
       (new TextEncoder().encode(rule.value ?? '').length > 8192 ||

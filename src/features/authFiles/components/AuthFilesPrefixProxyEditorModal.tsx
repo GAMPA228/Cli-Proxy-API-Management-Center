@@ -4,9 +4,6 @@ import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Input } from '@/components/ui/Input';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import { Select } from '@/components/ui/Select';
-import { IconTrash2 } from '@/components/ui/icons';
-import { validateRequestHeaderRules, type RequestHeaderRule } from '../requestHeaderRules';
 import type {
   PrefixProxyEditorField,
   PrefixProxyEditorFieldValue,
@@ -27,17 +24,6 @@ export type AuthFilesPrefixProxyEditorModalProps = {
 export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEditorModalProps) {
   const { t } = useTranslation();
   const { disableControls, editor, updatedText, dirty, onClose, onSave, onChange } = props;
-  const headerError = editor?.isCodexFile
-    ? validateRequestHeaderRules(editor.requestHeaderRules)
-    : null;
-  const headersDisabled = disableControls || editor?.saving || !editor?.json;
-  const updateHeader = (index: number, patch: Partial<RequestHeaderRule>) => {
-    if (!editor) return;
-    onChange(
-      'requestHeaderRules',
-      editor.requestHeaderRules.map((rule, i) => (i === index ? { ...rule, ...patch } : rule))
-    );
-  };
   const titleText = editor?.fileName
     ? t('auth_files.auth_field_editor_title', { name: editor.fileName })
     : t('auth_files.prefix_proxy_button');
@@ -64,13 +50,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
             className={styles.footerBtn}
             onClick={onSave}
             loading={editor?.saving === true}
-            disabled={
-              disableControls ||
-              editor?.saving === true ||
-              !dirty ||
-              !editor?.json ||
-              Boolean(headerError)
-            }
+            disabled={disableControls || editor?.saving === true || !dirty || !editor?.json}
           >
             {t('common.save')}
           </Button>
@@ -150,87 +130,6 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                 />
                 {editor.isCodexFile && (
                   <div className={styles.formGroup}>
-                    <label>{t('auth_files.request_headers_title')}</label>
-                    <div className={styles.headerRules}>
-                      {editor.requestHeaderRules.length > 0 && (
-                        <div className={styles.headerRule} aria-hidden="true">
-                          <span>{t('auth_files.request_headers_name_label')}</span>
-                          <span>{t('auth_files.request_headers_operation_label')}</span>
-                          <span>{t('auth_files.request_headers_value_label')}</span>
-                        </div>
-                      )}
-                      {editor.requestHeaderRules.map((rule, index) => (
-                        <div className={styles.headerRule} key={index}>
-                          <Input
-                            aria-label={t('auth_files.request_headers_name', { row: index + 1 })}
-                            value={rule.name}
-                            disabled={headersDisabled}
-                            onChange={(e) => updateHeader(index, { name: e.target.value })}
-                          />
-                          <Select
-                            ariaLabel={t('auth_files.request_headers_operation', {
-                              row: index + 1,
-                            })}
-                            value={rule.operation}
-                            disabled={headersDisabled}
-                            options={['override', 'default', 'delete'].map((value) => ({
-                              value,
-                              label: t(`auth_files.request_headers_${value}`),
-                            }))}
-                            onChange={(value) =>
-                              updateHeader(index, {
-                                operation: value as RequestHeaderRule['operation'],
-                              })
-                            }
-                          />
-                          <Input
-                            aria-label={t('auth_files.request_headers_value', { row: index + 1 })}
-                            value={rule.operation === 'delete' ? '' : (rule.value ?? '')}
-                            disabled={headersDisabled || rule.operation === 'delete'}
-                            onChange={(e) => updateHeader(index, { value: e.target.value })}
-                          />
-                          <Button
-                            variant="ghost"
-                            className={styles.headerRemove}
-                            aria-label={t('auth_files.request_headers_remove', { row: index + 1 })}
-                            title={t('auth_files.request_headers_remove', { row: index + 1 })}
-                            disabled={headersDisabled}
-                            onClick={() =>
-                              onChange(
-                                'requestHeaderRules',
-                                editor.requestHeaderRules.filter((_, i) => i !== index)
-                              )
-                            }
-                          >
-                            <IconTrash2 size={16} />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                    {headerError && (
-                      <div role="alert" className={styles.errorBox}>
-                        {t(`auth_files.request_headers_${headerError.key}`, {
-                          row: headerError.row,
-                        })}
-                      </div>
-                    )}
-                    <Button
-                      variant="secondary"
-                      className={styles.headerAdd}
-                      disabled={headersDisabled || editor.requestHeaderRules.length >= 32}
-                      onClick={() =>
-                        onChange('requestHeaderRules', [
-                          ...editor.requestHeaderRules,
-                          { name: '', operation: 'override', value: '' },
-                        ])
-                      }
-                    >
-                      {t('auth_files.request_headers_add')}
-                    </Button>
-                  </div>
-                )}
-                {editor.isCodexFile && (
-                  <div className={styles.formGroup}>
                     <label>{t('ai_providers.codex_websockets_label')}</label>
                     <div className={styles.toggleRow}>
                       <ToggleSwitch
@@ -240,9 +139,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                         onChange={(value) => onChange('websocket', value)}
                       />
                     </div>
-                    <div className={styles.fieldHint}>
-                      {t('ai_providers.codex_websockets_hint')}
-                    </div>
+                    <div className={styles.fieldHint}>{t('ai_providers.codex_websockets_hint')}</div>
                   </div>
                 )}
               </div>

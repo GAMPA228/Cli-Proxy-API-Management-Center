@@ -1,0 +1,138 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  h1 {
+    font-size: 24px;
+    margin: 0;
+  }
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr) 160px;
+  gap: 12px;
+}
+.tableWrap {
+  overflow-x: auto;
+  border-top: 1px solid var(--border-color);
+}
+.table {
+  width: 100%;
+  min-width: 1000px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  th,
+  td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  th {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  th:nth-child(1) {
+    width: 20%;
+  }
+  th:nth-child(2) {
+    width: 17%;
+  }
+  th:nth-child(3) {
+    width: 18%;
+  }
+  th:nth-child(4) {
+    width: 10%;
+  }
+  th:nth-child(5) {
+    width: 14%;
+  }
+  th:nth-child(6) {
+    width: 11%;
+  }
+  th:nth-child(7) {
+    width: 110px;
+  }
+}
+.value {
+  white-space: pre-wrap;
+  max-height: 80px;
+  overflow: auto;
+  font-family: monospace;
+}
+.note {
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.active {
+  color: var(--success-color, #15803d);
+}
+.expired {
+  color: var(--text-tertiary);
+}
+.error {
+  color: var(--danger-color, #dc2626);
+  padding: 12px 0;
+}
+.empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  > label {
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+}
+.model {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding-left: 8px;
+  span {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+}
+.rowButton {
+  width: 30px;
+  height: 32px;
+  padding: 0;
+}

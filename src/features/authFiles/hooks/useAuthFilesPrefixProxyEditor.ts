@@ -6,11 +6,6 @@ import { useNotificationStore } from '@/stores';
 import { formatFileSize } from '@/utils/format';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
 import {
-  parseRequestHeaderRules,
-  validateRequestHeaderRules,
-  type RequestHeaderRule,
-} from '../requestHeaderRules';
-import {
   normalizeExcludedModels,
   parseDisableCoolingValue,
   parseExcludedModelsText,
@@ -24,10 +19,9 @@ export type PrefixProxyEditorField =
   | 'excludedModelsText'
   | 'disableCooling'
   | 'websocket'
-  | 'requestHeaderRules'
   | 'note';
 
-export type PrefixProxyEditorFieldValue = string | boolean | RequestHeaderRule[];
+export type PrefixProxyEditorFieldValue = string | boolean;
 
 export type PrefixProxyEditorState = {
   fileName: string;
@@ -46,8 +40,6 @@ export type PrefixProxyEditorState = {
   websocket: boolean;
   note: string;
   noteTouched: boolean;
-  requestHeaderRules: RequestHeaderRule[];
-  requestHeaderRulesTouched: boolean;
 };
 
 export type UseAuthFilesPrefixProxyEditorOptions = {
@@ -102,15 +94,6 @@ const buildPrefixProxyUpdatedText = (editor: PrefixProxyEditorState | null): str
 
   if (editor.isCodexFile) {
     next.websocket = editor.websocket;
-    if (editor.requestHeaderRulesTouched) {
-      if (editor.requestHeaderRules.length) {
-        next.request_header_rules = editor.requestHeaderRules.map(({ name, operation, value }) =>
-          operation === 'delete' ? { name, operation } : { name, operation, value: value ?? '' }
-        );
-      } else {
-        delete next.request_header_rules;
-      }
-    }
   }
 
   if (editor.noteTouched) {
@@ -177,8 +160,6 @@ export function useAuthFilesPrefixProxyEditor(
       websocket: false,
       note: '',
       noteTouched: false,
-      requestHeaderRules: [],
-      requestHeaderRulesTouched: false,
     });
 
     try {
@@ -229,9 +210,6 @@ export function useAuthFilesPrefixProxyEditor(
       const disableCoolingValue = parseDisableCoolingValue(json.disable_cooling);
       const websocketValue = parseDisableCoolingValue(json.websocket);
       const note = typeof json.note === 'string' ? json.note : '';
-      const requestHeaderRules = isCodexFile
-        ? parseRequestHeaderRules(json.request_header_rules)
-        : [];
 
       setPrefixProxyEditor((prev) => {
         if (!prev || prev.fileName !== name) return prev;
@@ -250,8 +228,6 @@ export function useAuthFilesPrefixProxyEditor(
           websocket: websocketValue ?? false,
           note,
           noteTouched: false,
-          requestHeaderRules,
-          requestHeaderRulesTouched: false,
           error: null,
         };
       });
@@ -271,9 +247,6 @@ export function useAuthFilesPrefixProxyEditor(
   ) => {
     setPrefixProxyEditor((prev) => {
       if (!prev) return prev;
-      if (field === 'requestHeaderRules' && Array.isArray(value)) {
-        return { ...prev, requestHeaderRules: value, requestHeaderRulesTouched: true };
-      }
       if (field === 'prefix') return { ...prev, prefix: String(value) };
       if (field === 'proxyUrl') return { ...prev, proxyUrl: String(value) };
       if (field === 'priority') return { ...prev, priority: String(value) };
@@ -287,16 +260,6 @@ export function useAuthFilesPrefixProxyEditor(
   const handlePrefixProxySave = async () => {
     if (!prefixProxyEditor?.json) return;
     if (!prefixProxyDirty) return;
-    if (prefixProxyEditor.isCodexFile) {
-      const invalid = validateRequestHeaderRules(prefixProxyEditor.requestHeaderRules);
-      if (invalid) {
-        showNotification(
-          t(`auth_files.request_headers_${invalid.key}`, { row: invalid.row }),
-          'error'
-        );
-        return;
-      }
-    }
 
     const name = prefixProxyEditor.fileName;
     const payload = prefixProxyUpdatedText;
