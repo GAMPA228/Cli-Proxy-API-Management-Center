@@ -140,6 +140,18 @@ function rawBytes(base64: string | null | undefined): Uint8Array<ArrayBuffer> {
 const decode = (data: string | null | undefined) => new TextDecoder().decode(rawBytes(data));
 const previewLimit = 256 * 1024;
 
+function formatEventList(events: Iterable<unknown>): string {
+  let text = '[';
+  let separator = '\n';
+  for (const event of events) {
+    text += separator + JSON.stringify(event, null, 2).replace(/^/gm, '  ');
+    // Format complete events first; never parse a sliced JSON payload.
+    if (text.length > previewLimit) break;
+    separator = ',\n';
+  }
+  return text + '\n]';
+}
+
 function formatBody(raw: string): string {
   try {
     return JSON.stringify(JSON.parse(raw), null, 2);
@@ -147,10 +159,9 @@ function formatBody(raw: string): string {
     /* SSE and non-JSON bodies remain inspectable. */
   }
   if (/^(data|event):/m.test(raw)) {
-    const events = raw
-      .split(/\r?\n\r?\n/)
-      .filter(Boolean)
-      .map((event) => {
+    function* events() {
+      for (const event of raw.split(/\r?\n\r?\n/)) {
+        if (!event) continue;
         const fields: Record<string, string> = {};
         const dataLines: string[] = [];
         for (const line of event.split(/\r?\n/)) {
@@ -163,12 +174,13 @@ function formatBody(raw: string): string {
         }
         const data = dataLines.join('\n');
         try {
-          return { ...fields, data: JSON.parse(data) };
+          yield { ...fields, data: JSON.parse(data) };
         } catch {
-          return { ...fields, data };
+          yield { ...fields, data };
         }
-      });
-    return JSON.stringify(events, null, 2);
+      }
+    }
+    return formatEventList(events());
   }
   return raw;
 }
@@ -243,25 +255,25 @@ export function CaptureViewer({
     }
     return decode(item.response_body);
   }, [item, tab]);
-  const text = useMemo(() => {
-    if (raw.length > previewLimit) return raw.slice(0, previewLimit);
+  const displayText = useMemo(() => {
     if (!formatted || !item) return raw;
     if (tab === 'response' && item.protocol === 'websocket' && item.frames?.length) {
-      return JSON.stringify(
-        item.frames.map((frame) => {
+      const frames = item.frames;
+      function* events() {
+        for (const frame of frames) {
           const value = decode(frame.body);
           try {
-            return { at: frame.at, data: JSON.parse(value) };
+            yield { at: frame.at, data: JSON.parse(value) };
           } catch {
-            return { at: frame.at, data: value };
+            yield { at: frame.at, data: value };
           }
-        }),
-        null,
-        2
-      );
+        }
+      }
+      return formatEventList(events());
     }
     return formatBody(raw);
   }, [formatted, item, raw, tab]);
+  const text = displayText.slice(0, previewLimit);
   const download = () => {
     if (!item) return;
     const websocket = tab === 'response' && item.protocol === 'websocket' && item.frames?.length;
@@ -416,7 +428,7 @@ export function CaptureViewer({
             {item.transport_decompressed && (
               <div role="status">{t('usage_stats.capture_decompressed')}</div>
             )}
-            {raw.length > previewLimit && (
+            {displayText.length > previewLimit && (
               <div role="status">{t('usage_stats.capture_preview_limit')}</div>
             )}
             <pre className={styles.body} role="tabpanel">
