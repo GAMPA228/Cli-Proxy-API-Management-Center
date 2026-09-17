@@ -137,15 +137,21 @@ function formatBody(raw: string): string {
       .split(/\r?\n\r?\n/)
       .filter(Boolean)
       .map((event) => {
-        const data = event
-          .split(/\r?\n/)
-          .filter((line) => line.startsWith('data:'))
-          .map((line) => line.slice(5).trimStart())
-          .join('\n');
+        const fields: Record<string, string> = {};
+        const dataLines: string[] = [];
+        for (const line of event.split(/\r?\n/)) {
+          if (!line || line.startsWith(':')) continue;
+          const separator = line.indexOf(':');
+          const name = separator < 0 ? line : line.slice(0, separator);
+          const value = separator < 0 ? '' : line.slice(separator + 1).replace(/^ /, '');
+          if (name === 'data') dataLines.push(value);
+          else if (name === 'event' || name === 'id' || name === 'retry') fields[name] = value;
+        }
+        const data = dataLines.join('\n');
         try {
-          return { raw: event, data: JSON.parse(data) };
+          return { ...fields, data: JSON.parse(data) };
         } catch {
-          return { raw: event, data };
+          return { ...fields, data };
         }
       });
     return JSON.stringify(events, null, 2);
