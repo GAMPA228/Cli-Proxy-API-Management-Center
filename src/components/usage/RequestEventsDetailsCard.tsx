@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CaptureControls, CaptureViewer } from './UpstreamCapture';
+import { IconEye } from '@/components/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -40,6 +42,7 @@ type RequestEventRow = {
   reasoningEffort: string;
   serviceTier: string;
   firstTokenMs: number | null;
+  captureID: string;
   appliedServiceTier: string;
   responseServiceTier: string;
   clientIP: string;
@@ -214,6 +217,7 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
     timestamp,
     api: typeof row.api === 'string' ? row.api : '',
     first_token_ms: row.first_token_ms,
+    capture_id: row.capture_id,
     client_ip: typeof row.client_ip === 'string' ? row.client_ip : '',
     source: typeof row.source === 'string' ? row.source : '',
     auth_id: typeof row.auth_id === 'string' ? row.auth_id : '',
@@ -261,6 +265,9 @@ export function RequestEventsDetailsCard({
   const [searchKeyword, setSearchKeyword] = useState('');
   const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
   const [page, setPage] = useState(1);
+  const [captureID, setCaptureID] = useState<string | null>(null);
+  const [captureRefresh, setCaptureRefresh] = useState(0);
+  const refreshCaptured = useCallback(() => setCaptureRefresh((value) => value + 1), []);
   const [pageSize, setPageSize] = useState(10);
   const [serverDetails, setServerDetails] = useState<UsageDetail[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
@@ -362,7 +369,7 @@ export function RequestEventsDetailsCard({
       cancelled = true;
       window.clearTimeout(loadingTimer);
     };
-  }, [detailQuery, t]);
+  }, [detailQuery, t, captureRefresh]);
 
   const rows = useMemo<RequestEventRow[]>(() => {
     const details = detailsMode === 'server' ? serverDetails : collectUsageDetails(usage);
@@ -428,6 +435,7 @@ export function RequestEventsDetailsCard({
         model,
         reasoningEffort,
         serviceTier,
+        captureID: typeof detail.capture_id === 'string' ? detail.capture_id : '',
         firstTokenMs:
           typeof detail.first_token_ms === 'number' && Number.isFinite(detail.first_token_ms) && detail.first_token_ms >= 0
             ? detail.first_token_ms
@@ -594,7 +602,6 @@ export function RequestEventsDetailsCard({
     setPage(1);
   };
 
-
   const handlePageSizeChange = (size: number) => {
     if (!Number.isFinite(size) || size < 1) return;
     setPageSize(Math.floor(size));
@@ -718,6 +725,8 @@ export function RequestEventsDetailsCard({
 
   return (
     <Card title={t('usage_stats.request_events_title')}>
+      <CaptureControls onRefresh={refreshCaptured} />
+      <CaptureViewer captureID={captureID} onClose={() => setCaptureID(null)} />
       <div className={styles.requestEventsTopBar}>
         <div className={styles.requestEventsToolbar}>
           <div className={`${styles.requestEventsFilterItem} ${styles.requestEventsSearchItem}`}>
@@ -840,6 +849,7 @@ export function RequestEventsDetailsCard({
                 <col className={styles.requestEventsColProxy} />
                 <col className={styles.requestEventsColAuthIndex} />
                 <col className={styles.requestEventsColResult} />
+                <col className={styles.requestEventsColCapture} />
                 <col className={styles.requestEventsColToken} />
                 <col className={styles.requestEventsColToken} />
                 <col className={styles.requestEventsColToken} />
@@ -859,6 +869,7 @@ export function RequestEventsDetailsCard({
                   <th>{t('usage_stats.request_events_proxy')}</th>
                   <th>{t('usage_stats.request_events_auth_index')}</th>
                   <th>{t('usage_stats.request_events_result')}</th>
+                  <th>{t('usage_stats.capture_column')}</th>
                   <th>{t('usage_stats.input_tokens')}</th>
                   <th>{t('usage_stats.output_tokens')}</th>
                   <th>{t('usage_stats.reasoning_tokens')}</th>
@@ -955,6 +966,21 @@ export function RequestEventsDetailsCard({
                         {row.failed ? t('stats.failure') : t('stats.success')}
                       </span>
                     </td>
+                    <td className={styles.tableCellStatus}>
+                      {row.captureID ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={t('usage_stats.capture_view')}
+                          aria-label={t('usage_stats.capture_view')}
+                          onClick={() => setCaptureID(row.captureID)}
+                        >
+                          <IconEye size={16} />
+                        </Button>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                     <td className={styles.tableCellMono}>{row.inputTokens.toLocaleString()}</td>
                     <td className={styles.tableCellMono}>{row.outputTokens.toLocaleString()}</td>
                     <td className={styles.tableCellMono}>{row.reasoningTokens.toLocaleString()}</td>
@@ -980,6 +1006,3 @@ export function RequestEventsDetailsCard({
     </Card>
   );
 }
-
-
-

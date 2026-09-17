@@ -38,6 +38,7 @@ export interface UsageDetailRow {
   timestamp?: string;
   latency_ms?: number;
   first_token_ms?: number | null;
+  capture_id?: string;
   client_ip?: string;
   source?: string;
   auth_id?: string;
