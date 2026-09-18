@@ -1,3 +1,44 @@
+.controlRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 24px;
+  margin-bottom: 16px;
+  > .controls { margin-bottom: 0; min-width: 0; }
+}
+.autoControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 13px;
+}
+.maxChars {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  input {
+    width: 84px;
+    height: 32px;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+}
+.settingsButton { width: 32px; height: 32px; padding: 0; flex-shrink: 0; }
+.settingsError {
+  flex-basis: 100%;
+  color: var(--error-color, #c83a46);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
 .controls {
   display: flex;
   flex-wrap: wrap;

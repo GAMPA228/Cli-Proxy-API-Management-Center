@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CaptureControls, CaptureViewer } from './UpstreamCapture';
+import { AutoTurnStateControls } from './AutoTurnStateControls';
+import captureStyles from './UpstreamCapture.module.scss';
 import { IconEye } from '@/components/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -43,6 +45,7 @@ type RequestEventRow = {
   reasoningEffort: string;
   serviceTier: string;
   firstTokenMs: number | null;
+  turnStateLength: number | null;
   captureID: string;
   appliedServiceTier: string;
   responseServiceTier: string;
@@ -218,6 +221,7 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
     timestamp,
     api: typeof row.api === 'string' ? row.api : '',
     first_token_ms: row.first_token_ms,
+    turn_state_length: row.turn_state_length,
     capture_id: row.capture_id,
     client_ip: typeof row.client_ip === 'string' ? row.client_ip : '',
     source: typeof row.source === 'string' ? row.source : '',
@@ -439,6 +443,10 @@ export function RequestEventsDetailsCard({
         reasoningEffort,
         serviceTier,
         captureID: typeof detail.capture_id === 'string' ? detail.capture_id : '',
+        turnStateLength:
+          typeof detail.turn_state_length === 'number' && Number.isInteger(detail.turn_state_length) && detail.turn_state_length >= 0
+            ? detail.turn_state_length
+            : null,
         firstTokenMs:
           typeof detail.first_token_ms === 'number' && Number.isFinite(detail.first_token_ms) && detail.first_token_ms >= 0
             ? detail.first_token_ms
@@ -623,6 +631,7 @@ export function RequestEventsDetailsCard({
       'applied_service_tier',
       'response_service_tier',
       'first_token_ms',
+      'turn_state_length',
       'source_type',
       'source',
       'source_raw',
@@ -652,6 +661,7 @@ export function RequestEventsDetailsCard({
         row.appliedServiceTier,
         row.responseServiceTier,
         row.firstTokenMs ?? '',
+        row.turnStateLength ?? '',
         row.sourceType,
         row.source,
         row.sourceRaw,
@@ -692,6 +702,7 @@ export function RequestEventsDetailsCard({
       applied_service_tier: row.appliedServiceTier,
       response_service_tier: row.responseServiceTier,
       first_token_ms: row.firstTokenMs,
+      turn_state_length: row.turnStateLength,
       source_type: row.sourceType,
       source: row.source,
       source_raw: row.sourceRaw,
@@ -731,7 +742,10 @@ export function RequestEventsDetailsCard({
 
   return (
     <Card title={t('usage_stats.request_events_title')}>
-      <CaptureControls onRefresh={refreshCaptured} />
+      <div className={captureStyles.controlRow}>
+        <CaptureControls onRefresh={refreshCaptured} />
+        <AutoTurnStateControls />
+      </div>
       <CaptureViewer captureID={captureID} onClose={() => setCaptureID(null)} />
       <div className={styles.requestEventsTopBar}>
         <div className={styles.requestEventsToolbar}>
@@ -848,6 +862,7 @@ export function RequestEventsDetailsCard({
                 <col className={styles.requestEventsColModel} />
                 <col className={styles.requestEventsColSpeed} />
                 <col className={styles.requestEventsColTTFT} />
+                <col className={styles.requestEventsColTTFT} />
                 <col className={styles.requestEventsColClientIP} />
                 <col className={styles.requestEventsColAPIKey} />
                 <col className={styles.requestEventsColSourceType} />
@@ -868,6 +883,7 @@ export function RequestEventsDetailsCard({
                   <th>{t('usage_stats.model_name')}</th>
                   <th>{t('usage_stats.request_events_speed')}</th>
                   <th>{t('usage_stats.request_events_ttft')}</th>
+                  <th>{t('usage_stats.request_events_turn_state_length')}</th>
                   <th>{t('usage_stats.request_events_client_ip')}</th>
                   <th>{t('usage_stats.request_events_api_key')}</th>
                   <th>{t('usage_stats.request_events_source_type')}</th>
@@ -939,6 +955,7 @@ export function RequestEventsDetailsCard({
                           ? `${row.firstTokenMs.toLocaleString(i18n.language)} ms`
                           : `${(row.firstTokenMs / 1000).toLocaleString(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s`}
                     </td>
+                    <td className={styles.tableCellMono}>{row.turnStateLength ?? '-'}</td>
                     <td
                       className={`${styles.requestEventsClientIP} ${styles.tableCellMono}`}
                       title={row.clientIP}

@@ -81,6 +81,8 @@ export function RequestHeaderRulesPage() {
     account.note ? account.name + ' (' + account.note + ')' : account.name;
   const expired = (rule: HeaderRule) =>
     Boolean(rule.expires_at && Date.parse(rule.expires_at) <= now);
+  const ruleStatus = (rule: HeaderRule) =>
+    expired(rule) ? 'expired' : rule.active === false ? 'disabled' : 'active';
   const remaining = (rule: HeaderRule) => {
     if (!rule.expires_at) return t('header_rules.permanent');
     const seconds = Math.max(0, Math.ceil((Date.parse(rule.expires_at) - now) / 1000));
@@ -90,7 +92,7 @@ export function RequestHeaderRulesPage() {
   const account = accounts.find((item) => item.auth_id === editor?.authId);
   const modelOptions = useMemo(
     () =>
-      [...new Set(accounts.flatMap((item) => item.models))]
+      [...new Set(accounts.flatMap((item) => [...item.models, ...item.rules.flatMap((rule) => rule.models ?? [])]))]
         .sort()
         .map((value) => ({ value, label: value })),
     [accounts]
@@ -101,7 +103,7 @@ export function RequestHeaderRulesPage() {
       ({ account: item, rule }) =>
         (!accountFilter || item.auth_id === accountFilter) &&
         (!modelFilter || !rule.models?.length || rule.models.includes(modelFilter)) &&
-        (!statusFilter || (expired(rule) ? 'expired' : 'active') === statusFilter)
+        (!statusFilter || ruleStatus(rule) === statusFilter)
     );
   const ruleError = editor ? validateRequestHeaderRules([editor.rule]) : null;
   const disabled = !connected || busy || loading;
@@ -133,7 +135,7 @@ export function RequestHeaderRulesPage() {
     }
   };
   const save = () => {
-    if (!editor || !account || ruleError) return;
+    if (!editor || !account || ruleError || editor.rule.source === 'turn-state-auto') return;
     const { name, operation, value, models, duration_minutes } = editor.rule;
     void mutate({
       auth_id: editor.authId,
@@ -154,6 +156,7 @@ export function RequestHeaderRulesPage() {
     rule: HeaderRule,
     action: 'delete' | 'restart'
   ) => {
+    if (rule.source === 'turn-state-auto') return;
     showConfirmation({
       title: t('header_rules.' + action),
       message: t('header_rules.' + action + '_confirm', {
@@ -166,6 +169,7 @@ export function RequestHeaderRulesPage() {
     });
   };
   const open = (account?: HeaderRuleAccount, rule?: HeaderRule) => {
+    if (rule?.source === 'turn-state-auto') return;
     const selected =
       account ?? accounts.find((item) => item.auth_id === accountFilter) ?? accounts[0];
     setEditorError('');
@@ -214,7 +218,7 @@ export function RequestHeaderRulesPage() {
           ariaLabel={t('header_rules.status')}
           value={statusFilter}
           onChange={setStatusFilter}
-          options={['', 'active', 'expired'].map((value) => ({
+          options={['', 'active', 'disabled', 'expired'].map((value) => ({
             value,
             label: t('header_rules.' + (value || 'all_status')),
           }))}
@@ -255,7 +259,12 @@ export function RequestHeaderRulesPage() {
                   <td>
                     {rule.models?.length ? rule.models.join(', ') : t('header_rules.all_models')}
                   </td>
-                  <td>{rule.name}</td>
+                  <td>
+                    {rule.name}
+                    {rule.source === 'turn-state-auto' && (
+                      <span className={styles.sourceBadge}>{t('header_rules.auto_generated')}</span>
+                    )}
+                  </td>
                   <td>{t('auth_files.request_headers_' + rule.operation)}</td>
                   <td>
                     <div className={styles.value}>
@@ -263,16 +272,16 @@ export function RequestHeaderRulesPage() {
                     </div>
                   </td>
                   <td
-                    className={expired(rule) ? styles.expired : styles.active}
+                    className={ruleStatus(rule) === 'active' ? styles.active : styles.expired}
                     title={rule.expires_at ? new Date(rule.expires_at).toLocaleString() : undefined}
                   >
                     {remaining(rule)}
-                    {!expired(rule) && rule.expires_at && (
-                      <div className={styles.note}>{t('header_rules.active')}</div>
+                    {(!expired(rule) && (rule.expires_at || rule.active === false)) && (
+                      <div className={styles.note}>{t('header_rules.' + ruleStatus(rule))}</div>
                     )}
                   </td>
                   <td>
-                    <div className={styles.actions}>
+                    {rule.source !== 'turn-state-auto' && <div className={styles.actions}>
                       <Button
                         variant="ghost"
                         className={styles.rowButton}
@@ -303,7 +312,7 @@ export function RequestHeaderRulesPage() {
                       >
                         <IconTrash2 size={16} />
                       </Button>
-                    </div>
+                    </div>}
                   </td>
                 </tr>
               ))}

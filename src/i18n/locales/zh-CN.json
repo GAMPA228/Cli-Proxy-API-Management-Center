@@ -1,5 +1,7 @@
 {
   "header_rules": {
+    "auto_generated": "自动生成",
+    "disabled": "已禁用",
     "title": "请求头规则",
     "account": "账号",
     "models": "适用模型",
@@ -1068,6 +1070,14 @@
     "remote_access_disabled": "远程访问不支持此登录方式，请从本地 (localhost) 访问"
   },
   "usage_stats": {
+    "request_events_turn_state_length": "Turn State 长度",
+    "auto_turn_state_toggle": "自动维护 Turn State",
+    "auto_turn_state_max_chars": "最大字符数",
+    "auto_turn_state_load_failed": "加载 Turn State 设置失败",
+    "auto_turn_state_save_failed": "保存 Turn State 设置失败",
+    "auto_turn_state_saved": "Turn State 设置已保存",
+    "auto_turn_state_invalid": "请输入 1 到 8192 的整数",
+    "auto_turn_state_storage_errors": "Turn State 存储错误：{{count}}",
     "title": "使用统计",
     "total_requests": "总请求数",
     "success_requests": "成功请求",

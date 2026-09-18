@@ -1,5 +1,7 @@
 {
   "header_rules": {
+    "auto_generated": "Создано автоматически",
+    "disabled": "Отключено",
     "title": "Правила заголовков",
     "account": "Аккаунт",
     "models": "Модели",
@@ -1071,6 +1073,14 @@
     "remote_access_disabled": "Этот способ входа недоступен при удалённом доступе. Подключитесь с localhost."
   },
   "usage_stats": {
+    "request_events_turn_state_length": "Длина Turn State",
+    "auto_turn_state_toggle": "Автоматически поддерживать Turn State",
+    "auto_turn_state_max_chars": "Максимум символов",
+    "auto_turn_state_load_failed": "Не удалось загрузить настройки Turn State",
+    "auto_turn_state_save_failed": "Не удалось сохранить настройки Turn State",
+    "auto_turn_state_saved": "Настройки Turn State сохранены",
+    "auto_turn_state_invalid": "Введите целое число от 1 до 8192",
+    "auto_turn_state_storage_errors": "Ошибки хранения Turn State: {{count}}",
     "title": "Статистика использования",
     "total_requests": "Всего запросов",
     "success_requests": "Успешные запросы",

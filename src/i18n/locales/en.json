@@ -1,5 +1,7 @@
 {
   "header_rules": {
+    "auto_generated": "Auto-generated",
+    "disabled": "Disabled",
     "title": "Request Header Rules",
     "account": "Account",
     "models": "Models",
@@ -1068,6 +1070,14 @@
     "remote_access_disabled": "This login method is not available for remote access. Please access from localhost."
   },
   "usage_stats": {
+    "request_events_turn_state_length": "Turn State length",
+    "auto_turn_state_toggle": "Automatically maintain Turn State",
+    "auto_turn_state_max_chars": "Maximum characters",
+    "auto_turn_state_load_failed": "Failed to load Turn State settings",
+    "auto_turn_state_save_failed": "Failed to save Turn State settings",
+    "auto_turn_state_saved": "Turn State settings saved",
+    "auto_turn_state_invalid": "Enter an integer from 1 to 8192",
+    "auto_turn_state_storage_errors": "Turn State storage errors: {{count}}",
     "title": "Usage Statistics",
     "total_requests": "Total Requests",
     "success_requests": "Success Requests",

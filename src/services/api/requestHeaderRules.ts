@@ -1,7 +1,12 @@
 import { apiClient } from './client';
 import type { RequestHeaderRule } from '@/features/authFiles/requestHeaderRules';
 
-export type HeaderRule = RequestHeaderRule & { id: string };
+export type HeaderRule = RequestHeaderRule & {
+  id: string;
+  source?: 'turn-state-auto';
+  active?: boolean;
+  issued_at?: string;
+};
 export type HeaderRuleAccount = {
   auth_id: string;
   name: string;
