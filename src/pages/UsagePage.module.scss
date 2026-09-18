@@ -626,6 +626,26 @@
   gap: 6px;
 }
 
+.requestModelFlow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  > span {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+.requestModelArrow {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
 .requestMetadataBadges {
   display: flex;
   flex-wrap: wrap;
@@ -1605,7 +1625,7 @@
 }
 
 .requestEventsTable {
-  min-width: 2180px;
+  min-width: 2100px;
 }
 
 .requestEventsColCapture { width: 80px; }
@@ -1619,11 +1639,7 @@
 }
 
 .requestEventsColModel {
-  width: 11%;
-}
-
-.requestEventsColResponseModel {
-  width: 200px;
+  width: 320px;
 }
 
 .requestEventsColSpeed {

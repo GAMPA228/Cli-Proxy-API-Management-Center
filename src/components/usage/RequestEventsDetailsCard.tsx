@@ -846,7 +846,6 @@ export function RequestEventsDetailsCard({
               <colgroup>
                 <col className={styles.requestEventsColTime} />
                 <col className={styles.requestEventsColModel} />
-                <col className={styles.requestEventsColResponseModel} />
                 <col className={styles.requestEventsColSpeed} />
                 <col className={styles.requestEventsColTTFT} />
                 <col className={styles.requestEventsColClientIP} />
@@ -867,7 +866,6 @@ export function RequestEventsDetailsCard({
                 <tr>
                   <th>{t('usage_stats.request_events_timestamp')}</th>
                   <th>{t('usage_stats.model_name')}</th>
-                  <th>{t('usage_stats.response_model')}</th>
                   <th>{t('usage_stats.request_events_speed')}</th>
                   <th>{t('usage_stats.request_events_ttft')}</th>
                   <th>{t('usage_stats.request_events_client_ip')}</th>
@@ -895,6 +893,7 @@ export function RequestEventsDetailsCard({
                       className={`${styles.modelCell} ${styles.tableCellLeft}`}
                       title={[
                         row.model,
+                        row.responseModel ? `${t('usage_stats.response_model')}: ${row.responseModel}` : '',
                         row.reasoningEffort
                           ? `${t('usage_stats.request_events_reasoning')}: ${row.reasoningEffort}`
                           : '',
@@ -903,16 +902,21 @@ export function RequestEventsDetailsCard({
                         .join(' · ')}
                     >
                       <span className={styles.modelCellStack}>
-                        <span className={styles.truncateText}>{row.model}</span>
+                        <span className={styles.requestModelFlow}>
+                          <span>{row.model}</span>
+                          {row.responseModel && (
+                            <>
+                              <span className={styles.requestModelArrow} aria-hidden="true">{'\u2192'}</span>
+                              <span title={t('usage_stats.response_model')}>{row.responseModel}</span>
+                            </>
+                          )}
+                        </span>
                         <span className={styles.requestMetadataBadges}>
                           {row.reasoningEffort && (
                             <span className={styles.reasoningEffortBadge}>{row.reasoningEffort}</span>
                           )}
                         </span>
                       </span>
-                    </td>
-                    <td className={`${styles.modelCell} ${styles.tableCellLeft}`} title={row.responseModel}>
-                      <span className={styles.truncateText}>{row.responseModel ?? '\u2014'}</span>
                     </td>
                     <ServiceTierCell
                       requested={row.serviceTier}
