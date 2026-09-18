@@ -890,7 +890,7 @@ export function RequestEventsDetailsCard({
                       {row.timestampLabel}
                     </td>
                     <td
-                      className={`${styles.modelCell} ${styles.tableCellLeft}`}
+                      className={`${styles.modelCell} ${styles.requestModelCell}`}
                       title={[
                         row.model,
                         row.responseModel ? `${t('usage_stats.response_model')}: ${row.responseModel}` : '',
@@ -907,7 +907,12 @@ export function RequestEventsDetailsCard({
                           {row.responseModel && (
                             <>
                               <span className={styles.requestModelArrow} aria-hidden="true">{'\u2192'}</span>
-                              <span title={t('usage_stats.response_model')}>{row.responseModel}</span>
+                              <span
+                                className={`${styles.serviceTierBadge} ${styles.serviceTierBadgeDefault} ${styles.responseModelBadge}`}
+                                title={t('usage_stats.response_model')}
+                              >
+                                {row.responseModel}
+                              </span>
                             </>
                           )}
                         </span>

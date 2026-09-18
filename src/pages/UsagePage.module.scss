@@ -629,7 +629,8 @@
 .requestModelFlow {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
+  justify-content: center;
   gap: 4px 6px;
   max-width: 100%;
   white-space: normal;
@@ -644,6 +645,14 @@
 .requestModelArrow {
   color: var(--text-tertiary);
   flex-shrink: 0;
+}
+
+.requestModelCell {
+  text-align: center;
+
+  .modelCellStack {
+    align-items: center;
+  }
 }
 
 .requestMetadataBadges {
@@ -1626,6 +1635,15 @@
 
 .requestEventsTable {
   min-width: 2100px;
+}
+
+.responseModelBadge {
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .requestEventsColCapture { width: 80px; }
