@@ -22,6 +22,7 @@ export interface UpstreamCapture {
   protocol: string;
   status: number;
   response_headers: Record<string, string[]> | null;
+  request_headers?: Record<string, string[]> | null;
   response_trailers?: Record<string, string[]>;
   handshake_reused: boolean;
   transport_decompressed?: boolean;

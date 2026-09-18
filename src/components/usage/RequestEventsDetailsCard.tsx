@@ -39,6 +39,7 @@ type RequestEventRow = {
   timestampMs: number;
   timestampLabel: string;
   model: string;
+  responseModel?: string;
   reasoningEffort: string;
   serviceTier: string;
   firstTokenMs: number | null;
@@ -242,6 +243,7 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
     response_service_tier:
       typeof row.response_service_tier === 'string' ? row.response_service_tier : '',
     __modelName: typeof row.model === 'string' ? row.model : '',
+    response_model: typeof row.response_model === 'string' ? row.response_model.trim() || undefined : undefined,
     __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
   };
 };
@@ -433,6 +435,7 @@ export function RequestEventsDetailsCard({
         timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
         model,
+        responseModel: detail.response_model,
         reasoningEffort,
         serviceTier,
         captureID: typeof detail.capture_id === 'string' ? detail.capture_id : '',
@@ -612,6 +615,7 @@ export function RequestEventsDetailsCard({
     const csvHeader = [
       'timestamp',
       'model',
+      'response_model',
       'client_ip',
       'api_key',
       'reasoning_effort',
@@ -640,6 +644,7 @@ export function RequestEventsDetailsCard({
       [
         row.timestamp,
         row.model,
+        row.responseModel ?? '',
         row.clientIP,
         row.apiKeyLabel,
         row.reasoningEffort,
@@ -679,6 +684,7 @@ export function RequestEventsDetailsCard({
     const payload = rowsToExport.map((row) => ({
       timestamp: row.timestamp,
       model: row.model,
+      response_model: row.responseModel,
       client_ip: row.clientIP,
       api_key: row.apiKeyLabel,
       reasoning_effort: row.reasoningEffort,
@@ -840,6 +846,7 @@ export function RequestEventsDetailsCard({
               <colgroup>
                 <col className={styles.requestEventsColTime} />
                 <col className={styles.requestEventsColModel} />
+                <col className={styles.requestEventsColResponseModel} />
                 <col className={styles.requestEventsColSpeed} />
                 <col className={styles.requestEventsColTTFT} />
                 <col className={styles.requestEventsColClientIP} />
@@ -860,6 +867,7 @@ export function RequestEventsDetailsCard({
                 <tr>
                   <th>{t('usage_stats.request_events_timestamp')}</th>
                   <th>{t('usage_stats.model_name')}</th>
+                  <th>{t('usage_stats.response_model')}</th>
                   <th>{t('usage_stats.request_events_speed')}</th>
                   <th>{t('usage_stats.request_events_ttft')}</th>
                   <th>{t('usage_stats.request_events_client_ip')}</th>
@@ -902,6 +910,9 @@ export function RequestEventsDetailsCard({
                           )}
                         </span>
                       </span>
+                    </td>
+                    <td className={`${styles.modelCell} ${styles.tableCellLeft}`} title={row.responseModel}>
+                      <span className={styles.truncateText}>{row.responseModel ?? '\u2014'}</span>
                     </td>
                     <ServiceTierCell
                       requested={row.serviceTier}

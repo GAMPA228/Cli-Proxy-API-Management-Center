@@ -70,6 +70,7 @@ export interface UsageDetail {
   service_tier?: string;
   applied_service_tier?: string;
   response_service_tier?: string;
+  response_model?: string;
   __modelName?: string;
   __timestampMs?: number;
   __requestCount?: number;
@@ -581,6 +582,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,
+          response_model: typeof detailRaw.response_model === 'string' ? detailRaw.response_model.trim() || undefined : undefined,
           __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
           __requestCount:
             typeof detailRaw.__requestCount === 'number'
@@ -660,6 +662,7 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,
+          response_model: typeof detailRaw.response_model === 'string' ? detailRaw.response_model.trim() || undefined : undefined,
           __endpoint: endpoint,
           __endpointMethod: endpointMethod,
           __endpointPath: endpointPath,

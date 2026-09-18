@@ -51,6 +51,7 @@ export interface UsageDetailRow {
   service_tier?: string;
   applied_service_tier?: string;
   response_service_tier?: string;
+  response_model?: string;
   tokens?: UsageDetailTokens;
   failed?: boolean;
 }

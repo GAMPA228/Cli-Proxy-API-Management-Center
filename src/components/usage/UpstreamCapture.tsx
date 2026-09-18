@@ -185,7 +185,7 @@ function formatBody(raw: string): string {
   return raw;
 }
 
-type Tab = 'request' | 'headers' | 'response';
+type Tab = 'request_headers' | 'request' | 'headers' | 'response';
 
 export function CaptureViewer({
   captureID,
@@ -237,6 +237,7 @@ export function CaptureViewer({
   const item = items[Math.min(index, items.length - 1)];
   const raw = useMemo(() => {
     if (!item) return '';
+    if (tab === 'request_headers') return JSON.stringify(item.request_headers ?? {}, null, 2);
     if (tab === 'headers')
       return JSON.stringify(
         {
@@ -278,7 +279,7 @@ export function CaptureViewer({
     if (!item) return;
     const websocket = tab === 'response' && item.protocol === 'websocket' && item.frames?.length;
     const body =
-      tab === 'headers' || websocket
+      tab === 'request_headers' || tab === 'headers' || websocket
         ? raw
         : rawBytes(tab === 'request' ? item.request_body : item.response_body);
     downloadBlob({
@@ -405,7 +406,7 @@ export function CaptureViewer({
               </dd>
             </dl>
             <div className={styles.tabs} role="tablist">
-              {(['request', 'headers', 'response'] as Tab[]).map((value) => (
+              {(['request_headers', 'request', 'headers', 'response'] as Tab[]).map((value) => (
                 <button
                   key={value}
                   type="button"
