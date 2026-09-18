@@ -9,6 +9,7 @@ import { capturesApi, type CaptureStatus, type UpstreamCapture } from '@/service
 import { downloadBlob } from '@/utils/download';
 import { copyToClipboard } from '@/utils/clipboard';
 import { useNotificationStore } from '@/stores';
+import { parseTurnState, type TurnStateInfo } from './turnState';
 import styles from './UpstreamCapture.module.scss';
 
 export function CaptureControls({ onRefresh }: { onRefresh: () => void }) {
@@ -185,7 +186,16 @@ function formatBody(raw: string): string {
   return raw;
 }
 
-type Tab = 'request_headers' | 'request' | 'headers' | 'response';
+type Tab = 'request_headers' | 'request' | 'headers' | 'turn_state' | 'response';
+
+type TurnStateResult = { info?: TurnStateInfo; error?: 'invalid_base64' | 'short_header' };
+
+function turnStateValues(headers: UpstreamCapture['response_headers']): string[] {
+  if (!headers) return [];
+  return Object.entries(headers)
+    .filter(([name]) => name.toLowerCase() === 'x-codex-turn-state')
+    .flatMap(([, values]) => values ?? []);
+}
 
 export function CaptureViewer({
   captureID,
@@ -235,8 +245,43 @@ export function CaptureViewer({
     };
   }, [load]);
   const item = items[Math.min(index, items.length - 1)];
+  const turnStates = useMemo<TurnStateResult[]>(() => {
+    if (!item) return [];
+    return turnStateValues(item.response_headers).map((value) => {
+      try {
+        return { info: parseTurnState(value) };
+      } catch (err) {
+        return { error: err instanceof Error && err.message === 'short_header' ? 'short_header' : 'invalid_base64' };
+      }
+    });
+  }, [item]);
+  const turnStateText = useMemo(
+    () =>
+      turnStates
+        .map(({ info, error }, index) =>
+          JSON.stringify(
+            info
+              ? {
+                  index: index + 1,
+                  base64_length: info.base64Length,
+                  byte_length: info.byteLength,
+                  version: `0x${info.version.toString(16).padStart(2, '0')} (${info.version})`,
+                  unix_seconds: info.unixSeconds,
+                  issued_at_utc: info.issuedAt?.toUTCString() ?? null,
+                  issued_at_local: info.issuedAt?.toLocaleString() ?? null,
+                  fernet_structure: info.validStructure,
+                }
+              : { index: index + 1, error },
+            null,
+            2
+          )
+        )
+        .join('\n'),
+    [turnStates]
+  );
   const raw = useMemo(() => {
     if (!item) return '';
+    if (tab === 'turn_state') return turnStateText;
     if (tab === 'request_headers') return JSON.stringify(item.request_headers ?? {}, null, 2);
     if (tab === 'headers')
       return JSON.stringify(
@@ -255,9 +300,9 @@ export function CaptureViewer({
       return item.frames.map((frame) => decode(frame.body)).join('\n');
     }
     return decode(item.response_body);
-  }, [item, tab]);
+  }, [item, tab, turnStateText]);
   const displayText = useMemo(() => {
-    if (!formatted || !item) return raw;
+    if (!formatted || !item || tab === 'turn_state') return raw;
     if (tab === 'response' && item.protocol === 'websocket' && item.frames?.length) {
       const frames = item.frames;
       function* events() {
@@ -279,7 +324,7 @@ export function CaptureViewer({
     if (!item) return;
     const websocket = tab === 'response' && item.protocol === 'websocket' && item.frames?.length;
     const body =
-      tab === 'request_headers' || tab === 'headers' || websocket
+      tab === 'request_headers' || tab === 'headers' || tab === 'turn_state' || websocket
         ? raw
         : rawBytes(tab === 'request' ? item.request_body : item.response_body);
     downloadBlob({
@@ -406,7 +451,7 @@ export function CaptureViewer({
               </dd>
             </dl>
             <div className={styles.tabs} role="tablist">
-              {(['request_headers', 'request', 'headers', 'response'] as Tab[]).map((value) => (
+              {(['request_headers', 'request', 'headers', 'turn_state', 'response'] as Tab[]).map((value) => (
                 <button
                   key={value}
                   type="button"
@@ -417,24 +462,55 @@ export function CaptureViewer({
                   {t(`usage_stats.capture_${value}`)}
                 </button>
               ))}
-              <label className={styles.format}>
+              {tab !== 'turn_state' && <label className={styles.format}>
                 <input
                   type="checkbox"
                   checked={formatted}
                   onChange={(event) => setFormatted(event.target.checked)}
                 />
                 {t('usage_stats.capture_format')}
-              </label>
+              </label>}
             </div>
             {item.transport_decompressed && (
               <div role="status">{t('usage_stats.capture_decompressed')}</div>
             )}
-            {displayText.length > previewLimit && (
+            {tab !== 'turn_state' && displayText.length > previewLimit && (
               <div role="status">{t('usage_stats.capture_preview_limit')}</div>
             )}
-            <pre className={styles.body} role="tabpanel">
-              {text || '-'}
-            </pre>
+            {tab === 'turn_state' ? (
+              <div className={styles.turnState} role="tabpanel">
+                {!turnStates.length && <p>{t('usage_stats.capture_turn_state_missing')}</p>}
+                {turnStates.map(({ info, error }, i) => (
+                  <section key={i}>
+                    {turnStates.length > 1 && <h3>{t('usage_stats.capture_turn_state_entry', { index: i + 1 })}</h3>}
+                    {error ? (
+                      <p className={styles.error}>{t(`usage_stats.capture_turn_state_${error}`)}</p>
+                    ) : info && (
+                      <dl className={styles.turnStateFields}>
+                        <dt>{t('usage_stats.capture_turn_state_length')}</dt><dd>{info.base64Length}</dd>
+                        <dt>{t('usage_stats.capture_turn_state_bytes')}</dt><dd>{info.byteLength}</dd>
+                        <dt>{t('usage_stats.capture_turn_state_version')}</dt>
+                        <dd>{`0x${info.version.toString(16).padStart(2, '0')} (${info.version})`}</dd>
+                        <dt>{t('usage_stats.capture_turn_state_unix')}</dt><dd>{info.unixSeconds}</dd>
+                        <dt>{t('usage_stats.capture_turn_state_utc')}</dt>
+                        <dd>{info.issuedAt?.toUTCString() ?? t('usage_stats.capture_turn_state_invalid_time')}</dd>
+                        <dt>{t('usage_stats.capture_turn_state_local')}</dt>
+                        <dd>{info.issuedAt?.toLocaleString() ?? t('usage_stats.capture_turn_state_invalid_time')}</dd>
+                        <dt>{t('usage_stats.capture_turn_state_structure')}</dt>
+                        <dd>{t(info.validStructure ? 'usage_stats.capture_turn_state_valid' : 'usage_stats.capture_turn_state_invalid')}</dd>
+                      </dl>
+                    )}
+                  </section>
+                ))}
+                {turnStates.some(({ info }) => info) && (
+                  <p className={styles.turnStateNote}>{t('usage_stats.capture_turn_state_note')}</p>
+                )}
+              </div>
+            ) : (
+              <pre className={styles.body} role="tabpanel">
+                {text || '-'}
+              </pre>
+            )}
           </>
         )}
       </div>

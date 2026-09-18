@@ -91,3 +91,49 @@
   font-size: 12px;
   line-height: 1.6;
 }
+
+.turnState {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  height: min(48vh, 520px);
+  overflow: auto;
+  font-size: 13px;
+
+  section + section {
+    border-top: 1px solid var(--border-color);
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  h3 {
+    font-size: 13px;
+    margin: 0 0 12px;
+  }
+}
+
+.turnStateFields {
+  display: grid;
+  grid-template-columns: minmax(140px, 32%) minmax(0, 1fr);
+  margin: 0;
+
+  dt, dd {
+    margin: 0;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border-color);
+    overflow-wrap: anywhere;
+  }
+
+  dt {
+    color: var(--text-secondary);
+  }
+}
+
+.turnStateNote {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
