@@ -1075,6 +1075,7 @@
     "auto_turn_state_toggle": "自动维护 Turn State",
     "auto_turn_state_scope": "账号范围",
     "auto_turn_state_accounts": "自动维护账号",
+    "auto_turn_state_selected_count": "已选 {{count}} 个账号",
     "auto_turn_state_all_accounts": "全部账号",
     "auto_turn_state_selected_accounts": "指定账号",
     "auto_turn_state_no_accounts": "未选择账号",

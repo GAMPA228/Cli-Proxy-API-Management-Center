@@ -18,20 +18,22 @@
   font-size: 13px;
 }
 .accountScope {
-  width: 190px;
+  width: 140px;
   max-width: 100%;
 }
 .accountPicker {
-  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 180px;
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
   > div {
-    width: min(480px, 100%);
+    width: 100%;
     margin-bottom: 0;
-    margin-left: auto;
+    min-width: 0;
   }
-  > button { float: right; }
 }
 .maxChars {
   display: flex;
@@ -48,8 +50,9 @@
     color: var(--text-primary);
   }
 }
-.settingsButton { width: 32px; height: 32px; padding: 0; flex-shrink: 0; }
+.settingsButton { width: 32px; height: 32px; padding: 0; flex-shrink: 0; order: 1; }
 .settingsError {
+  order: 2;
   flex-basis: 100%;
   color: var(--error-color, #c83a46);
   overflow-wrap: anywhere;

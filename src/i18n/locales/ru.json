@@ -1078,6 +1078,7 @@
     "auto_turn_state_toggle": "Автоматически поддерживать Turn State",
     "auto_turn_state_scope": "Область аккаунтов",
     "auto_turn_state_accounts": "Аккаунты автоматизации",
+    "auto_turn_state_selected_count": "Выбрано аккаунтов: {{count}}",
     "auto_turn_state_all_accounts": "Все аккаунты",
     "auto_turn_state_selected_accounts": "Выбранные аккаунты",
     "auto_turn_state_no_accounts": "Нет выбранных аккаунтов",

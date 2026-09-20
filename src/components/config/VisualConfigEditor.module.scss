@@ -555,6 +555,22 @@
   text-align: center;
 }
 
+.upstreamAuthCheckOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  margin: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-primary);
+  &:hover, &:focus-within { background: var(--bg-secondary); }
+  input { flex: 0 0 16px; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--primary-color); }
+  > span { min-width: 0; display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; }
+  strong { font-size: 13px; font-weight: 500; }
+  small { font-size: 11px; color: var(--text-secondary); }
+}
+
 .serviceTierNotice {
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--border-color));

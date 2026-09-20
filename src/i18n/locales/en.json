@@ -1075,6 +1075,7 @@
     "auto_turn_state_toggle": "Automatically maintain Turn State",
     "auto_turn_state_scope": "Account scope",
     "auto_turn_state_accounts": "Automation accounts",
+    "auto_turn_state_selected_count": "{{count}} accounts selected",
     "auto_turn_state_all_accounts": "All accounts",
     "auto_turn_state_selected_accounts": "Selected accounts",
     "auto_turn_state_no_accounts": "No accounts selected",

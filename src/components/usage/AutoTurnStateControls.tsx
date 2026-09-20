@@ -167,6 +167,8 @@ export function AutoTurnStateControls() {
       {accountScope === 'selected' && (
         <div className={styles.accountPicker}>
           <UpstreamAuthSelector
+            compact
+            summary={t('usage_stats.auto_turn_state_selected_count', { count: authIds.length })}
             label={t('usage_stats.auto_turn_state_accounts')}
             value={authIds}
             files={authFiles}

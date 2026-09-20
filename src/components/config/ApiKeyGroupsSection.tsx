@@ -61,6 +61,8 @@ export function UpstreamAuthSelector({
   emptyLabel,
   missingLabel,
   showHint = true,
+  compact = false,
+  summary,
 }: {
   value: string[];
   files: AuthFileItem[];
@@ -72,6 +74,8 @@ export function UpstreamAuthSelector({
   emptyLabel?: string;
   missingLabel?: string;
   showHint?: boolean;
+  compact?: boolean;
+  summary?: string;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
@@ -98,17 +102,29 @@ export function UpstreamAuthSelector({
   );
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const normalizedSearch = search.trim().toLowerCase();
+  const availableFiles = useMemo(
+    () =>
+      compact
+        ? [
+            ...files,
+            ...selected
+              .filter((id) => !fileMap.has(id))
+              .map((id) => ({ id, name: id }) as AuthFileItem),
+          ]
+        : files,
+    [compact, files, selected, fileMap]
+  );
   const options = useMemo(
     () =>
-      files.filter((file) => {
+      availableFiles.filter((file) => {
         const id = authFileID(file);
-        if (!id || selectedSet.has(id)) return false;
+        if (!id || (!compact && selectedSet.has(id))) return false;
         if (!normalizedSearch) return true;
         return `${id} ${authFileLabel(file)} ${file.status ?? ''}`
           .toLowerCase()
           .includes(normalizedSearch);
       }),
-    [files, normalizedSearch, selectedSet]
+    [availableFiles, compact, normalizedSearch, selectedSet]
   );
 
   useEffect(() => {
@@ -137,7 +153,10 @@ export function UpstreamAuthSelector({
       const openAbove = spaceBelow < 220 && spaceAbove > spaceBelow;
       const availableHeight = openAbove ? spaceAbove : spaceBelow;
       const maxHeight = Math.max(72, Math.min(300, availableHeight));
-      const width = Math.min(rect.width, window.innerWidth - viewportPadding * 2);
+      const width = Math.min(
+        compact ? Math.max(rect.width, 400) : rect.width,
+        window.innerWidth - viewportPadding * 2
+      );
       const left = Math.min(
         Math.max(viewportPadding, rect.left),
         window.innerWidth - width - viewportPadding
@@ -156,7 +175,7 @@ export function UpstreamAuthSelector({
       window.removeEventListener('resize', updateDropdownPosition);
       window.removeEventListener('scroll', updateDropdownPosition, true);
     };
-  }, [isOpen]);
+  }, [isOpen, compact]);
 
   const addAuth = (authID: string) => {
     if (!authID || selectedSet.has(authID)) return;
@@ -166,12 +185,14 @@ export function UpstreamAuthSelector({
 
   return (
     <div className={`form-group ${styles.compactFormGroup}`}>
-      <div className={styles.apiKeysMeta}>
-        <label className={styles.apiKeysLabel}>
-          {label ?? t('config_management.visual.api_key_groups.upstream_accounts')}
-        </label>
-        <span className={styles.apiKeysCount}>{selected.length}</span>
-      </div>
+      {!compact && (
+        <div className={styles.apiKeysMeta}>
+          <label className={styles.apiKeysLabel}>
+            {label ?? t('config_management.visual.api_key_groups.upstream_accounts')}
+          </label>
+          <span className={styles.apiKeysCount}>{selected.length}</span>
+        </div>
+      )}
       <div className={styles.upstreamAuthPicker} ref={pickerRef}>
         <button
           ref={triggerRef}
@@ -181,14 +202,19 @@ export function UpstreamAuthSelector({
             setIsOpen((open) => !open);
             setSearch('');
           }}
-          disabled={disabled || loading || loadFailed || (options.length === 0 && !isOpen)}
-          aria-haspopup="listbox"
+          disabled={
+            disabled || loading || (!compact && (loadFailed || (options.length === 0 && !isOpen)))
+          }
+          aria-label={label}
+          aria-haspopup={compact ? 'dialog' : 'listbox'}
           aria-expanded={isOpen}
         >
           <span>
             {loading
               ? t('common.loading')
-              : t('config_management.visual.api_key_groups.select_upstream_account')}
+              : compact
+                ? summary
+                : t('config_management.visual.api_key_groups.select_upstream_account')}
           </span>
           <IconChevronDown
             size={16}
@@ -198,13 +224,21 @@ export function UpstreamAuthSelector({
         {isOpen &&
         !disabled &&
         !loading &&
-        !loadFailed &&
+        (!loadFailed || compact) &&
         dropdownRect &&
         typeof document !== 'undefined'
           ? createPortal(
               <div
                 ref={dropdownRef}
                 className={styles.upstreamAuthDropdown}
+                role={compact ? 'dialog' : undefined}
+                aria-label={compact ? label : undefined}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    setIsOpen(false);
+                    triggerRef.current?.focus();
+                  }
+                }}
                 style={{
                   position: 'fixed',
                   top: `${dropdownRect.top}px`,
@@ -231,11 +265,43 @@ export function UpstreamAuthSelector({
                   autoFocus
                 />
                 {options.length > 0 ? (
-                  <div className={styles.upstreamAuthOptions} role="listbox">
+                  <div className={styles.upstreamAuthOptions} role={compact ? 'group' : 'listbox'}>
                     {options.map((file) => {
                       const id = authFileID(file);
                       const unavailable = file.disabled === true || file.unavailable === true;
                       const status = String(file.status ?? '').trim();
+                      if (compact) {
+                        const known = fileMap.has(id);
+                        const primary = String(
+                          file.email ?? file.account ?? file.label ?? file.name ?? id
+                        );
+                        return (
+                          <label key={id} className={styles.upstreamAuthCheckOption}>
+                            <input
+                              type="checkbox"
+                              checked={selectedSet.has(id)}
+                              disabled={disabled}
+                              onChange={() =>
+                                onChange(
+                                  selectedSet.has(id)
+                                    ? selected.filter((item) => item !== id)
+                                    : [...selected, id]
+                                )
+                              }
+                            />
+                            <span>
+                              <strong>{primary}</strong>
+                              <small>
+                                {known
+                                  ? [file.name !== primary ? file.name : '', status]
+                                      .filter(Boolean)
+                                      .join(' · ') || id
+                                  : missingLabel}
+                              </small>
+                            </span>
+                          </label>
+                        );
+                      }
                       return (
                         <button
                           key={id}
@@ -268,51 +334,52 @@ export function UpstreamAuthSelector({
             )
           : null}
       </div>
-      {loading && <div className="hint">{t('common.loading')}</div>}
+      {!compact && loading && <div className="hint">{t('common.loading')}</div>}
       {loadFailed && (
         <div className="hint">
           {t('config_management.visual.api_key_groups.account_load_failed')}
         </div>
       )}
-      {selected.length === 0 ? (
-        <div className={styles.apiKeysEmpty}>
-          {emptyLabel ?? t('config_management.visual.api_key_groups.accounts_unrestricted')}
-        </div>
-      ) : (
-        <div className={styles.apiKeyGroupSelectionList}>
-          {selected.map((authID) => {
-            const file = fileMap.get(authID);
-            const unavailable = file?.disabled === true || file?.unavailable === true;
-            const status = String(file?.status ?? '').trim();
-            return (
-              <div key={authID} className={styles.apiKeyGroupSelectionItem}>
-                <div className={styles.apiKeyGroupSelectionText}>
-                  <strong title={file ? authFileLabel(file) : authID}>
-                    {file ? authFileLabel(file) : authID}
-                  </strong>
-                  <span>
-                    {file
-                      ? `${authID}${status ? ` · ${status}` : ''}${unavailable ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}` : ''}`
-                      : (missingLabel ??
-                        t('config_management.visual.api_key_groups.missing_account'))}
-                  </span>
+      {!compact &&
+        (selected.length === 0 ? (
+          <div className={styles.apiKeysEmpty}>
+            {emptyLabel ?? t('config_management.visual.api_key_groups.accounts_unrestricted')}
+          </div>
+        ) : (
+          <div className={styles.apiKeyGroupSelectionList}>
+            {selected.map((authID) => {
+              const file = fileMap.get(authID);
+              const unavailable = file?.disabled === true || file?.unavailable === true;
+              const status = String(file?.status ?? '').trim();
+              return (
+                <div key={authID} className={styles.apiKeyGroupSelectionItem}>
+                  <div className={styles.apiKeyGroupSelectionText}>
+                    <strong title={file ? authFileLabel(file) : authID}>
+                      {file ? authFileLabel(file) : authID}
+                    </strong>
+                    <span>
+                      {file
+                        ? `${authID}${status ? ` · ${status}` : ''}${unavailable ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}` : ''}`
+                        : (missingLabel ??
+                          t('config_management.visual.api_key_groups.missing_account'))}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={styles.payloadRowActionButton}
+                    onClick={() => onChange(selected.filter((item) => item !== authID))}
+                    disabled={disabled}
+                    title={t('config_management.visual.common.delete')}
+                    aria-label={t('config_management.visual.common.delete')}
+                  >
+                    <IconTrash2 size={16} />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={styles.payloadRowActionButton}
-                  onClick={() => onChange(selected.filter((item) => item !== authID))}
-                  disabled={disabled}
-                  title={t('config_management.visual.common.delete')}
-                  aria-label={t('config_management.visual.common.delete')}
-                >
-                  <IconTrash2 size={16} />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        ))}
       {showHint && (
         <div className="hint">
           {t('config_management.visual.api_key_groups.upstream_accounts_hint')}
