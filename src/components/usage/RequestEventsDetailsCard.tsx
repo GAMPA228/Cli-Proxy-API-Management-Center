@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CaptureControls, CaptureViewer } from './UpstreamCapture';
 import { AutoTurnStateControls } from './AutoTurnStateControls';
 import captureStyles from './UpstreamCapture.module.scss';
@@ -34,6 +34,21 @@ import { UsageTablePagination } from './UsageTablePagination';
 import styles from '@/pages/UsagePage.module.scss';
 
 const ALL_FILTER = '__all__';
+
+type ResultFilter = 'all' | 'success' | 'failed';
+
+const parseLocalSecond = (value: string): number | undefined => {
+  if (!value) return undefined;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (!match) return NaN;
+  const [, year, month, day, hour, minute, second = '00'] = match;
+  const date = new Date(value);
+  // Reject normalized invalid dates and local times skipped by a DST transition.
+  if (date.getFullYear() !== Number(year) || date.getMonth() + 1 !== Number(month) ||
+      date.getDate() !== Number(day) || date.getHours() !== Number(hour) ||
+      date.getMinutes() !== Number(minute) || date.getSeconds() !== Number(second)) return NaN;
+  return date.getTime();
+};
 
 type RequestEventRow = {
   id: string;
@@ -269,6 +284,16 @@ export function RequestEventsDetailsCard({
   const [sourceFilter, setSourceFilter] = useState(ALL_FILTER);
   const [authIndexFilter, setAuthIndexFilter] = useState(ALL_FILTER);
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [resultDraft, setResultDraft] = useState<ResultFilter>('all');
+  const [startDraft, setStartDraft] = useState('');
+  const [endDraft, setEndDraft] = useState('');
+  const [eventFilters, setEventFilters] = useState<{
+    result: ResultFilter; start?: number; end?: number;
+  }>({ result: 'all' });
+  const [timeErrors, setTimeErrors] = useState<{ start?: string; end?: string }>({});
+  const timeFilterId = useId();
+  const startInput = useRef<HTMLInputElement>(null);
+  const endInput = useRef<HTMLInputElement>(null);
   const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
   const [page, setPage] = useState(1);
   const [captureID, setCaptureID] = useState<string | null>(null);
@@ -338,8 +363,11 @@ export function RequestEventsDetailsCard({
       model: modelFilter !== ALL_FILTER ? modelFilter : undefined,
       auth_index: authIndexFilter !== ALL_FILTER ? authIndexFilter : undefined,
       search: searchKeyword.trim() || undefined,
+      result: eventFilters.result === 'all' ? undefined : eventFilters.result,
+      start_time: eventFilters.start === undefined ? undefined : new Date(eventFilters.start).toISOString(),
+      end_time: eventFilters.end === undefined ? undefined : new Date(eventFilters.end).toISOString(),
     }),
-    [authIndexFilter, modelFilter, page, pageSize, searchKeyword]
+    [authIndexFilter, modelFilter, page, pageSize, searchKeyword, eventFilters]
   );
 
   useEffect(() => {
@@ -559,6 +587,10 @@ export function RequestEventsDetailsCard({
   const filteredRows = useMemo(
     () =>
       rows.filter((row) => {
+        const resultMatched = eventFilters.result === 'all' || row.failed === (eventFilters.result === 'failed');
+        const timeMatched =
+          (eventFilters.start === undefined || row.timestampMs >= eventFilters.start) &&
+          (eventFilters.end === undefined || row.timestampMs < eventFilters.end);
         const modelMatched = effectiveModelFilter === ALL_FILTER || row.model === effectiveModelFilter;
         const sourceMatched =
           effectiveSourceFilter === ALL_FILTER || row.sourceKey === effectiveSourceFilter;
@@ -583,9 +615,9 @@ export function RequestEventsDetailsCard({
           row.proxySource.toLowerCase().includes(normalizedSearchKeyword) ||
           row.proxyProtocol.toLowerCase().includes(normalizedSearchKeyword) ||
           row.proxyEndpoint.toLowerCase().includes(normalizedSearchKeyword);
-        return modelMatched && sourceMatched && authIndexMatched && keywordMatched;
+        return resultMatched && timeMatched && modelMatched && sourceMatched && authIndexMatched && keywordMatched;
       }),
-    [effectiveAuthIndexFilter, effectiveModelFilter, effectiveSourceFilter, normalizedSearchKeyword, rows]
+    [effectiveAuthIndexFilter, effectiveModelFilter, effectiveSourceFilter, normalizedSearchKeyword, rows, eventFilters]
   );
 
   const serverPaging = detailsMode === 'server';
@@ -600,16 +632,45 @@ export function RequestEventsDetailsCard({
   const shouldEnableTableScroll = renderedRows.length > 10;
 
   const hasActiveFilters =
+    resultDraft !== 'all' || startDraft !== '' || endDraft !== '' ||
+    Boolean(timeErrors.start || timeErrors.end) ||
+    eventFilters.result !== 'all' || eventFilters.start !== undefined || eventFilters.end !== undefined ||
     effectiveModelFilter !== ALL_FILTER ||
     effectiveSourceFilter !== ALL_FILTER ||
     effectiveAuthIndexFilter !== ALL_FILTER ||
     normalizedSearchKeyword.length > 0;
 
   const handleClearFilters = () => {
+    setResultDraft('all');
+    setStartDraft('');
+    setEndDraft('');
+    setEventFilters({ result: 'all' });
+    setTimeErrors({});
     setModelFilter(ALL_FILTER);
     setSourceFilter(ALL_FILTER);
     setAuthIndexFilter(ALL_FILTER);
     setSearchKeyword('');
+    setPage(1);
+  };
+
+  const handleQuery = () => {
+    const start = parseLocalSecond(startDraft);
+    const end = parseLocalSecond(endDraft);
+    const errors: typeof timeErrors = {};
+    const fitsTimestampRange = (value: number | undefined) =>
+      value === undefined || (Number.isFinite(value) && Math.abs(value) <= 9223372036854);
+    if (!fitsTimestampRange(start) || !startInput.current?.validity.valid) {
+      errors.start = 'usage_stats.request_events_time_invalid';
+    }
+    if (!fitsTimestampRange(end === undefined ? undefined : end + 1000) || !endInput.current?.validity.valid) {
+      errors.end = 'usage_stats.request_events_time_invalid';
+    }
+    if (!errors.start && !errors.end && start !== undefined && end !== undefined && start > end) {
+      errors.end = 'usage_stats.request_events_time_inverted';
+    }
+    setTimeErrors(errors);
+    if (errors.start || errors.end) return;
+    setEventFilters({ result: resultDraft, start, end: end === undefined ? undefined : end + 1000 });
     setPage(1);
   };
 
@@ -804,6 +865,47 @@ export function RequestEventsDetailsCard({
               fullWidth={false}
             />
           </div>
+          <div className={styles.requestEventsResultFilter}>
+            <span>{t('usage_stats.request_events_result')}</span>
+            <Select
+              value={resultDraft}
+              options={[
+                { value: 'all', label: t('usage_stats.filter_all') },
+                { value: 'success', label: t('stats.success') },
+                { value: 'failed', label: t('stats.failure') },
+              ]}
+              onChange={(value) => setResultDraft(value as ResultFilter)}
+              ariaLabel={t('usage_stats.request_events_result')}
+              fullWidth={false}
+            />
+          </div>
+          {(['start', 'end'] as const).map((field) => (
+            <div key={field} className={styles.requestEventsTimeFilter}>
+              <label htmlFor={`${timeFilterId}-${field}`}>
+                {t(`usage_stats.request_events_${field}_time`)}
+              </label>
+              <input
+                ref={field === 'start' ? startInput : endInput}
+                id={`${timeFilterId}-${field}`}
+                type="datetime-local"
+                step={1}
+                className="input"
+                value={field === 'start' ? startDraft : endDraft}
+                aria-invalid={Boolean(timeErrors[field])}
+                aria-describedby={timeErrors[field] ? `${timeFilterId}-${field}-error` : undefined}
+                onChange={(event) => {
+                  (field === 'start' ? setStartDraft : setEndDraft)(event.target.value);
+                  setTimeErrors({});
+                }}
+              />
+              {timeErrors[field] && (
+                <span id={`${timeFilterId}-${field}-error`} role="alert" className={styles.requestEventsTimeError}>
+                  {t(timeErrors[field])}
+                </span>
+              )}
+            </div>
+          ))}
+          <Button size="sm" onClick={handleQuery}>{t('usage_stats.request_events_query')}</Button>
         </div>
         <div className={styles.requestEventsActions}>
           <Button

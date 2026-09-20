@@ -1,5 +1,5 @@
 /**
- * 使用统计相关 API
+ * Usage statistics API.
  */
 
 import { apiClient } from './client';
@@ -66,6 +66,9 @@ export interface UsageDetailsQuery {
   source?: string;
   auth_index?: string | number | null;
   search?: string;
+  result?: 'success' | 'failed';
+  start_time?: string;
+  end_time?: string;
 }
 
 export interface UsageDetailsPage {
@@ -180,14 +183,14 @@ const compactQuery = (query: object = {}) => {
 
 export const usageApi = {
   /**
-   * 获取使用统计原始数据
+   * Fetch raw usage statistics.
    */
   getUsage: () =>
     apiClient.get<Record<string, unknown>>('/usage', {
       timeout: apiClient.getTimeout(USAGE_TIMEOUT_MS),
     }),
   /**
-   * 分页获取请求事件明细
+   * Fetch paginated request events.
    */
   getUsageDetails: (query: UsageDetailsQuery = {}) =>
     apiClient.get<UsageDetailsPage>('/usage/details', {
@@ -196,7 +199,7 @@ export const usageApi = {
     }),
 
   /**
-   * 获取 SQLite 侧聚合后的使用统计数据
+   * Fetch usage statistics aggregated by SQLite.
    */
   getUsageAggregate: (query: UsageAggregateQuery = {}) =>
     apiClient.get<UsageAggregatePayload>('/usage/aggregate', {
@@ -205,7 +208,7 @@ export const usageApi = {
     }),
 
   /**
-   * 获取按 Codex 认证账号计算的额度容量估算。
+   * Fetch quota capacity estimates per Codex account.
    */
   getQuotaEstimator: (options: QuotaEstimatorOptions = {}) =>
     apiClient.post<QuotaEstimatorOverview>('/usage/quota-estimator', options, {
@@ -213,7 +216,7 @@ export const usageApi = {
     }),
 
   /**
-   * 导出使用统计快照
+   * Export a usage snapshot.
    */
   exportUsage: () =>
     apiClient.get<UsageExportPayload>('/usage/export', {
@@ -221,7 +224,7 @@ export const usageApi = {
     }),
 
   /**
-   * 导入使用统计快照
+   * Import a usage snapshot.
    */
   importUsage: (payload: unknown) =>
     apiClient.post<UsageImportResponse>('/usage/import', payload, {
@@ -229,7 +232,7 @@ export const usageApi = {
     }),
 
   /**
-   * 计算密钥成功/失败统计，必要时会先获取 usage 数据
+   * Compute key success/failure statistics, fetching usage if needed.
    */
   async getKeyStats(usageData?: unknown): Promise<KeyStats> {
     let payload = usageData;
