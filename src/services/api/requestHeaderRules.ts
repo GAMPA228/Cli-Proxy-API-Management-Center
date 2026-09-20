@@ -5,6 +5,7 @@ export type HeaderRule = RequestHeaderRule & {
   id: string;
   source?: 'turn-state-auto';
   active?: boolean;
+  account_enabled?: boolean;
   issued_at?: string;
 };
 export type HeaderRuleAccount = {

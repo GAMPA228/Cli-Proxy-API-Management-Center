@@ -50,13 +50,17 @@ const authFileLabel = (file: AuthFileItem): string => {
   return [primary || authFileID(file), ...secondary].join(' · ');
 };
 
-function UpstreamAuthSelector({
+export function UpstreamAuthSelector({
   value,
   files,
   loading,
   loadFailed,
   disabled,
   onChange,
+  label,
+  emptyLabel,
+  missingLabel,
+  showHint = true,
 }: {
   value: string[];
   files: AuthFileItem[];
@@ -64,6 +68,10 @@ function UpstreamAuthSelector({
   loadFailed: boolean;
   disabled?: boolean;
   onChange: (next: string[]) => void;
+  label?: string;
+  emptyLabel?: string;
+  missingLabel?: string;
+  showHint?: boolean;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
@@ -160,7 +168,7 @@ function UpstreamAuthSelector({
     <div className={`form-group ${styles.compactFormGroup}`}>
       <div className={styles.apiKeysMeta}>
         <label className={styles.apiKeysLabel}>
-          {t('config_management.visual.api_key_groups.upstream_accounts')}
+          {label ?? t('config_management.visual.api_key_groups.upstream_accounts')}
         </label>
         <span className={styles.apiKeysCount}>{selected.length}</span>
       </div>
@@ -187,7 +195,12 @@ function UpstreamAuthSelector({
             className={isOpen ? styles.upstreamAuthChevronOpen : styles.upstreamAuthChevron}
           />
         </button>
-        {isOpen && !loading && !loadFailed && dropdownRect && typeof document !== 'undefined'
+        {isOpen &&
+        !disabled &&
+        !loading &&
+        !loadFailed &&
+        dropdownRect &&
+        typeof document !== 'undefined'
           ? createPortal(
               <div
                 ref={dropdownRef}
@@ -214,6 +227,7 @@ function UpstreamAuthSelector({
                   placeholder={t(
                     'config_management.visual.api_key_groups.search_upstream_accounts'
                   )}
+                  aria-label={t('config_management.visual.api_key_groups.search_upstream_accounts')}
                   autoFocus
                 />
                 {options.length > 0 ? (
@@ -262,7 +276,7 @@ function UpstreamAuthSelector({
       )}
       {selected.length === 0 ? (
         <div className={styles.apiKeysEmpty}>
-          {t('config_management.visual.api_key_groups.accounts_unrestricted')}
+          {emptyLabel ?? t('config_management.visual.api_key_groups.accounts_unrestricted')}
         </div>
       ) : (
         <div className={styles.apiKeyGroupSelectionList}>
@@ -273,11 +287,14 @@ function UpstreamAuthSelector({
             return (
               <div key={authID} className={styles.apiKeyGroupSelectionItem}>
                 <div className={styles.apiKeyGroupSelectionText}>
-                  <strong>{file ? authFileLabel(file) : authID}</strong>
+                  <strong title={file ? authFileLabel(file) : authID}>
+                    {file ? authFileLabel(file) : authID}
+                  </strong>
                   <span>
                     {file
                       ? `${authID}${status ? ` · ${status}` : ''}${unavailable ? ` · ${t('config_management.visual.api_key_groups.account_unavailable')}` : ''}`
-                      : t('config_management.visual.api_key_groups.missing_account')}
+                      : (missingLabel ??
+                        t('config_management.visual.api_key_groups.missing_account'))}
                   </span>
                 </div>
                 <Button
@@ -296,9 +313,11 @@ function UpstreamAuthSelector({
           })}
         </div>
       )}
-      <div className="hint">
-        {t('config_management.visual.api_key_groups.upstream_accounts_hint')}
-      </div>
+      {showHint && (
+        <div className="hint">
+          {t('config_management.visual.api_key_groups.upstream_accounts_hint')}
+        </div>
+      )}
     </div>
   );
 }

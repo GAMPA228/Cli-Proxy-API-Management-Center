@@ -1,6 +1,7 @@
 {
   "header_rules": {
     "auto_generated": "自动生成",
+    "account_disabled": "账号未启用",
     "disabled": "已禁用",
     "title": "请求头规则",
     "account": "账号",
@@ -1072,6 +1073,13 @@
   "usage_stats": {
     "request_events_turn_state_length": "Turn State 长度",
     "auto_turn_state_toggle": "自动维护 Turn State",
+    "auto_turn_state_scope": "账号范围",
+    "auto_turn_state_accounts": "自动维护账号",
+    "auto_turn_state_all_accounts": "全部账号",
+    "auto_turn_state_selected_accounts": "指定账号",
+    "auto_turn_state_no_accounts": "未选择账号",
+    "auto_turn_state_missing_account": "账号不可用",
+    "auto_turn_state_retry_accounts": "重新加载账号",
     "auto_turn_state_max_chars": "最大字符数",
     "auto_turn_state_load_failed": "加载 Turn State 设置失败",
     "auto_turn_state_save_failed": "保存 Turn State 设置失败",

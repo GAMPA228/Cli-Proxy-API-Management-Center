@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { Select } from '@/components/ui/Select';
+import { UpstreamAuthSelector } from '@/components/config/ApiKeyGroupsSection';
+import { authFilesApi } from '@/services/api/authFiles';
+import type { AuthFileItem } from '@/types/authFile';
 import { IconCheck, IconRefreshCw } from '@/components/ui/icons';
 import { turnStateAutoRulesApi, type TurnStateAutoRules } from '@/services/api/turnStateAutoRules';
 import { useNotificationStore } from '@/stores';
@@ -13,10 +17,48 @@ export function AutoTurnStateControls() {
   const [status, setStatus] = useState<TurnStateAutoRules | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [maxChars, setMaxChars] = useState('292');
+  const [accountScope, setAccountScope] = useState<TurnStateAutoRules['account_scope']>('all');
+  const [authIds, setAuthIds] = useState<string[]>([]);
+  const [authFiles, setAuthFiles] = useState<AuthFileItem[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(true);
+  const [accountsFailed, setAccountsFailed] = useState(false);
+  const accountsGeneration = useRef(0);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const generation = useRef(0);
   const changing = useRef(false);
+  const loadAccounts = useCallback(async () => {
+    const current = ++accountsGeneration.current;
+    setAccountsLoading(true);
+    setAccountsFailed(false);
+    try {
+      const response = await authFilesApi.list();
+      if (current !== accountsGeneration.current) return;
+      const files = Array.isArray(response) ? response : response.files;
+      setAuthFiles(
+        (Array.isArray(files) ? files : []).filter(
+          (file: AuthFileItem) =>
+            String(file.provider ?? file.type ?? '')
+              .trim()
+              .toLowerCase() === 'codex' &&
+            String(file.account_type ?? file.accountType ?? '')
+              .trim()
+              .toLowerCase() !== 'api_key'
+        )
+      );
+    } catch {
+      if (current === accountsGeneration.current) setAccountsFailed(true);
+    } finally {
+      if (current === accountsGeneration.current) setAccountsLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void loadAccounts();
+    const requestGeneration = accountsGeneration;
+    return () => {
+      requestGeneration.current++;
+    };
+  }, [loadAccounts]);
   const load = useCallback(async () => {
     const current = ++generation.current;
     setBusy(true);
@@ -27,6 +69,8 @@ export function AutoTurnStateControls() {
       setStatus(next);
       setEnabled(next.enabled);
       setMaxChars(String(next.max_chars));
+      setAccountScope(next.account_scope);
+      setAuthIds(next.auth_ids);
     } catch {
       if (current === generation.current) setError(t('usage_stats.auto_turn_state_load_failed'));
     } finally {
@@ -42,7 +86,13 @@ export function AutoTurnStateControls() {
   }, [load]);
   const value = Number(maxChars);
   const valid = maxChars.trim() !== '' && Number.isInteger(value) && value >= 1 && value <= 8192;
-  const dirty = status && (enabled !== status.enabled || value !== status.max_chars);
+  const dirty =
+    status &&
+    (enabled !== status.enabled ||
+      value !== status.max_chars ||
+      accountScope !== status.account_scope ||
+      authIds.length !== status.auth_ids.length ||
+      authIds.some((id) => !status.auth_ids.includes(id)));
   const save = async () => {
     if (!status || !valid || busy || changing.current) return;
     changing.current = true;
@@ -50,11 +100,18 @@ export function AutoTurnStateControls() {
     setBusy(true);
     setError('');
     try {
-      const next = await turnStateAutoRulesApi.save({ enabled, max_chars: value });
+      const next = await turnStateAutoRulesApi.save({
+        enabled,
+        max_chars: value,
+        account_scope: accountScope,
+        auth_ids: authIds,
+      });
       if (current !== generation.current) return;
       setStatus(next);
       setEnabled(next.enabled);
       setMaxChars(String(next.max_chars));
+      setAccountScope(next.account_scope);
+      setAuthIds(next.auth_ids);
       showNotification(t('usage_stats.auto_turn_state_saved'), 'success');
     } catch {
       if (current === generation.current) setError(t('usage_stats.auto_turn_state_save_failed'));
@@ -84,6 +141,17 @@ export function AutoTurnStateControls() {
           onChange={(event) => setMaxChars(event.target.value)}
         />
       </label>
+      <Select
+        className={styles.accountScope}
+        ariaLabel={t('usage_stats.auto_turn_state_scope')}
+        value={accountScope}
+        disabled={busy || !status}
+        onChange={(scope) => setAccountScope(scope as TurnStateAutoRules['account_scope'])}
+        options={[
+          { value: 'all', label: t('usage_stats.auto_turn_state_all_accounts') },
+          { value: 'selected', label: t('usage_stats.auto_turn_state_selected_accounts') },
+        ]}
+      />
       <Button
         variant="ghost"
         size="sm"
@@ -96,6 +164,34 @@ export function AutoTurnStateControls() {
       >
         {!busy && (status ? <IconCheck size={16} /> : <IconRefreshCw size={16} />)}
       </Button>
+      {accountScope === 'selected' && (
+        <div className={styles.accountPicker}>
+          <UpstreamAuthSelector
+            label={t('usage_stats.auto_turn_state_accounts')}
+            value={authIds}
+            files={authFiles}
+            loading={accountsLoading}
+            loadFailed={accountsFailed}
+            disabled={busy || !status}
+            onChange={setAuthIds}
+            emptyLabel={t('usage_stats.auto_turn_state_no_accounts')}
+            missingLabel={t('usage_stats.auto_turn_state_missing_account')}
+            showHint={false}
+          />
+          {accountsFailed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={accountsLoading}
+              onClick={() => void loadAccounts()}
+              title={t('usage_stats.auto_turn_state_retry_accounts')}
+              aria-label={t('usage_stats.auto_turn_state_retry_accounts')}
+            >
+              <IconRefreshCw size={16} />
+            </Button>
+          )}
+        </div>
+      )}
       {(error || !valid || Boolean(status?.storage_errors)) && (
         <span className={styles.settingsError} role="alert">
           {error ||

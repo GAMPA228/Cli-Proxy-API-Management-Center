@@ -1,6 +1,7 @@
 {
   "header_rules": {
     "auto_generated": "Создано автоматически",
+    "account_disabled": "Аккаунт отключён",
     "disabled": "Отключено",
     "title": "Правила заголовков",
     "account": "Аккаунт",
@@ -1075,6 +1076,13 @@
   "usage_stats": {
     "request_events_turn_state_length": "Длина Turn State",
     "auto_turn_state_toggle": "Автоматически поддерживать Turn State",
+    "auto_turn_state_scope": "Область аккаунтов",
+    "auto_turn_state_accounts": "Аккаунты автоматизации",
+    "auto_turn_state_all_accounts": "Все аккаунты",
+    "auto_turn_state_selected_accounts": "Выбранные аккаунты",
+    "auto_turn_state_no_accounts": "Нет выбранных аккаунтов",
+    "auto_turn_state_missing_account": "Аккаунт недоступен",
+    "auto_turn_state_retry_accounts": "Обновить аккаунты",
     "auto_turn_state_max_chars": "Максимум символов",
     "auto_turn_state_load_failed": "Не удалось загрузить настройки Turn State",
     "auto_turn_state_save_failed": "Не удалось сохранить настройки Turn State",

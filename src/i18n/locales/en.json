@@ -1,6 +1,7 @@
 {
   "header_rules": {
     "auto_generated": "Auto-generated",
+    "account_disabled": "Account disabled",
     "disabled": "Disabled",
     "title": "Request Header Rules",
     "account": "Account",
@@ -1072,6 +1073,13 @@
   "usage_stats": {
     "request_events_turn_state_length": "Turn State length",
     "auto_turn_state_toggle": "Automatically maintain Turn State",
+    "auto_turn_state_scope": "Account scope",
+    "auto_turn_state_accounts": "Automation accounts",
+    "auto_turn_state_all_accounts": "All accounts",
+    "auto_turn_state_selected_accounts": "Selected accounts",
+    "auto_turn_state_no_accounts": "No accounts selected",
+    "auto_turn_state_missing_account": "Account unavailable",
+    "auto_turn_state_retry_accounts": "Reload accounts",
     "auto_turn_state_max_chars": "Maximum characters",
     "auto_turn_state_load_failed": "Failed to load Turn State settings",
     "auto_turn_state_save_failed": "Failed to save Turn State settings",

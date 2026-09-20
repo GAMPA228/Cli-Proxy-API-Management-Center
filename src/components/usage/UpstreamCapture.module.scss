@@ -17,6 +17,22 @@
   min-width: 0;
   font-size: 13px;
 }
+.accountScope {
+  width: 190px;
+  max-width: 100%;
+}
+.accountPicker {
+  flex: 0 0 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  > div {
+    width: min(480px, 100%);
+    margin-bottom: 0;
+    margin-left: auto;
+  }
+  > button { float: right; }
+}
 .maxChars {
   display: flex;
   flex-wrap: wrap;

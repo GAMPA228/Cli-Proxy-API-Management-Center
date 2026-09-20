@@ -276,43 +276,53 @@ export function RequestHeaderRulesPage() {
                     title={rule.expires_at ? new Date(rule.expires_at).toLocaleString() : undefined}
                   >
                     {remaining(rule)}
-                    {(!expired(rule) && (rule.expires_at || rule.active === false)) && (
-                      <div className={styles.note}>{t('header_rules.' + ruleStatus(rule))}</div>
+                    {!expired(rule) && (rule.expires_at || rule.active === false) && (
+                      <div className={styles.note}>
+                        {t(
+                          rule.source === 'turn-state-auto' &&
+                            rule.active === false &&
+                            rule.account_enabled === false
+                            ? 'header_rules.account_disabled'
+                            : 'header_rules.' + ruleStatus(rule)
+                        )}
+                      </div>
                     )}
                   </td>
                   <td>
-                    {rule.source !== 'turn-state-auto' && <div className={styles.actions}>
-                      <Button
-                        variant="ghost"
-                        className={styles.rowButton}
-                        title={t('header_rules.edit')}
-                        aria-label={t('header_rules.edit')}
-                        disabled={disabled}
-                        onClick={() => open(account, rule)}
-                      >
-                        <IconPencil size={16} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className={styles.rowButton}
-                        title={t('header_rules.restart')}
-                        aria-label={t('header_rules.restart')}
-                        disabled={disabled || !rule.duration_minutes}
-                        onClick={() => confirmAction(account, rule, 'restart')}
-                      >
-                        <IconTimer size={16} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className={styles.rowButton}
-                        title={t('header_rules.delete')}
-                        aria-label={t('header_rules.delete')}
-                        disabled={disabled}
-                        onClick={() => confirmAction(account, rule, 'delete')}
-                      >
-                        <IconTrash2 size={16} />
-                      </Button>
-                    </div>}
+                    {rule.source !== 'turn-state-auto' && (
+                      <div className={styles.actions}>
+                        <Button
+                          variant="ghost"
+                          className={styles.rowButton}
+                          title={t('header_rules.edit')}
+                          aria-label={t('header_rules.edit')}
+                          disabled={disabled}
+                          onClick={() => open(account, rule)}
+                        >
+                          <IconPencil size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={styles.rowButton}
+                          title={t('header_rules.restart')}
+                          aria-label={t('header_rules.restart')}
+                          disabled={disabled || !rule.duration_minutes}
+                          onClick={() => confirmAction(account, rule, 'restart')}
+                        >
+                          <IconTimer size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={styles.rowButton}
+                          title={t('header_rules.delete')}
+                          aria-label={t('header_rules.delete')}
+                          disabled={disabled}
+                          onClick={() => confirmAction(account, rule, 'delete')}
+                        >
+                          <IconTrash2 size={16} />
+                        </Button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
