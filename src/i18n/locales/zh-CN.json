@@ -1249,6 +1249,7 @@
     "request_events_proxy_direct_auth": "直连（账号覆盖）",
     "request_events_auth_index": "认证索引",
     "request_events_result": "结果",
+    "request_events_filter_search": "搜索",
     "request_events_start_time": "开始时间（本地）",
     "request_events_end_time": "结束时间（本地，含该秒）",
     "request_events_query": "查询",

@@ -803,7 +803,7 @@ export function RequestEventsDetailsCard({
 
   return (
     <Card title={t('usage_stats.request_events_title')}>
-      <div className={captureStyles.controlRow}>
+      <div className={`${captureStyles.controlRow} ${styles.requestEventsCaptureControls}`}>
         <CaptureControls onRefresh={refreshCaptured} />
         <AutoTurnStateControls />
       </div>
@@ -811,7 +811,9 @@ export function RequestEventsDetailsCard({
       <div className={styles.requestEventsTopBar}>
         <div className={styles.requestEventsToolbar}>
           <div className={`${styles.requestEventsFilterItem} ${styles.requestEventsSearchItem}`}>
+            <label htmlFor={`${timeFilterId}-search`}>{t('usage_stats.request_events_filter_search')}</label>
             <input
+              id={`${timeFilterId}-search`}
               className={`input ${styles.requestEventsSearchInput}`}
               value={searchKeyword}
               onChange={(event) => {
@@ -827,7 +829,9 @@ export function RequestEventsDetailsCard({
             />
           </div>
           <div className={styles.requestEventsFilterItem}>
+            <label htmlFor={`${timeFilterId}-model`}>{t('usage_stats.request_events_filter_model')}</label>
             <Select
+              id={`${timeFilterId}-model`}
               value={effectiveModelFilter}
               options={modelOptions}
               onChange={(value) => {
@@ -840,7 +844,9 @@ export function RequestEventsDetailsCard({
             />
           </div>
           <div className={styles.requestEventsFilterItem}>
+            <label htmlFor={`${timeFilterId}-source`}>{t('usage_stats.request_events_filter_source')}</label>
             <Select
+              id={`${timeFilterId}-source`}
               value={effectiveSourceFilter}
               options={sourceOptions}
               onChange={(value) => {
@@ -853,7 +859,9 @@ export function RequestEventsDetailsCard({
             />
           </div>
           <div className={styles.requestEventsFilterItem}>
+            <label htmlFor={`${timeFilterId}-auth`}>{t('usage_stats.request_events_filter_auth_index')}</label>
             <Select
+              id={`${timeFilterId}-auth`}
               value={effectiveAuthIndexFilter}
               options={authIndexOptions}
               onChange={(value) => {
@@ -865,9 +873,11 @@ export function RequestEventsDetailsCard({
               fullWidth={false}
             />
           </div>
-          <div className={styles.requestEventsResultFilter}>
-            <span>{t('usage_stats.request_events_result')}</span>
+          <div className={styles.requestEventsFilterItem}>
+            <label htmlFor={`${timeFilterId}-result`}>{t('usage_stats.request_events_result')}</label>
             <Select
+              id={`${timeFilterId}-result`}
+              className={styles.requestEventsSelect}
               value={resultDraft}
               options={[
                 { value: 'all', label: t('usage_stats.filter_all') },
@@ -879,6 +889,8 @@ export function RequestEventsDetailsCard({
               fullWidth={false}
             />
           </div>
+        </div>
+        <div className={styles.requestEventsTimeRow}>
           {(['start', 'end'] as const).map((field) => (
             <div key={field} className={styles.requestEventsTimeFilter}>
               <label htmlFor={`${timeFilterId}-${field}`}>
@@ -905,33 +917,35 @@ export function RequestEventsDetailsCard({
               )}
             </div>
           ))}
-          <Button size="sm" onClick={handleQuery}>{t('usage_stats.request_events_query')}</Button>
-        </div>
-        <div className={styles.requestEventsActions}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearFilters}
-            disabled={!hasActiveFilters}
-          >
-            {t('usage_stats.clear_filters')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={filteredRows.length === 0 || detailLoading}
-          >
-            {t('usage_stats.export_csv')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleExportJson}
-            disabled={filteredRows.length === 0 || detailLoading}
-          >
-            {t('usage_stats.export_json')}
-          </Button>
+          <div className={styles.requestEventsQueryActions}>
+            <Button size="sm" onClick={handleQuery}>{t('usage_stats.request_events_query')}</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+            >
+              {t('usage_stats.clear_filters')}
+            </Button>
+          </div>
+          <div className={styles.requestEventsActions}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleExportCsv}
+              disabled={filteredRows.length === 0 || detailLoading}
+            >
+              {t('usage_stats.export_csv')}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleExportJson}
+              disabled={filteredRows.length === 0 || detailLoading}
+            >
+              {t('usage_stats.export_json')}
+            </Button>
+          </div>
         </div>
       </div>
 
