@@ -24,6 +24,7 @@ import { LogsPage } from '@/pages/LogsPage';
 import { SystemPage } from '@/pages/SystemPage';
 import { ProxyNodesPage } from '@/pages/ProxyNodesPage';
 import { RequestHeaderRulesPage } from '@/pages/RequestHeaderRulesPage';
+import { PluginsPage } from '@/pages/PluginsPage';
 
 const mainRoutes = [
   { path: '/', element: <DashboardPage /> },
@@ -73,6 +74,8 @@ const mainRoutes = [
   { path: '/ai-providers/*', element: <AiProvidersPage /> },
   { path: '/auth-files', element: <AuthFilesPage /> },
   { path: '/request-header-rules', element: <RequestHeaderRulesPage /> },
+  { path: '/plugins', element: <PluginsPage /> },
+  { path: '/plugins/:pluginId', element: <PluginsPage /> },
   { path: '/auth-files/oauth-excluded', element: <AuthFilesOAuthExcludedEditPage /> },
   { path: '/auth-files/oauth-model-alias', element: <AuthFilesOAuthModelAliasEditPage /> },
   { path: '/oauth', element: <OAuthPage /> },

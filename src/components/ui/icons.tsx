@@ -484,3 +484,11 @@ export function IconSidebarProxyNodes({ size = 20, ...props }: IconProps) {
     </svg>
   );
 }
+
+export function IconSidebarPlugins({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...sidebarSvgProps} width={size} height={size} {...props}>
+      <path d="M8 3h3v3a2 2 0 1 0 4 0V3h3v6h3v3a2 2 0 1 0 0 4h-3v5h-5v-3a2 2 0 1 0-4 0v3H5v-5H2v-4h3V3z" />
+    </svg>
+  );
+}

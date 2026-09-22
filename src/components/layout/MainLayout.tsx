@@ -23,6 +23,7 @@ import {
   IconSidebarQuota,
   IconSidebarSystem,
   IconSidebarProxyNodes,
+  IconSidebarPlugins,
   IconSidebarUsage,
   IconDollarSign,
 } from '@/components/ui/icons';
@@ -52,6 +53,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   logs: <IconSidebarLogs size={18} />,
   system: <IconSidebarSystem size={18} />,
   proxyNodes: <IconSidebarProxyNodes size={18} />,
+  plugins: <IconSidebarPlugins size={18} />,
 };
 
 // Header action icons - smaller size for header buttons
@@ -431,6 +433,7 @@ export function MainLayout() {
     { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
     { path: '/request-header-rules', label: t('nav.request_header_rules'), icon: sidebarIcons.config },
+    { path: '/plugins', label: t('nav.plugins'), icon: sidebarIcons.plugins },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
     { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota },
     {
