@@ -33,8 +33,25 @@
 - Follow-up build and focused ESLint on the three changed TS/TSX files passed.
 - Codebase index refreshed after implementation.
 
+## Browser Interaction Verification
+- Reused the Edge/Playwright component harness from `.codex/verify-plugin-cards.mjs`
+  in `.codex/verify-codex-settings.mjs`; management responses are mocked.
+- Actual `PluginsPage` gear: enabled settings load and save through the plugin endpoint;
+  the manual Add Rule dialog opens and closes; disabling the installed plugin switches
+  the gear to readable manual rules with no automatic settings or maintenance actions.
+- Nonexpired read-only rules display Disabled, including permanent rules with no
+  `active` property. Expired rules remain Expired. Unloaded-plugin gear also passes.
+- Actual full `UsagePage`: Capture upstream remains, automatic Turn State maintenance
+  is absent, and the Turn State length column displays the mocked value `292`.
+- Desktop (1440px) and mobile (390px) screenshots saved under `.codex/codex-*.png`;
+  no document horizontal overflow or browser page errors. Enabled desktop and disabled
+  mobile screenshots were visually inspected.
+- `node .codex/verify-codex-settings.mjs`: passed. The script closes its Edge browser
+  and temporary Vite server in `finally`, then verifies the port no longer responds.
+- Build and focused ESLint passed after the read-only status correction.
+
 ## Limits
-- No browser interaction or live-backend integration test was performed.
+- Browser interactions use mocked management APIs, not a live backend.
 - Frontend status checks cannot make the subsequent request atomic with plugin
   disablement; backend authorization and plugin endpoint gating remain authoritative.
-- No backend files were modified or synchronized; no persistent server was started.
+- No backend files were modified or synchronized; no test server was left running.

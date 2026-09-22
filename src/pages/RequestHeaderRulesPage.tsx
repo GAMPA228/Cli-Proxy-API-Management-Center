@@ -88,7 +88,7 @@ export function RequestHeaderRulesPage({ readOnly = false }: { readOnly?: boolea
   const expired = (rule: HeaderRule) =>
     Boolean(rule.expires_at && Date.parse(rule.expires_at) <= now);
   const ruleStatus = (rule: HeaderRule) =>
-    expired(rule) ? 'expired' : rule.active === false ? 'disabled' : 'active';
+    expired(rule) ? 'expired' : maintenanceReadOnly || rule.active === false ? 'disabled' : 'active';
   const remaining = (rule: HeaderRule) => {
     if (!rule.expires_at) return t('header_rules.permanent');
     const seconds = Math.max(0, Math.ceil((Date.parse(rule.expires_at) - now) / 1000));
@@ -296,7 +296,7 @@ export function RequestHeaderRulesPage({ readOnly = false }: { readOnly?: boolea
                     title={rule.expires_at ? new Date(rule.expires_at).toLocaleString() : undefined}
                   >
                     {remaining(rule)}
-                    {!expired(rule) && (rule.expires_at || rule.active === false) && (
+                    {!expired(rule) && (maintenanceReadOnly || rule.expires_at || rule.active === false) && (
                       <div className={styles.note}>
                         {t(
                           rule.source === 'turn-state-auto' &&
