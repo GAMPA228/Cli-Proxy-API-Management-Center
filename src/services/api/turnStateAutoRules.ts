@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { pluginsApi } from './plugins';
 
 export interface TurnStateAutoRules {
   enabled: boolean;
@@ -20,8 +21,14 @@ const normalize = (settings: SettingsResponse): TurnStateAutoRules => ({
 });
 
 export const turnStateAutoRulesApi = {
-  get: async () => normalize(await apiClient.get<SettingsResponse>('/usage/turn-state-auto-rules')),
+  get: async () => normalize(await apiClient.get<SettingsResponse>(await settingsPath())),
   save: async (
     settings: Pick<TurnStateAutoRules, 'enabled' | 'max_chars' | 'account_scope' | 'auth_ids' | 'lifetime_seconds'>
-  ) => normalize(await apiClient.put<SettingsResponse>('/usage/turn-state-auto-rules', settings)),
+  ) => normalize(await apiClient.put<SettingsResponse>(await settingsPath(), settings)),
 };
+
+async function settingsPath(): Promise<string> {
+  const { plugins } = await pluginsApi.list();
+  const enabled = plugins.some((plugin) => plugin.id === 'codex-headers' && plugin.effective_enabled);
+  return enabled ? '/plugins/codex-headers/turn-state' : '/usage/turn-state-auto-rules';
+}

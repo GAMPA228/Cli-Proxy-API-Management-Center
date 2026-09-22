@@ -117,11 +117,8 @@ export function RequestHeaderRulesPage() {
     setBusy(true);
     setEditorError('');
     try {
-      const response = await requestHeaderRulesApi.mutate(input);
-      setAccounts((items) =>
-        items.map((item) => (item.auth_id === response.account.auth_id ? response.account : item))
-      );
-      syncClock(response.server_time);
+      await requestHeaderRulesApi.mutate(input);
+      await load();
       setEditor(null);
       showNotification(t('header_rules.saved'), 'success');
     } catch (err) {
