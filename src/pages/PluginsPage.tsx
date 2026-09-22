@@ -4,17 +4,39 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import { IconDownload, IconExternalLink, IconRefreshCw, IconSettings, IconTrash2 } from '@/components/ui/icons';
-import { pluginsApi, type PluginEntry, type PluginList, type PluginStore, type StorePlugin } from '@/services/api/plugins';
+import {
+  IconCheck,
+  IconDownload,
+  IconExternalLink,
+  IconRefreshCw,
+  IconSettings,
+  IconSidebarPlugins,
+  IconTrash2,
+} from '@/components/ui/icons';
+import {
+  pluginsApi,
+  type PluginEntry,
+  type PluginList,
+  type PluginStore,
+  type StorePlugin,
+} from '@/services/api/plugins';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import { normalizeApiBase } from '@/utils/connection';
 import styles from './PluginsPage.module.scss';
 
 function resourcePath(id: string, path: string): string | null {
   const prefix = `/v0/resource/plugins/${encodeURIComponent(id)}/`;
-  return path.startsWith(prefix) && !path.includes('..') && !path.includes('?') && !path.includes('#')
+  return path.startsWith(prefix) &&
+    !path.includes('..') &&
+    !path.includes('?') &&
+    !path.includes('#')
     ? path
     : null;
+}
+
+function pluginVersion(value?: string): string {
+  const version = value?.trim();
+  return version ? (/^v/i.test(version) ? version : `v${version}`) : '';
 }
 
 export function PluginsPage() {
@@ -77,11 +99,21 @@ export function PluginsPage() {
       const result = await action();
       await load();
       if (store) await loadStore();
-      const restartRequired = result && typeof result === 'object' && 'restart_required' in result && result.restart_required;
-      showNotification(restartRequired ? t('plugins.restart_required') : message, restartRequired ? 'warning' : 'success');
+      const restartRequired =
+        result &&
+        typeof result === 'object' &&
+        'restart_required' in result &&
+        result.restart_required;
+      showNotification(
+        restartRequired ? t('plugins.restart_required') : message,
+        restartRequired ? 'warning' : 'success'
+      );
       return true;
     } catch (error) {
-      showNotification(error instanceof Error ? error.message : t('plugins.action_failed'), 'error');
+      showNotification(
+        error instanceof Error ? error.message : t('plugins.action_failed'),
+        'error'
+      );
       return false;
     } finally {
       setBusy('');
@@ -114,24 +146,34 @@ export function PluginsPage() {
       setConfigError(t('plugins.invalid_json'));
       return;
     }
-    if (await run('config:' + configId, () => pluginsApi.saveConfig(configId, parsed as Record<string, unknown>), t('plugins.saved'))) {
+    if (
+      await run(
+        'config:' + configId,
+        () => pluginsApi.saveConfig(configId, parsed as Record<string, unknown>),
+        t('plugins.saved')
+      )
+    ) {
       setConfigId('');
     }
   };
   const activePlugin = list?.plugins.find((plugin) => plugin.id === pluginId);
   const activeMenu = activePlugin?.menus[menuIndex] ?? activePlugin?.menus[0];
   const path = activeMenu && activePlugin ? resourcePath(activePlugin.id, activeMenu.path) : null;
-  const panelUrl = path ? new URL(path, normalizeApiBase(apiBase) || window.location.origin).href : '';
+  const panelUrl = path
+    ? new URL(path, normalizeApiBase(apiBase) || window.location.origin).href
+    : '';
   const installed = useMemo(
-    () => (list?.plugins ?? []).filter((plugin) =>
-      (plugin.metadata?.name || plugin.id).toLowerCase().includes(query.trim().toLowerCase())
-    ),
+    () =>
+      (list?.plugins ?? []).filter((plugin) =>
+        (plugin.metadata?.name || plugin.id).toLowerCase().includes(query.trim().toLowerCase())
+      ),
     [list, query]
   );
   const available = useMemo(
-    () => (store?.plugins ?? []).filter((plugin) =>
-      (plugin.name || plugin.id).toLowerCase().includes(query.trim().toLowerCase())
-    ),
+    () =>
+      (store?.plugins ?? []).filter((plugin) =>
+        (plugin.name || plugin.id).toLowerCase().includes(query.trim().toLowerCase())
+      ),
     [store, query]
   );
 
@@ -140,15 +182,32 @@ export function PluginsPage() {
       <header className={styles.header}>
         <h1>{pluginId ? activePlugin?.metadata?.name || pluginId : t('plugins.title')}</h1>
         <div className={styles.headerActions}>
-          {pluginId && <Button variant="secondary" size="sm" onClick={() => navigate('/plugins')}>{t('plugins.back')}</Button>}
-          <Button variant="ghost" size="sm" title={t('plugins.refresh')} aria-label={t('plugins.refresh')}
-            disabled={loading || !!busy} onClick={() => void (pluginId || view === 'installed' ? load() : loadStore())}>
+          {pluginId && (
+            <Button variant="secondary" size="sm" onClick={() => navigate('/plugins')}>
+              {t('plugins.back')}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            title={t('plugins.refresh')}
+            aria-label={t('plugins.refresh')}
+            disabled={loading || !!busy}
+            onClick={() => void (pluginId || view === 'installed' ? load() : loadStore())}
+          >
             <IconRefreshCw size={16} />
           </Button>
         </div>
       </header>
 
-      {listError && <div className={styles.error} role="alert">{listError} <Button variant="ghost" size="sm" onClick={() => void load()}>{t('plugins.retry')}</Button></div>}
+      {listError && (
+        <div className={styles.error} role="alert">
+          {listError}{' '}
+          <Button variant="ghost" size="sm" onClick={() => void load()}>
+            {t('plugins.retry')}
+          </Button>
+        </div>
+      )}
       {loading && !list && <div className={styles.state}>{t('plugins.loading')}</div>}
 
       {pluginId ? (
@@ -159,115 +218,331 @@ export function PluginsPage() {
             {activePlugin && activePlugin.menus.length > 1 && (
               <div className={styles.menuTabs}>
                 {activePlugin.menus.map((menu, index) => (
-                  <button type="button" key={menu.path} className={index === menuIndex ? styles.activeTab : ''}
-                    onClick={() => setMenuIndex(index)}>{menu.menu}</button>
+                  <button
+                    type="button"
+                    key={menu.path}
+                    className={index === menuIndex ? styles.activeTab : ''}
+                    onClick={() => setMenuIndex(index)}
+                  >
+                    {menu.menu}
+                  </button>
                 ))}
               </div>
             )}
-            <Button variant="ghost" size="sm" className={styles.external} title={t('plugins.open_external')}
-              aria-label={t('plugins.open_external')} onClick={() => window.open(panelUrl, '_blank', 'noopener,noreferrer')}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={styles.external}
+              title={t('plugins.open_external')}
+              aria-label={t('plugins.open_external')}
+              onClick={() => window.open(panelUrl, '_blank', 'noopener,noreferrer')}
+            >
               <IconExternalLink size={16} />
             </Button>
-            <iframe key={panelUrl} src={panelUrl} title={activeMenu?.menu || pluginId} className={styles.frame} />
+            <iframe
+              key={panelUrl}
+              src={panelUrl}
+              title={activeMenu?.menu || pluginId}
+              className={styles.frame}
+            />
           </div>
         ) : null
-      ) : list && (
-        <>
-          <div className={styles.statusBar}>
-            <span className={list.plugins_supported ? styles.ready : styles.unsupported}>
-              {t(list.plugins_supported ? 'plugins.loader_ready' : 'plugins.loader_unavailable')}
-            </span>
-            <ToggleSwitch checked={list.plugins_enabled} disabled={(!list.plugins_supported && !list.plugins_enabled) || !!busy}
-              label={t('plugins.global_switch')}
-              onChange={(enabled) => void run('global', () => pluginsApi.setGlobal(enabled), t('plugins.saved'))} />
-            <span className={styles.directory} title={list.plugins_dir}>{list.plugins_dir}</span>
-          </div>
-          <div className={styles.toolbar}>
-            <div className={styles.tabs} role="tablist" aria-label={t('plugins.title')}>
-              <button type="button" role="tab" aria-selected={view === 'installed'} className={view === 'installed' ? styles.activeTab : ''}
-                onClick={() => setView('installed')}>{t('plugins.installed')}</button>
-              <button type="button" role="tab" aria-selected={view === 'store'} className={view === 'store' ? styles.activeTab : ''}
-                onClick={() => setView('store')}>{t('plugins.store')}</button>
+      ) : (
+        list && (
+          <>
+            <div className={styles.statusBar}>
+              <span className={list.plugins_supported ? styles.ready : styles.unsupported}>
+                {t(list.plugins_supported ? 'plugins.loader_ready' : 'plugins.loader_unavailable')}
+              </span>
+              <ToggleSwitch
+                checked={list.plugins_enabled}
+                disabled={(!list.plugins_supported && !list.plugins_enabled) || !!busy}
+                label={t('plugins.global_switch')}
+                onChange={(enabled) =>
+                  void run('global', () => pluginsApi.setGlobal(enabled), t('plugins.saved'))
+                }
+              />
+              <span className={styles.directory} title={list.plugins_dir}>
+                {list.plugins_dir}
+              </span>
             </div>
-            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)}
-              className={styles.search} placeholder={t('plugins.search')} aria-label={t('plugins.search')} />
-          </div>
-          {view === 'installed' ? (
-            installed.length ? <div className={styles.list}>
-              {installed.map((plugin: PluginEntry) => (
-                <div className={styles.row} key={plugin.id}>
-                  <div className={styles.info}>
-                    <strong>{plugin.metadata?.name || plugin.id}</strong>
-                    <span>{plugin.id}{plugin.metadata?.version ? ` · v${plugin.metadata.version}` : ''}</span>
-                  </div>
-                  <span className={plugin.effective_enabled ? styles.ready : styles.muted}>
-                    {t(plugin.effective_enabled ? 'plugins.running' : plugin.registered ? 'plugins.inactive' : 'plugins.not_loaded')}
-                  </span>
-                  <div className={styles.actions}>
-                    {plugin.menus.length > 0 && plugin.effective_enabled && (
-                      <Button size="sm" variant="secondary" onClick={() => navigate(`/plugins/${encodeURIComponent(plugin.id)}`)}>{t('plugins.open')}</Button>
-                    )}
-                    <ToggleSwitch checked={plugin.enabled} disabled={!!busy || (!list.plugins_supported && !plugin.enabled)}
-                      ariaLabel={t('plugins.enable_one', { name: plugin.metadata?.name || plugin.id })}
-                      onChange={(enabled) => void run(plugin.id, () => pluginsApi.setEnabled(plugin.id, enabled), t('plugins.saved'))} />
-                    <Button variant="ghost" size="sm" title={t('plugins.configure')} aria-label={t('plugins.configure')}
-                      disabled={!!busy} onClick={() => void openConfig(plugin.id)}><IconSettings size={16} /></Button>
-                    <Button variant="ghost" size="sm" title={t('plugins.remove')} aria-label={t('plugins.remove')}
-                      disabled={!!busy} onClick={() => setRemoveId(plugin.id)}><IconTrash2 size={16} /></Button>
-                  </div>
-                </div>
-              ))}
-            </div> : <div className={styles.state}>{t('plugins.no_plugins')}</div>
-          ) : (
-            <>
-              {storeError && <div className={styles.error} role="alert">{storeError} <Button variant="ghost" size="sm" onClick={() => void loadStore()}>{t('plugins.retry')}</Button></div>}
-              {storeLoading && !store ? <div className={styles.state}>{t('plugins.loading')}</div> :
-                available.length ? <div className={styles.list}>
-                  {available.map((plugin: StorePlugin) => (
-                    <div className={styles.row} key={`${plugin.source_id}:${plugin.id}`}>
-                      <div className={styles.info}>
-                        <strong>{plugin.name || plugin.id}</strong>
-                        <span>{plugin.description}</span>
-                        <small>{plugin.source_id} · v{plugin.version}</small>
+            <div className={styles.toolbar}>
+              <div className={styles.tabs} role="tablist" aria-label={t('plugins.title')}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={view === 'installed'}
+                  className={view === 'installed' ? styles.activeTab : ''}
+                  onClick={() => setView('installed')}
+                >
+                  {t('plugins.installed')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={view === 'store'}
+                  className={view === 'store' ? styles.activeTab : ''}
+                  onClick={() => setView('store')}
+                >
+                  {t('plugins.store')}
+                </button>
+              </div>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className={styles.search}
+                placeholder={t('plugins.search')}
+                aria-label={t('plugins.search')}
+              />
+            </div>
+            {view === 'installed' ? (
+              installed.length ? (
+                <div className={styles.list}>
+                  {installed.map((plugin: PluginEntry) => (
+                    <article className={styles.card} key={plugin.id}>
+                      <div className={styles.cardHeader}>
+                        <span className={styles.pluginIcon} aria-hidden="true">
+                          <IconSidebarPlugins size={22} />
+                        </span>
+                        <div className={styles.info}>
+                          <h2>{plugin.metadata?.name || plugin.id}</h2>
+                          <span className={styles.pluginId}>{plugin.id}</span>
+                        </div>
                       </div>
-                      <div className={styles.actions}>
-                        <Button variant="secondary" size="sm" disabled={!list.plugins_supported || !!busy || (plugin.installed && !plugin.update_available)}
-                          loading={busy === plugin.id}
-                          onClick={() => void run(plugin.id, () => pluginsApi.install(plugin),
-                            t(plugin.installed ? 'plugins.update_started' : 'plugins.install_started'))}>
-                          <IconDownload size={16} />{t(plugin.installed ? 'plugins.update' : 'plugins.install')}
-                        </Button>
+                      <div className={styles.badges}>
+                        {pluginVersion(plugin.metadata?.version) && (
+                          <span className={styles.badge}>
+                            {pluginVersion(plugin.metadata?.version)}
+                          </span>
+                        )}
+                        <span
+                          className={`${styles.badge} ${plugin.effective_enabled ? styles.successBadge : ''}`}
+                        >
+                          {t(
+                            plugin.effective_enabled
+                              ? 'plugins.running'
+                              : plugin.registered
+                                ? 'plugins.inactive'
+                                : 'plugins.not_loaded'
+                          )}
+                        </span>
                       </div>
-                    </div>
+                      <div className={styles.cardFooter}>
+                        <div className={styles.actions}>
+                          {plugin.menus.length > 0 && plugin.effective_enabled && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => navigate(`/plugins/${encodeURIComponent(plugin.id)}`)}
+                            >
+                              {t('plugins.open')}
+                            </Button>
+                          )}
+                          <ToggleSwitch
+                            checked={plugin.enabled}
+                            disabled={!!busy || (!list.plugins_supported && !plugin.enabled)}
+                            ariaLabel={t('plugins.enable_one', {
+                              name: plugin.metadata?.name || plugin.id,
+                            })}
+                            onChange={(enabled) =>
+                              void run(
+                                plugin.id,
+                                () => pluginsApi.setEnabled(plugin.id, enabled),
+                                t('plugins.saved')
+                              )
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={t('plugins.configure')}
+                            aria-label={t('plugins.configure')}
+                            disabled={!!busy}
+                            onClick={() => void openConfig(plugin.id)}
+                          >
+                            <IconSettings size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={t('plugins.remove')}
+                            aria-label={t('plugins.remove')}
+                            disabled={!!busy}
+                            onClick={() => setRemoveId(plugin.id)}
+                          >
+                            <IconTrash2 size={16} />
+                          </Button>
+                        </div>
+                      </div>
+                    </article>
                   ))}
-                </div> : !storeError && <div className={styles.state}>{t('plugins.no_store_plugins')}</div>}
-              {(store?.source_errors ?? []).map((error) =>
-                <div className={styles.error} key={error.source_name}>{error.source_name}: {error.message}</div>)}
-            </>
-          )}
-        </>
+                </div>
+              ) : (
+                <div className={styles.state}>{t('plugins.no_plugins')}</div>
+              )
+            ) : (
+              <>
+                {storeError && (
+                  <div className={styles.error} role="alert">
+                    {storeError}{' '}
+                    <Button variant="ghost" size="sm" onClick={() => void loadStore()}>
+                      {t('plugins.retry')}
+                    </Button>
+                  </div>
+                )}
+                {storeLoading && !store ? (
+                  <div className={styles.state}>{t('plugins.loading')}</div>
+                ) : available.length ? (
+                  <div className={styles.list}>
+                    {available.map((plugin: StorePlugin) => (
+                      <article className={styles.card} key={`${plugin.source_id}:${plugin.id}`}>
+                        <div className={styles.cardHeader}>
+                          <span className={styles.pluginIcon} aria-hidden="true">
+                            <IconSidebarPlugins size={22} />
+                          </span>
+                          <div className={styles.info}>
+                            <h2>{plugin.name || plugin.id}</h2>
+                            <span className={styles.pluginId}>{plugin.id}</span>
+                          </div>
+                        </div>
+                        <div className={styles.badges}>
+                          <span className={styles.badge}>{plugin.source_id}</span>
+                          {pluginVersion(plugin.version) && (
+                            <span className={styles.badge}>{pluginVersion(plugin.version)}</span>
+                          )}
+                          {plugin.installed && (
+                            <span className={`${styles.badge} ${styles.successBadge}`}>
+                              {t('plugins.installed')}
+                            </span>
+                          )}
+                        </div>
+                        <p className={styles.description}>{plugin.description}</p>
+                        <div className={styles.cardFooter}>
+                          <span className={styles.author}>{plugin.author}</span>
+                          <div className={styles.actions}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={
+                                !list.plugins_supported ||
+                                !!busy ||
+                                (plugin.installed && !plugin.update_available)
+                              }
+                              loading={busy === plugin.id}
+                              onClick={() =>
+                                void run(
+                                  plugin.id,
+                                  () => pluginsApi.install(plugin),
+                                  t(
+                                    plugin.installed
+                                      ? 'plugins.update_started'
+                                      : 'plugins.install_started'
+                                  )
+                                )
+                              }
+                            >
+                              {plugin.installed && !plugin.update_available ? (
+                                <IconCheck size={16} />
+                              ) : plugin.update_available ? (
+                                <IconRefreshCw size={16} />
+                              ) : (
+                                <IconDownload size={16} />
+                              )}
+                              {t(
+                                plugin.installed
+                                  ? plugin.update_available
+                                    ? 'plugins.update'
+                                    : 'plugins.installed'
+                                  : 'plugins.install'
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  !storeError && <div className={styles.state}>{t('plugins.no_store_plugins')}</div>
+                )}
+                {(store?.source_errors ?? []).map((error) => (
+                  <div className={styles.error} key={error.source_name}>
+                    {error.source_name}: {error.message}
+                  </div>
+                ))}
+              </>
+            )}
+          </>
+        )
       )}
 
-      <Modal open={!!configId} title={t('plugins.configure')} onClose={() => { if (!busy) setConfigId(''); }}
-        footer={<>
-          <Button variant="secondary" onClick={() => setConfigId('')} disabled={!!busy}>{t('plugins.cancel')}</Button>
-          <Button onClick={() => void saveConfig()} disabled={!!busy || !!configError || !configText} loading={!!busy}>{t('plugins.save')}</Button>
-        </>} width={620}>
+      <Modal
+        open={!!configId}
+        title={t('plugins.configure')}
+        onClose={() => {
+          if (!busy) setConfigId('');
+        }}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfigId('')} disabled={!!busy}>
+              {t('plugins.cancel')}
+            </Button>
+            <Button
+              onClick={() => void saveConfig()}
+              disabled={!!busy || !!configError || !configText}
+              loading={!!busy}
+            >
+              {t('plugins.save')}
+            </Button>
+          </>
+        }
+        width={620}
+      >
         <div className={styles.editor}>
           <span>{configId}</span>
-          <textarea spellCheck={false} value={configText} onChange={(event) => { setConfigText(event.target.value); setConfigError(''); }}
-            aria-label={t('plugins.configure')} rows={14} />
-          {configError && <span role="alert" className={styles.error}>{configError}</span>}
+          <textarea
+            spellCheck={false}
+            value={configText}
+            onChange={(event) => {
+              setConfigText(event.target.value);
+              setConfigError('');
+            }}
+            aria-label={t('plugins.configure')}
+            rows={14}
+          />
+          {configError && (
+            <span role="alert" className={styles.error}>
+              {configError}
+            </span>
+          )}
         </div>
       </Modal>
-      <Modal open={!!removeId} title={t('plugins.remove')} onClose={() => { if (!busy) setRemoveId(''); }}
-        footer={<>
-          <Button variant="secondary" onClick={() => setRemoveId('')} disabled={!!busy}>{t('plugins.cancel')}</Button>
-          <Button variant="danger" loading={!!busy} onClick={() => {
-            const id = removeId;
-            void run(id, () => pluginsApi.remove(id), t('plugins.removed')).then((success) => { if (success) setRemoveId(''); });
-          }}>{t('plugins.remove')}</Button>
-        </>}>
+      <Modal
+        open={!!removeId}
+        title={t('plugins.remove')}
+        onClose={() => {
+          if (!busy) setRemoveId('');
+        }}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRemoveId('')} disabled={!!busy}>
+              {t('plugins.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              loading={!!busy}
+              onClick={() => {
+                const id = removeId;
+                void run(id, () => pluginsApi.remove(id), t('plugins.removed')).then((success) => {
+                  if (success) setRemoveId('');
+                });
+              }}
+            >
+              {t('plugins.remove')}
+            </Button>
+          </>
+        }
+      >
         <p>{t('plugins.remove_confirm', { name: removeId })}</p>
       </Modal>
     </section>

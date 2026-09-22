@@ -8,7 +8,13 @@
   color: var(--text-primary);
 }
 
-.header, .headerActions, .toolbar, .statusBar, .actions, .tabs, .menuTabs {
+.header,
+.headerActions,
+.toolbar,
+.statusBar,
+.actions,
+.tabs,
+.menuTabs {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -18,10 +24,16 @@
   justify-content: space-between;
   min-height: 40px;
 
-  h1 { margin: 0; font-size: 20px; font-weight: 650; }
+  h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 650;
+  }
 }
 
-.headerActions { gap: 6px; }
+.headerActions {
+  gap: 6px;
+}
 
 .statusBar {
   flex-wrap: wrap;
@@ -32,9 +44,18 @@
   font-size: 13px;
 }
 
-.ready { color: var(--success-color, #147d5a); }
-.unsupported { color: var(--error-color, #b74732); }
-.muted, .directory, .info span, .info small { color: var(--text-secondary); }
+.ready {
+  color: var(--success-color, #147d5a);
+}
+.unsupported {
+  color: var(--error-color, #b74732);
+}
+.muted,
+.directory,
+.info span,
+.info small {
+  color: var(--text-secondary);
+}
 
 .directory {
   overflow: hidden;
@@ -45,8 +66,12 @@
   font-size: 12px;
 }
 
-.toolbar { justify-content: space-between; flex-wrap: wrap; }
-.tabs, .menuTabs {
+.toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.tabs,
+.menuTabs {
   gap: 4px;
   border-bottom: 1px solid var(--border-color);
 
@@ -74,15 +99,93 @@
   color: var(--text-primary);
 }
 
-.list { border-top: 1px solid var(--border-color); }
-.row {
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  font-size: 13px;
+  transition: border-color 150ms ease;
+
+  &:hover,
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color));
+  }
+}
+.cardHeader {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.pluginIcon {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
   min-width: 0;
-  padding: 14px 4px;
-  border-bottom: 1px solid var(--border-color);
-  font-size: 13px;
+}
+.badge {
+  padding: 3px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.successBadge {
+  color: var(--success-color, #147d5a);
+  border-color: color-mix(in srgb, var(--success-color, #147d5a) 30%, transparent);
+  background: color-mix(in srgb, var(--success-color, #147d5a) 8%, var(--bg-primary));
+}
+.description {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+.author {
+  min-width: 0;
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.pluginId {
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .info {
@@ -92,10 +195,24 @@
   gap: 4px;
   min-width: 0;
   overflow-wrap: anywhere;
-  strong { font-size: 14px; }
+  h2 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.4;
+    font-weight: 650;
+  }
 }
 
-.actions { flex: 0 0 auto; gap: 6px; }
+.actions {
+  flex: 0 1 auto;
+  gap: 6px;
+  flex-wrap: wrap;
+  :global(.btn > span) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
 .state {
   padding: 44px 16px;
   color: var(--text-secondary);
@@ -119,7 +236,12 @@
   flex-direction: column;
   min-height: 400px;
 }
-.external { position: absolute; right: 8px; top: 4px; z-index: 1; }
+.external {
+  position: absolute;
+  right: 8px;
+  top: 4px;
+  z-index: 1;
+}
 .frame {
   flex: 1;
   min-height: 400px;
@@ -148,9 +270,17 @@
 }
 
 @media (max-width: 640px) {
-  .row { flex-wrap: wrap; gap: 10px; }
-  .info { flex-basis: 100%; }
-  .actions { flex-wrap: wrap; }
-  .directory { margin-left: 0; }
-  .search { width: 100%; }
+  .list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .card {
+    padding: 16px;
+  }
+  .directory {
+    margin-left: 0;
+  }
+  .search {
+    width: 100%;
+  }
 }
