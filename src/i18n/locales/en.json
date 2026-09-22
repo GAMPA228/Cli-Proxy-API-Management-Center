@@ -1082,6 +1082,8 @@
     "auto_turn_state_missing_account": "Account unavailable",
     "auto_turn_state_retry_accounts": "Reload accounts",
     "auto_turn_state_max_chars": "Maximum characters",
+    "auto_turn_state_lifetime": "Lifetime (seconds)",
+    "auto_turn_state_lifetime_invalid": "Enter an integer from 60 to 3600 seconds",
     "auto_turn_state_load_failed": "Failed to load Turn State settings",
     "auto_turn_state_save_failed": "Failed to save Turn State settings",
     "auto_turn_state_saved": "Turn State settings saved",

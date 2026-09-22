@@ -17,6 +17,7 @@ export function AutoTurnStateControls() {
   const [status, setStatus] = useState<TurnStateAutoRules | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [maxChars, setMaxChars] = useState('292');
+  const [lifetimeSeconds, setLifetimeSeconds] = useState('3600');
   const [accountScope, setAccountScope] = useState<TurnStateAutoRules['account_scope']>('all');
   const [authIds, setAuthIds] = useState<string[]>([]);
   const [authFiles, setAuthFiles] = useState<AuthFileItem[]>([]);
@@ -69,6 +70,7 @@ export function AutoTurnStateControls() {
       setStatus(next);
       setEnabled(next.enabled);
       setMaxChars(String(next.max_chars));
+      setLifetimeSeconds(String(next.lifetime_seconds));
       setAccountScope(next.account_scope);
       setAuthIds(next.auth_ids);
     } catch {
@@ -86,15 +88,18 @@ export function AutoTurnStateControls() {
   }, [load]);
   const value = Number(maxChars);
   const valid = maxChars.trim() !== '' && Number.isInteger(value) && value >= 1 && value <= 8192;
+  const lifetime = Number(lifetimeSeconds);
+  const validLifetime = lifetimeSeconds.trim() !== '' && Number.isInteger(lifetime) && lifetime >= 60 && lifetime <= 3600;
   const dirty =
     status &&
     (enabled !== status.enabled ||
       value !== status.max_chars ||
+      lifetime !== status.lifetime_seconds ||
       accountScope !== status.account_scope ||
       authIds.length !== status.auth_ids.length ||
       authIds.some((id) => !status.auth_ids.includes(id)));
   const save = async () => {
-    if (!status || !valid || busy || changing.current) return;
+    if (!status || !valid || !validLifetime || busy || changing.current) return;
     changing.current = true;
     const current = ++generation.current;
     setBusy(true);
@@ -103,6 +108,7 @@ export function AutoTurnStateControls() {
       const next = await turnStateAutoRulesApi.save({
         enabled,
         max_chars: value,
+        lifetime_seconds: lifetime,
         account_scope: accountScope,
         auth_ids: authIds,
       });
@@ -110,6 +116,7 @@ export function AutoTurnStateControls() {
       setStatus(next);
       setEnabled(next.enabled);
       setMaxChars(String(next.max_chars));
+      setLifetimeSeconds(String(next.lifetime_seconds));
       setAccountScope(next.account_scope);
       setAuthIds(next.auth_ids);
       showNotification(t('usage_stats.auto_turn_state_saved'), 'success');
@@ -141,6 +148,19 @@ export function AutoTurnStateControls() {
           onChange={(event) => setMaxChars(event.target.value)}
         />
       </label>
+      <label className={styles.maxChars}>
+        <span>{t('usage_stats.auto_turn_state_lifetime')}</span>
+        <input
+          type="number"
+          min={60}
+          max={3600}
+          step={1}
+          value={lifetimeSeconds}
+          disabled={busy || !status}
+          aria-invalid={!validLifetime}
+          onChange={(event) => setLifetimeSeconds(event.target.value)}
+        />
+      </label>
       <Select
         className={styles.accountScope}
         ariaLabel={t('usage_stats.auto_turn_state_scope')}
@@ -157,7 +177,7 @@ export function AutoTurnStateControls() {
         size="sm"
         className={styles.settingsButton}
         loading={busy}
-        disabled={busy || (status ? !valid || !dirty : false)}
+        disabled={busy || (status ? !valid || !validLifetime || !dirty : false)}
         title={t(status ? 'common.save' : 'usage_stats.capture_refresh')}
         aria-label={t(status ? 'common.save' : 'usage_stats.capture_refresh')}
         onClick={() => void (status ? save() : load())}
@@ -194,13 +214,15 @@ export function AutoTurnStateControls() {
           )}
         </div>
       )}
-      {(error || !valid || Boolean(status?.storage_errors)) && (
+      {(error || !valid || !validLifetime || Boolean(status?.storage_errors)) && (
         <span className={styles.settingsError} role="alert">
           {error ||
             t(
               !valid
                 ? 'usage_stats.auto_turn_state_invalid'
-                : 'usage_stats.auto_turn_state_storage_errors',
+                : !validLifetime
+                  ? 'usage_stats.auto_turn_state_lifetime_invalid'
+                  : 'usage_stats.auto_turn_state_storage_errors',
               { count: status?.storage_errors }
             )}
         </span>

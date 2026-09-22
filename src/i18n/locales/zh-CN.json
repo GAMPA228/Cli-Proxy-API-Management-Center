@@ -1082,6 +1082,8 @@
     "auto_turn_state_missing_account": "账号不可用",
     "auto_turn_state_retry_accounts": "重新加载账号",
     "auto_turn_state_max_chars": "最大字符数",
+    "auto_turn_state_lifetime": "有效时间（秒）",
+    "auto_turn_state_lifetime_invalid": "请输入 60 到 3600 的整数秒数",
     "auto_turn_state_load_failed": "加载 Turn State 设置失败",
     "auto_turn_state_save_failed": "保存 Turn State 设置失败",
     "auto_turn_state_saved": "Turn State 设置已保存",

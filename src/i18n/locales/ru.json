@@ -1085,6 +1085,8 @@
     "auto_turn_state_missing_account": "Аккаунт недоступен",
     "auto_turn_state_retry_accounts": "Обновить аккаунты",
     "auto_turn_state_max_chars": "Максимум символов",
+    "auto_turn_state_lifetime": "Срок действия (секунды)",
+    "auto_turn_state_lifetime_invalid": "Введите целое число от 60 до 3600 секунд",
     "auto_turn_state_load_failed": "Не удалось загрузить настройки Turn State",
     "auto_turn_state_save_failed": "Не удалось сохранить настройки Turn State",
     "auto_turn_state_saved": "Настройки Turn State сохранены",
