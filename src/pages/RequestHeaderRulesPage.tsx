@@ -31,11 +31,13 @@ const emptyRule = (): HeaderRule => ({
   duration_minutes: 0,
 });
 
-export function RequestHeaderRulesPage() {
+export function RequestHeaderRulesPage({ readOnly = false }: { readOnly?: boolean }) {
   const { t } = useTranslation();
   const connected = useAuthStore((state) => state.connectionStatus === 'connected');
   const { showNotification, showConfirmation } = useNotificationStore();
   const [accounts, setAccounts] = useState<HeaderRuleAccount[]>([]);
+  const [serverReadOnly, setServerReadOnly] = useState(true);
+  const maintenanceReadOnly = readOnly || serverReadOnly;
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -63,15 +65,19 @@ export function RequestHeaderRulesPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await requestHeaderRulesApi.list();
+      const response = await requestHeaderRulesApi.list(readOnly);
       setAccounts(response.accounts);
+      setServerReadOnly(response.read_only);
+      if (response.read_only) setEditor(null);
       syncClock(response.server_time);
     } catch (err) {
+      setServerReadOnly(true);
+      setEditor(null);
       setError(err instanceof Error ? err.message : t('header_rules.load_failed'));
     } finally {
       setLoading(false);
     }
-  }, [connected, t]);
+  }, [connected, readOnly, t]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -92,7 +98,14 @@ export function RequestHeaderRulesPage() {
   const account = accounts.find((item) => item.auth_id === editor?.authId);
   const modelOptions = useMemo(
     () =>
-      [...new Set(accounts.flatMap((item) => [...item.models, ...item.rules.flatMap((rule) => rule.models ?? [])]))]
+      [
+        ...new Set(
+          accounts.flatMap((item) => [
+            ...item.models,
+            ...item.rules.flatMap((rule) => rule.models ?? []),
+          ])
+        ),
+      ]
         .sort()
         .map((value) => ({ value, label: value })),
     [accounts]
@@ -114,6 +127,7 @@ export function RequestHeaderRulesPage() {
     setEditorError('');
   };
   const mutate = async (input: HeaderRuleMutation) => {
+    if (maintenanceReadOnly || disabled) return;
     setBusy(true);
     setEditorError('');
     try {
@@ -132,7 +146,14 @@ export function RequestHeaderRulesPage() {
     }
   };
   const save = () => {
-    if (!editor || !account || ruleError || editor.rule.source === 'turn-state-auto') return;
+    if (
+      maintenanceReadOnly ||
+      !editor ||
+      !account ||
+      ruleError ||
+      editor.rule.source === 'turn-state-auto'
+    )
+      return;
     const { name, operation, value, models, duration_minutes } = editor.rule;
     void mutate({
       auth_id: editor.authId,
@@ -153,7 +174,7 @@ export function RequestHeaderRulesPage() {
     rule: HeaderRule,
     action: 'delete' | 'restart'
   ) => {
-    if (rule.source === 'turn-state-auto') return;
+    if (maintenanceReadOnly || rule.source === 'turn-state-auto') return;
     showConfirmation({
       title: t('header_rules.' + action),
       message: t('header_rules.' + action + '_confirm', {
@@ -166,7 +187,7 @@ export function RequestHeaderRulesPage() {
     });
   };
   const open = (account?: HeaderRuleAccount, rule?: HeaderRule) => {
-    if (rule?.source === 'turn-state-auto') return;
+    if (maintenanceReadOnly || rule?.source === 'turn-state-auto') return;
     const selected =
       account ?? accounts.find((item) => item.auth_id === accountFilter) ?? accounts[0];
     setEditorError('');
@@ -190,9 +211,11 @@ export function RequestHeaderRulesPage() {
           >
             <IconRefreshCw size={18} />
           </Button>
-          <Button disabled={disabled || !accounts.length} onClick={() => open()}>
-            {t('header_rules.add')}
-          </Button>
+          {!maintenanceReadOnly && (
+            <Button disabled={disabled || !accounts.length} onClick={() => open()}>
+              {t('header_rules.add')}
+            </Button>
+          )}
         </div>
       </div>
       <div className={styles.filters}>
@@ -286,7 +309,7 @@ export function RequestHeaderRulesPage() {
                     )}
                   </td>
                   <td>
-                    {rule.source !== 'turn-state-auto' && (
+                    {!maintenanceReadOnly && rule.source !== 'turn-state-auto' && (
                       <div className={styles.actions}>
                         <Button
                           variant="ghost"
@@ -328,7 +351,7 @@ export function RequestHeaderRulesPage() {
         </div>
       )}
       <Modal
-        open={Boolean(editor)}
+        open={!maintenanceReadOnly && Boolean(editor)}
         title={t(editor?.rule.id ? 'header_rules.edit' : 'header_rules.add')}
         width={720}
         onClose={() => setEditor(null)}

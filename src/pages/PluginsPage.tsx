@@ -136,7 +136,9 @@ export function PluginsPage() {
     try {
       setList(await pluginsApi.list());
       setListError('');
-      setConfigText(JSON.stringify(await pluginsApi.config(id), null, 2));
+      if (id !== 'codex-headers') {
+        setConfigText(JSON.stringify(await pluginsApi.config(id), null, 2));
+      }
     } catch (error) {
       setConfigError(error instanceof Error ? error.message : t('plugins.load_failed'));
     } finally {
@@ -513,10 +515,28 @@ export function PluginsPage() {
         }
         width={codexSettings ? 1120 : 620}
       >
-        {codexSettings && !configReadOnly && !busy && !configError ? (
+        {codexSettings ? (
           <div className={styles.codexSettings}>
-            <AutoTurnStateControls />
-            <RequestHeaderRulesPage />
+            {configError && (
+              <span role="alert" className={styles.error}>
+                {configError}
+              </span>
+            )}
+            {busy ? (
+              <span>{t('plugins.loading')}</span>
+            ) : (
+              <>
+                {!configReadOnly && !configError ? (
+                  <AutoTurnStateControls />
+                ) : (
+                  <span>
+                    {t('usage_stats.auto_turn_state_toggle')}:{' '}
+                    {t(configPlugin?.registered ? 'plugins.inactive' : 'plugins.not_loaded')}
+                  </span>
+                )}
+                <RequestHeaderRulesPage readOnly={configReadOnly || !!configError} />
+              </>
+            )}
           </div>
         ) : (
           <div className={styles.editor}>

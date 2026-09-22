@@ -5,11 +5,13 @@
 - Removed the standalone Header Rules navigation item. The old URL redirects to `/plugins`.
 - Reused `AutoTurnStateControls` and `RequestHeaderRulesPage` in the running
   `codex-headers` plugin's gear dialog.
-- Disabled/unloaded plugin settings display read-only configuration without maintenance controls.
+- Disabled/unloaded Codex plugin settings display readable manual rules without maintenance
+  controls. Automatic settings are unavailable; raw stored `enabled` values are not displayed.
 - Removed `/usage/turn-state-auto-rules` fallback. Reads and writes use the existing
   `/plugins/codex-headers/turn-state` endpoint after checking live plugin status.
 - Generated rules still use `/plugins/codex-headers/rules`. Manual rules retain
-  `/request-header-rules`, with a live plugin check before listing or mutation.
+  `/request-header-rules`, honor its `read_only` flag, and check live plugin status before mutation.
+  Manual reads remain available while the plugin is disabled or unloaded.
 - Capture, Turn State parsing, length display, and length export are unchanged.
 
 ## Verification (2026-09-22)
@@ -20,12 +22,16 @@
 - In-memory Node regression checks using TypeScript transpilation and a mocked
   API client: passed for active-plugin endpoint routing, default normalization,
   generated/manual rule merge, and manual rule mutation.
-- Missing, disabled, and unregistered plugin cases reject settings reads/writes
-  and rule reads/mutations after only the plugin-list request.
+- Missing, disabled, and unregistered plugin cases reject automatic settings reads/writes
+  and rule mutations. Read-only manual rule lists require only `GET /request-header-rules`.
 - Plugin-list and Turn State endpoint failures do not fall back to native writes.
-- Source-wiring assertions confirm gear-only maintenance, read-only configuration,
+- Source-wiring assertions confirm gear-only maintenance, read-only manual rules,
   removal of the standalone navigation, and retained capture/length observation.
-- Codebase index refreshed; the shared plugin guard has three callers.
+- Follow-up contract checks: explicit client read-only and missing backend `read_only`
+  fail closed; active lists still merge plugin-generated rules; disabled lists exclude
+  legacy generated rules and do not request automatic settings or plugin rules.
+- Follow-up build and focused ESLint on the three changed TS/TSX files passed.
+- Codebase index refreshed after implementation.
 
 ## Limits
 - No browser interaction or live-backend integration test was performed.

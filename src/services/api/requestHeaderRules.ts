@@ -26,11 +26,18 @@ export type HeaderRuleMutation = {
 };
 
 export const requestHeaderRulesApi = {
-  list: async () => {
+  list: async (readOnly = false) => {
+    const response = await apiClient.get<{
+      accounts: HeaderRuleAccount[];
+      server_time: string;
+      read_only: boolean;
+    }>('/request-header-rules');
+    response.read_only = readOnly || response.read_only !== false;
+    for (const account of response.accounts) {
+      account.rules = account.rules.filter((rule) => rule.source !== 'turn-state-auto');
+    }
+    if (response.read_only) return response;
     await requireEnabledPlugin('codex-headers');
-    const response = await apiClient.get<{ accounts: HeaderRuleAccount[]; server_time: string }>(
-      '/request-header-rules'
-    );
     const result = await apiClient.get<{
       rules: Array<{
         auth_id: string;
@@ -45,7 +52,6 @@ export const requestHeaderRulesApi = {
       }>;
     }>('/plugins/codex-headers/rules');
     for (const account of response.accounts) {
-      account.rules = account.rules.filter((rule) => rule.source !== 'turn-state-auto');
       for (const item of result.rules) {
         if (item.auth_id !== account.auth_id) continue;
         account.rules.push({
