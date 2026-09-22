@@ -36,6 +36,19 @@ const ALL_FILTER = '__all__';
 
 type ResultFilter = 'all' | 'success' | 'failed';
 
+const createTodayEventRange = (now = new Date()) => {
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const day = now.getDate();
+  const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return {
+    startDraft: `${date}T00:00:00`,
+    endDraft: `${date}T23:59:59`,
+    start: new Date(year, month, day).getTime(),
+    end: new Date(year, month, day + 1).getTime(),
+  };
+};
+
 const parseLocalSecond = (value: string): number | undefined => {
   if (!value) return undefined;
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
@@ -284,11 +297,12 @@ export function RequestEventsDetailsCard({
   const [authIndexFilter, setAuthIndexFilter] = useState(ALL_FILTER);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [resultDraft, setResultDraft] = useState<ResultFilter>('all');
-  const [startDraft, setStartDraft] = useState('');
-  const [endDraft, setEndDraft] = useState('');
+  const [initialRange] = useState(createTodayEventRange);
+  const [startDraft, setStartDraft] = useState(initialRange.startDraft);
+  const [endDraft, setEndDraft] = useState(initialRange.endDraft);
   const [eventFilters, setEventFilters] = useState<{
     result: ResultFilter; start?: number; end?: number;
-  }>({ result: 'all' });
+  }>({ result: 'all', start: initialRange.start, end: initialRange.end });
   const [timeErrors, setTimeErrors] = useState<{ start?: string; end?: string }>({});
   const timeFilterId = useId();
   const startInput = useRef<HTMLInputElement>(null);
