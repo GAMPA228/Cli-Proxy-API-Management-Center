@@ -23,7 +23,6 @@ import { ConfigPage } from '@/pages/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
 import { SystemPage } from '@/pages/SystemPage';
 import { ProxyNodesPage } from '@/pages/ProxyNodesPage';
-import { RequestHeaderRulesPage } from '@/pages/RequestHeaderRulesPage';
 import { PluginsPage } from '@/pages/PluginsPage';
 
 const mainRoutes = [
@@ -73,7 +72,7 @@ const mainRoutes = [
   { path: '/ai-providers', element: <AiProvidersPage /> },
   { path: '/ai-providers/*', element: <AiProvidersPage /> },
   { path: '/auth-files', element: <AuthFilesPage /> },
-  { path: '/request-header-rules', element: <RequestHeaderRulesPage /> },
+  { path: '/request-header-rules', element: <Navigate to="/plugins" replace /> },
   { path: '/plugins', element: <PluginsPage /> },
   { path: '/plugins/:pluginId', element: <PluginsPage /> },
   { path: '/auth-files/oauth-excluded', element: <AuthFilesOAuthExcludedEditPage /> },

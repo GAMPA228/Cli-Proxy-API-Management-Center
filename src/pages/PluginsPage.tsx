@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { AutoTurnStateControls } from '@/components/usage/AutoTurnStateControls';
+import { RequestHeaderRulesPage } from '@/pages/RequestHeaderRulesPage';
 import {
   IconCheck,
   IconDownload,
@@ -15,6 +17,7 @@ import {
 } from '@/components/ui/icons';
 import {
   pluginsApi,
+  requireEnabledPlugin,
   type PluginEntry,
   type PluginList,
   type PluginStore,
@@ -60,6 +63,10 @@ export function PluginsPage() {
   const [configError, setConfigError] = useState('');
   const [removeId, setRemoveId] = useState('');
   const [menuIndex, setMenuIndex] = useState(0);
+  const configPlugin = list?.plugins.find((plugin) => plugin.id === configId);
+  const configReadOnly =
+    loading || !!listError || !configPlugin?.registered || !configPlugin.effective_enabled;
+  const codexSettings = configId === 'codex-headers';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -127,6 +134,8 @@ export function PluginsPage() {
     setConfigText('');
     setBusy('config:' + id);
     try {
+      setList(await pluginsApi.list());
+      setListError('');
       setConfigText(JSON.stringify(await pluginsApi.config(id), null, 2));
     } catch (error) {
       setConfigError(error instanceof Error ? error.message : t('plugins.load_failed'));
@@ -135,6 +144,7 @@ export function PluginsPage() {
     }
   };
   const saveConfig = async () => {
+    if (configReadOnly || codexSettings || busy) return;
     let parsed: unknown;
     try {
       parsed = JSON.parse(configText);
@@ -149,7 +159,10 @@ export function PluginsPage() {
     if (
       await run(
         'config:' + configId,
-        () => pluginsApi.saveConfig(configId, parsed as Record<string, unknown>),
+        async () => {
+          await requireEnabledPlugin(configId);
+          return pluginsApi.saveConfig(configId, parsed as Record<string, unknown>);
+        },
         t('plugins.saved')
       )
     ) {
@@ -487,35 +500,48 @@ export function PluginsPage() {
             <Button variant="secondary" onClick={() => setConfigId('')} disabled={!!busy}>
               {t('plugins.cancel')}
             </Button>
-            <Button
-              onClick={() => void saveConfig()}
-              disabled={!!busy || !!configError || !configText}
-              loading={!!busy}
-            >
-              {t('plugins.save')}
-            </Button>
+            {!codexSettings && !configReadOnly && (
+              <Button
+                onClick={() => void saveConfig()}
+                disabled={!!busy || !!configError || !configText}
+                loading={!!busy}
+              >
+                {t('plugins.save')}
+              </Button>
+            )}
           </>
         }
-        width={620}
+        width={codexSettings ? 1120 : 620}
       >
-        <div className={styles.editor}>
-          <span>{configId}</span>
-          <textarea
-            spellCheck={false}
-            value={configText}
-            onChange={(event) => {
-              setConfigText(event.target.value);
-              setConfigError('');
-            }}
-            aria-label={t('plugins.configure')}
-            rows={14}
-          />
-          {configError && (
-            <span role="alert" className={styles.error}>
-              {configError}
-            </span>
-          )}
-        </div>
+        {codexSettings && !configReadOnly && !busy && !configError ? (
+          <div className={styles.codexSettings}>
+            <AutoTurnStateControls />
+            <RequestHeaderRulesPage />
+          </div>
+        ) : (
+          <div className={styles.editor}>
+            <span>{configId}</span>
+            {configReadOnly && (
+              <span>{t(configPlugin?.registered ? 'plugins.inactive' : 'plugins.not_loaded')}</span>
+            )}
+            <textarea
+              readOnly={configReadOnly || codexSettings || !!busy}
+              spellCheck={false}
+              value={configText}
+              onChange={(event) => {
+                setConfigText(event.target.value);
+                setConfigError('');
+              }}
+              aria-label={t('plugins.configure')}
+              rows={14}
+            />
+            {configError && (
+              <span role="alert" className={styles.error}>
+                {configError}
+              </span>
+            )}
+          </div>
+        )}
       </Modal>
       <Modal
         open={!!removeId}

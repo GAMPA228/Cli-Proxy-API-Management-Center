@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CaptureControls, CaptureViewer } from './UpstreamCapture';
-import { AutoTurnStateControls } from './AutoTurnStateControls';
 import captureStyles from './UpstreamCapture.module.scss';
 import { IconEye } from '@/components/ui/icons';
 import { useTranslation } from 'react-i18next';
@@ -805,7 +804,6 @@ export function RequestEventsDetailsCard({
     <Card title={t('usage_stats.request_events_title')}>
       <div className={`${captureStyles.controlRow} ${styles.requestEventsCaptureControls}`}>
         <CaptureControls onRefresh={refreshCaptured} />
-        <AutoTurnStateControls />
       </div>
       <CaptureViewer captureID={captureID} onClose={() => setCaptureID(null)} />
       <div className={styles.requestEventsTopBar}>

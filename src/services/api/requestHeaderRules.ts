@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { pluginsApi } from './plugins';
+import { requireEnabledPlugin } from './plugins';
 import type { RequestHeaderRule } from '@/features/authFiles/requestHeaderRules';
 
 export type HeaderRule = RequestHeaderRule & {
@@ -27,33 +27,50 @@ export type HeaderRuleMutation = {
 
 export const requestHeaderRulesApi = {
   list: async () => {
-    const response = await apiClient.get<{ accounts: HeaderRuleAccount[]; server_time: string }>('/request-header-rules');
-    const { plugins } = await pluginsApi.list();
-    if (!plugins.some((plugin) => plugin.id === 'codex-headers' && plugin.effective_enabled)) return response;
-    const result = await apiClient.get<{ rules: Array<{
-      auth_id: string; id: string; model: string; value: string;
-      issued_at: string; expires_at: string; active: boolean;
-      account_enabled: boolean; duration_minutes: number;
-    }> }>('/plugins/codex-headers/rules');
+    await requireEnabledPlugin('codex-headers');
+    const response = await apiClient.get<{ accounts: HeaderRuleAccount[]; server_time: string }>(
+      '/request-header-rules'
+    );
+    const result = await apiClient.get<{
+      rules: Array<{
+        auth_id: string;
+        id: string;
+        model: string;
+        value: string;
+        issued_at: string;
+        expires_at: string;
+        active: boolean;
+        account_enabled: boolean;
+        duration_minutes: number;
+      }>;
+    }>('/plugins/codex-headers/rules');
     for (const account of response.accounts) {
       account.rules = account.rules.filter((rule) => rule.source !== 'turn-state-auto');
       for (const item of result.rules) {
         if (item.auth_id !== account.auth_id) continue;
         account.rules.push({
-          id: item.id, source: 'turn-state-auto',
-          name: 'X-Codex-Turn-State', operation: 'override', value: item.value,
-          models: [item.model], duration_minutes: item.duration_minutes,
-          expires_at: item.expires_at, issued_at: item.issued_at,
-          active: item.active, account_enabled: item.account_enabled,
+          id: item.id,
+          source: 'turn-state-auto',
+          name: 'X-Codex-Turn-State',
+          operation: 'override',
+          value: item.value,
+          models: [item.model],
+          duration_minutes: item.duration_minutes,
+          expires_at: item.expires_at,
+          issued_at: item.issued_at,
+          active: item.active,
+          account_enabled: item.account_enabled,
         });
         if (!account.models.includes(item.model)) account.models.push(item.model);
       }
     }
     return response;
   },
-  mutate: (input: HeaderRuleMutation) =>
-    apiClient.post<{ account: HeaderRuleAccount; server_time: string }>(
+  mutate: async (input: HeaderRuleMutation) => {
+    await requireEnabledPlugin('codex-headers');
+    return apiClient.post<{ account: HeaderRuleAccount; server_time: string }>(
       '/request-header-rules',
       input
-    ),
+    );
+  },
 };

@@ -284,3 +284,9 @@
     width: 100%;
   }
 }
+.codexSettings {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}

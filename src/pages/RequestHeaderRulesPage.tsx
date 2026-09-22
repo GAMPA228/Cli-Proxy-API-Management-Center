@@ -179,7 +179,7 @@ export function RequestHeaderRulesPage() {
   return (
     <div className={styles.page}>
       <div className={styles.heading}>
-        <h1>{t('header_rules.title')}</h1>
+        <h2>{t('header_rules.title')}</h2>
         <div className={styles.actions}>
           <Button
             variant="secondary"

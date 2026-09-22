@@ -43,6 +43,15 @@ interface PluginInstallResult {
 
 const idPath = (id: string) => `/plugins/${encodeURIComponent(id)}`;
 
+export async function requireEnabledPlugin(id: string): Promise<void> {
+  const { plugins } = await pluginsApi.list();
+  if (
+    !plugins.some((plugin) => plugin.id === id && plugin.registered && plugin.effective_enabled)
+  ) {
+    throw new Error(`Plugin ${id} is not running`);
+  }
+}
+
 export const pluginsApi = {
   list: () => apiClient.get<PluginList>('/plugins'),
   store: () => apiClient.get<PluginStore>('/plugin-store'),
