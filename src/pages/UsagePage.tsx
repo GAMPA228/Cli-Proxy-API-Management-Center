@@ -18,6 +18,7 @@ import { Select } from '@/components/ui/Select';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useThemeStore, useConfigStore } from '@/stores';
+import { usageApi } from '@/services/api/usage';
 import {
   StatCards,
   UsageChart,
@@ -32,6 +33,7 @@ import {
   CostTrendChart,
   ServiceHealthCard,
   useUsageData,
+  type UsagePayload,
   useUsageDetailSnapshot,
   useSparklines,
   useChartData
@@ -164,6 +166,42 @@ export function UsagePage() {
 
   const hasPrices = Object.keys(modelPrices).length > 0;
   const nowMs = lastRefreshedAt?.getTime() ?? 0;
+  const [recentUsage, setRecentUsage] = useState<{ refreshedAt: number; usage: UsagePayload } | null>(null);
+  useEffect(() => {
+    if (!nowMs || !usage) return;
+    let cancelled = false;
+
+    const loadRecentUsage = async () => {
+      const details = [];
+      let page = 1;
+      try {
+        while (true) {
+          const response = await usageApi.getUsageDetails({
+            start_time: new Date(nowMs - 60 * 60 * 1000).toISOString(),
+            end_time: new Date(nowMs + 1).toISOString(),
+            page,
+            page_size: 1000
+          });
+          const items = response.items ?? [];
+          details.push(...items.filter((item) => item.timestamp));
+          if (!response.has_more || items.length === 0) break;
+          page += 1;
+        }
+        if (!cancelled) {
+          setRecentUsage({
+            refreshedAt: nowMs,
+            usage: { apis: { recent: { models: { all: { details } } } } }
+          });
+        }
+      } catch {
+        if (!cancelled) setRecentUsage(null);
+      }
+    };
+
+    void loadRecentUsage();
+    return () => { cancelled = true; };
+  }, [nowMs, usage]);
+  const rateUsage = recentUsage?.refreshedAt === nowMs ? recentUsage.usage : null;
   const { usage: aggregateUsage, loading: aggregateUsageLoading } = useUsageDetailSnapshot({
     enabled: Boolean(usage && (hasPrices || timeRange !== 'all')),
     range: timeRange,
@@ -224,7 +262,7 @@ export function UsagePage() {
     rpmSparkline,
     tpmSparkline,
     costSparkline
-  } = useSparklines({ usage: analysisUsage, loading: analysisLoading, nowMs });
+  } = useSparklines({ usage: rateUsage, loading: loading || !rateUsage, nowMs });
 
   // Chart data hook
   const {
@@ -329,6 +367,7 @@ export function UsagePage() {
 
       <StatCards
         usage={analysisUsage}
+        rateUsage={rateUsage}
         loading={analysisLoading}
         costLoading={analysisLoading}
         costUsage={analysisUsage}

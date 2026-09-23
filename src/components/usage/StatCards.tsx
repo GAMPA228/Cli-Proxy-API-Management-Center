@@ -31,6 +31,7 @@ interface StatCardData {
 
 export interface StatCardsProps {
   usage: UsagePayload | null;
+  rateUsage: UsagePayload | null;
   loading: boolean;
   costLoading?: boolean;
   costUsage?: UsagePayload | null;
@@ -45,7 +46,7 @@ export interface StatCardsProps {
   };
 }
 
-export function StatCards({ usage, loading, costLoading = false, costUsage, modelPrices, nowMs, sparklines }: StatCardsProps) {
+export function StatCards({ usage, rateUsage, loading, costLoading = false, costUsage, modelPrices, nowMs, sparklines }: StatCardsProps) {
   const { t } = useTranslation();
 
   const hasPrices = Object.keys(modelPrices).length > 0;
@@ -58,7 +59,6 @@ export function StatCards({ usage, loading, costLoading = false, costUsage, mode
 
     if (!usage) return empty;
     const details = collectUsageDetails(usage);
-    if (!details.length) return empty;
 
     let cachedTokens = 0;
     let reasoningTokens = 0;
@@ -80,6 +80,9 @@ export function StatCards({ usage, loading, costLoading = false, costUsage, mode
         reasoningTokens += tokens.reasoning_tokens;
       }
 
+    });
+
+    collectUsageDetails(rateUsage).forEach((detail) => {
       const timestamp = detail.__timestampMs ?? 0;
       if (hasValidNow && Number.isFinite(timestamp) && timestamp >= windowStart && timestamp <= now) {
         requestCount += detail.__requestCount ?? 1;
@@ -98,7 +101,7 @@ export function StatCards({ usage, loading, costLoading = false, costUsage, mode
         tokenCount
       }
     };
-  }, [nowMs, usage]);
+  }, [nowMs, rateUsage, usage]);
 
   const totalCost = useMemo(() => {
     const source = costUsage ?? usage;
@@ -158,10 +161,10 @@ export function StatCards({ usage, loading, costLoading = false, costUsage, mode
       accent: USAGE_STAT_CARD_ACCENTS.rpm.accent,
       accentSoft: USAGE_STAT_CARD_ACCENTS.rpm.accentSoft,
       accentBorder: USAGE_STAT_CARD_ACCENTS.rpm.accentBorder,
-      value: loading ? '-' : formatPerMinuteValue(rateStats.rpm),
+      value: loading || !rateUsage ? '-' : formatPerMinuteValue(rateStats.rpm),
       meta: (
         <span className={styles.statMetaItem}>
-          {t('usage_stats.total_requests')}: {loading ? '-' : rateStats.requestCount.toLocaleString()}
+          {t('usage_stats.total_requests')}: {loading || !rateUsage ? '-' : rateStats.requestCount.toLocaleString()}
         </span>
       ),
       trend: sparklines.rpm
@@ -173,10 +176,10 @@ export function StatCards({ usage, loading, costLoading = false, costUsage, mode
       accent: USAGE_STAT_CARD_ACCENTS.tpm.accent,
       accentSoft: USAGE_STAT_CARD_ACCENTS.tpm.accentSoft,
       accentBorder: USAGE_STAT_CARD_ACCENTS.tpm.accentBorder,
-      value: loading ? '-' : formatPerMinuteValue(rateStats.tpm),
+      value: loading || !rateUsage ? '-' : formatPerMinuteValue(rateStats.tpm),
       meta: (
         <span className={styles.statMetaItem}>
-          {t('usage_stats.total_tokens')}: {loading ? '-' : formatCompactNumber(rateStats.tokenCount)}
+          {t('usage_stats.total_tokens')}: {loading || !rateUsage ? '-' : formatCompactNumber(rateStats.tokenCount)}
         </span>
       ),
       trend: sparklines.tpm
