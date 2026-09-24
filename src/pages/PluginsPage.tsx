@@ -18,6 +18,7 @@ import {
 import {
   pluginsApi,
   requireEnabledPlugin,
+  type ExternalPluginUpdate,
   type PluginEntry,
   type PluginList,
   type PluginStore,
@@ -56,6 +57,8 @@ export function PluginsPage() {
   const [listError, setListError] = useState('');
   const [storeError, setStoreError] = useState('');
   const [busy, setBusy] = useState('');
+  const [externalUpdates, setExternalUpdates] = useState<Record<string, ExternalPluginUpdate>>({});
+  const [stagedUpdates, setStagedUpdates] = useState<Record<string, boolean>>({});
   const [view, setView] = useState<'installed' | 'store'>('installed');
   const [query, setQuery] = useState('');
   const [configId, setConfigId] = useState('');
@@ -124,6 +127,35 @@ export function PluginsPage() {
       return false;
     } finally {
       setBusy('');
+    }
+  };
+
+  const checkExternalUpdate = async (id: string) => {
+    if (busy) return;
+    setBusy('check:' + id);
+    setExternalUpdates((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+    try {
+      const update = await pluginsApi.checkExternalUpdate(id);
+      setExternalUpdates((current) => ({ ...current, [id]: update }));
+      if (!update.supported) {
+        showNotification(update.message || t('plugins.update_unsupported'), 'warning');
+      } else if (!update.update_available) {
+        showNotification(t('plugins.up_to_date'), 'success');
+      }
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : t('plugins.action_failed'), 'error');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const updateExternal = async (id: string) => {
+    if (await run('update:' + id, () => pluginsApi.updateExternal(id), t('plugins.update_started'))) {
+      setStagedUpdates((current) => ({ ...current, [id]: true }));
     }
   };
 
@@ -342,9 +374,42 @@ export function PluginsPage() {
                                 : 'plugins.not_loaded'
                           )}
                         </span>
+                        {externalUpdates[plugin.id]?.update_available && !stagedUpdates[plugin.id] && (
+                          <span className={`${styles.badge} ${styles.successBadge}`}>
+                            {t('plugins.new_version', { version: pluginVersion(externalUpdates[plugin.id].latest_version) })}
+                          </span>
+                        )}
+                        {stagedUpdates[plugin.id] && (
+                          <span className={styles.badge}>{t('plugins.restart_to_activate')}</span>
+                        )}
                       </div>
                       <div className={styles.cardFooter}>
                         <div className={styles.actions}>
+                          {!plugin.store_managed && plugin.registered && plugin.metadata?.github_repository && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={!!busy || !!stagedUpdates[plugin.id]}
+                                loading={busy === 'check:' + plugin.id}
+                                onClick={() => void checkExternalUpdate(plugin.id)}
+                              >
+                                <IconRefreshCw size={16} />
+                                {t('plugins.check_update')}
+                              </Button>
+                              {externalUpdates[plugin.id]?.update_available && !stagedUpdates[plugin.id] && (
+                                <Button
+                                  size="sm"
+                                  disabled={!!busy}
+                                  loading={busy === 'update:' + plugin.id}
+                                  onClick={() => void updateExternal(plugin.id)}
+                                >
+                                  <IconDownload size={16} />
+                                  {t('plugins.update')}
+                                </Button>
+                              )}
+                            </>
+                          )}
                           {plugin.menus.length > 0 && plugin.effective_enabled && (
                             <Button
                               size="sm"
