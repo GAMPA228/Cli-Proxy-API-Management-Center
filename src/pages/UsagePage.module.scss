@@ -1881,6 +1881,31 @@
   white-space: nowrap;
 }
 
+.requestEventsErrorButton {
+  cursor: pointer;
+  font-family: inherit;
+  &:hover { text-decoration: underline; }
+  &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+}
+
+.requestErrorDetail {
+  display: grid;
+  gap: 10px;
+  font-size: 13px;
+  pre {
+    max-height: min(60vh, 600px);
+    margin: 0;
+    padding: 14px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+  }
+}
+
 .chartLineHeader {
   display: inline-flex;
   align-items: center;

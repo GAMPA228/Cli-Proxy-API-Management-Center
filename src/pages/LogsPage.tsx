@@ -23,7 +23,7 @@ import {
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
-import { logsApi } from '@/services/api/logs';
+import { logsApi, type LogsQuery } from '@/services/api/logs';
 import { copyToClipboard } from '@/utils/clipboard';
 import { downloadBlob } from '@/utils/download';
 import { MANAGEMENT_API_PREFIX } from '@/utils/constants';
@@ -80,6 +80,12 @@ export function LogsPage() {
   const [error, setError] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [rangeStartDraft, setRangeStartDraft] = useState('');
+  const [rangeEndDraft, setRangeEndDraft] = useState('');
+  const [rangeError, setRangeError] = useState('');
+  const [appliedRange, setAppliedRange] = useState<{ start?: number; end?: number }>({});
+  const appliedRangeRef = useRef(appliedRange);
+  appliedRangeRef.current = appliedRange;
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [hideManagementLogs, setHideManagementLogs] = useState(true);
   const [showRawLogs, setShowRawLogs] = useState(false);
@@ -143,8 +149,13 @@ export function LogsPage() {
         scrollerInstance?.requestScrollToBottom();
       }
 
-      const params =
-        incremental && latestTimestampRef.current > 0 ? { after: latestTimestampRef.current } : {};
+      const params: LogsQuery = { limit: 2000 };
+      if (incremental && latestTimestampRef.current > 0) {
+        params.after = latestTimestampRef.current;
+      } else if (appliedRangeRef.current.start !== undefined) {
+        params.after = appliedRangeRef.current.start - 1;
+      }
+      if (appliedRangeRef.current.end !== undefined) params.before = appliedRangeRef.current.end;
       const data = await logsApi.fetchLogs(params);
 
       // 更新时间戳
@@ -194,6 +205,20 @@ export function LogsPage() {
   };
 
   useHeaderRefresh(() => loadLogs(false));
+
+  const applyTimeRange = () => {
+    const start = rangeStartDraft ? Math.floor(new Date(rangeStartDraft).getTime() / 1000) : undefined;
+    const end = rangeEndDraft ? Math.floor(new Date(rangeEndDraft).getTime() / 1000) : undefined;
+    if ((start !== undefined && !Number.isFinite(start)) || (end !== undefined && !Number.isFinite(end)) ||
+        (start !== undefined && end !== undefined && start > end)) {
+      setRangeError(t('logs.time_range_invalid', { defaultValue: 'Invalid time range' }));
+      return;
+    }
+    setRangeError('');
+    setAutoRefresh(false);
+    latestTimestampRef.current = 0;
+    setAppliedRange({ start, end });
+  };
 
   const clearLogs = async () => {
     showConfirmation({
@@ -268,7 +293,7 @@ export function LogsPage() {
       loadLogs(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionStatus]);
+  }, [connectionStatus, appliedRange]);
 
   useEffect(() => {
     if (activeTab !== 'errors') return;
@@ -485,6 +510,32 @@ export function LogsPage() {
             {error && <div className="error-box">{error}</div>}
 
             <div className={styles.filters}>
+              <div className={styles.timeRangeFilter}>
+                <label>
+                  <span>{t('logs.time_from', { defaultValue: 'From' })}</span>
+                  <input type="datetime-local" step="1" value={rangeStartDraft} onChange={(event) => setRangeStartDraft(event.target.value)} />
+                </label>
+                <label>
+                  <span>{t('logs.time_to', { defaultValue: 'To' })}</span>
+                  <input type="datetime-local" step="1" value={rangeEndDraft} onChange={(event) => setRangeEndDraft(event.target.value)} />
+                </label>
+                <Button size="sm" variant="secondary" onClick={applyTimeRange} disabled={disableControls}>
+                  <IconSearch size={16} />
+                  {t('logs.time_search', { defaultValue: 'Search' })}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => {
+                  setRangeStartDraft('');
+                  setRangeEndDraft('');
+                  setRangeError('');
+                  latestTimestampRef.current = 0;
+                  setAppliedRange({});
+                }} disabled={disableControls || (!rangeStartDraft && !rangeEndDraft && !appliedRange.start && !appliedRange.end)}
+                  title={t('logs.time_clear', { defaultValue: 'Clear time range' })}
+                  aria-label={t('logs.time_clear', { defaultValue: 'Clear time range' })}>
+                  <IconX size={16} />
+                </Button>
+                {rangeError && <span className={styles.timeRangeError} role="alert">{rangeError}</span>}
+              </div>
               <div className={styles.searchWrapper}>
                 <Input
                   value={searchQuery}
@@ -666,7 +717,7 @@ export function LogsPage() {
                 <ToggleSwitch
                   checked={autoRefresh}
                   onChange={(value) => setAutoRefresh(value)}
-                  disabled={disableControls}
+                  disabled={disableControls || appliedRange.end !== undefined}
                   label={
                     <span className={styles.switchLabel}>
                       <IconTimer size={16} />

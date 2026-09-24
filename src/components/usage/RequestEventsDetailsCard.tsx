@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { CountTooltipCell } from '@/components/providers/CountTooltipCell';
 import { authFilesApi } from '@/services/api/authFiles';
@@ -92,6 +93,8 @@ type RequestEventRow = {
   proxyEndpoint: string;
   proxyDisplay: string;
   failed: boolean;
+  errorStatus: number;
+  errorMessage: string;
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;
@@ -267,6 +270,8 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
       total_tokens: Math.max(toNumber(tokens.total_tokens), 0),
     },
     failed: row.failed === true,
+    error_status: typeof row.error_status === 'number' ? row.error_status : 0,
+    error_message: typeof row.error_message === 'string' ? row.error_message : '',
     reasoning_effort: typeof row.reasoning_effort === 'string' ? row.reasoning_effort : '',
     service_tier: typeof row.service_tier === 'string' ? row.service_tier : '',
     applied_service_tier:
@@ -310,6 +315,7 @@ export function RequestEventsDetailsCard({
   const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
   const [page, setPage] = useState(1);
   const [captureID, setCaptureID] = useState<string | null>(null);
+  const [selectedError, setSelectedError] = useState<RequestEventRow | null>(null);
   const [captureRefresh, setCaptureRefresh] = useState(0);
   const refreshCaptured = useCallback(() => setCaptureRefresh((value) => value + 1), []);
   const [pageSize, setPageSize] = useState(10);
@@ -510,6 +516,8 @@ export function RequestEventsDetailsCard({
         proxyEndpoint,
         proxyDisplay,
         failed: detail.failed === true,
+        errorStatus: typeof detail.error_status === 'number' ? detail.error_status : 0,
+        errorMessage: typeof detail.error_message === 'string' ? detail.error_message : '',
         inputTokens,
         outputTokens,
         reasoningTokens,
@@ -820,6 +828,20 @@ export function RequestEventsDetailsCard({
         <CaptureControls onRefresh={refreshCaptured} />
       </div>
       <CaptureViewer captureID={captureID} onClose={() => setCaptureID(null)} />
+      <Modal
+        open={Boolean(selectedError)}
+        title={t('usage_stats.request_error_title', { defaultValue: 'Request error' })}
+        onClose={() => setSelectedError(null)}
+        width={760}
+      >
+        {selectedError && (
+          <div className={styles.requestErrorDetail}>
+            <div>{selectedError.timestampLabel} · {selectedError.model}</div>
+            {selectedError.errorStatus > 0 && <div>HTTP {selectedError.errorStatus}</div>}
+            <pre>{selectedError.errorMessage || t('usage_stats.request_error_unavailable', { defaultValue: 'This request has no saved error detail.' })}</pre>
+          </div>
+        )}
+      </Modal>
       <div className={styles.requestEventsTopBar}>
         <div className={styles.requestEventsToolbar}>
           <div className={`${styles.requestEventsFilterItem} ${styles.requestEventsSearchItem}`}>
@@ -1125,11 +1147,18 @@ export function RequestEventsDetailsCard({
                       {row.authIndex}
                     </td>
                     <td className={styles.tableCellStatus}>
-                      <span
-                        className={row.failed ? styles.requestEventsResultFailed : styles.requestEventsResultSuccess}
-                      >
-                        {row.failed ? t('stats.failure') : t('stats.success')}
-                      </span>
+                      {row.failed ? (
+                        <button
+                          type="button"
+                          className={`${styles.requestEventsResultFailed} ${styles.requestEventsErrorButton}`}
+                          onClick={() => setSelectedError(row)}
+                          title={t('usage_stats.request_error_view', { defaultValue: 'View error detail' })}
+                        >
+                          {t('stats.failure')}
+                        </button>
+                      ) : (
+                        <span className={styles.requestEventsResultSuccess}>{t('stats.success')}</span>
+                      )}
                     </td>
                     <td className={styles.tableCellStatus}>
                       {row.captureID ? (

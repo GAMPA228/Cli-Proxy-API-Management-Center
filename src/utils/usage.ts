@@ -67,6 +67,8 @@ export interface UsageDetail {
     total_tokens: number;
   };
   failed: boolean;
+  error_status?: number;
+  error_message?: string;
   reasoning_effort?: string;
   service_tier?: string;
   applied_service_tier?: string;

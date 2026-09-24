@@ -55,6 +55,8 @@ export interface UsageDetailRow {
   response_model?: string;
   tokens?: UsageDetailTokens;
   failed?: boolean;
+  error_status?: number;
+  error_message?: string;
 }
 
 export interface UsageDetailsQuery {
