@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { CountTooltipCell } from '@/components/providers/CountTooltipCell';
 import { authFilesApi } from '@/services/api/authFiles';
 import { usageApi, type UsageDetailRow } from '@/services/api/usage';
+import { logsApi } from '@/services/api/logs';
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@/types';
 import type { AuthFileItem } from '@/types/authFile';
 import type { CredentialInfo } from '@/types/sourceInfo';
@@ -95,6 +96,7 @@ type RequestEventRow = {
   failed: boolean;
   errorStatus: number;
   errorMessage: string;
+  requestID: string;
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;
@@ -272,6 +274,7 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
     failed: row.failed === true,
     error_status: typeof row.error_status === 'number' ? row.error_status : 0,
     error_message: typeof row.error_message === 'string' ? row.error_message : '',
+    request_id: typeof row.request_id === 'string' ? row.request_id : '',
     reasoning_effort: typeof row.reasoning_effort === 'string' ? row.reasoning_effort : '',
     service_tier: typeof row.service_tier === 'string' ? row.service_tier : '',
     applied_service_tier:
@@ -316,6 +319,22 @@ export function RequestEventsDetailsCard({
   const [page, setPage] = useState(1);
   const [captureID, setCaptureID] = useState<string | null>(null);
   const [selectedError, setSelectedError] = useState<RequestEventRow | null>(null);
+  const [errorLogLines, setErrorLogLines] = useState<string[] | null>(null);
+  const [errorLogError, setErrorLogError] = useState('');
+
+  useEffect(() => {
+    const requestID = selectedError?.requestID;
+    if (!requestID) return;
+    let cancelled = false;
+    logsApi.fetchLogs({ request_id: requestID, limit: 2000 })
+      .then((response) => {
+        if (!cancelled) setErrorLogLines(Array.isArray(response.lines) ? response.lines : []);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setErrorLogError(error instanceof Error ? error.message : String(error));
+      });
+    return () => { cancelled = true; };
+  }, [selectedError?.requestID]);
   const [captureRefresh, setCaptureRefresh] = useState(0);
   const refreshCaptured = useCallback(() => setCaptureRefresh((value) => value + 1), []);
   const [pageSize, setPageSize] = useState(10);
@@ -518,6 +537,7 @@ export function RequestEventsDetailsCard({
         failed: detail.failed === true,
         errorStatus: typeof detail.error_status === 'number' ? detail.error_status : 0,
         errorMessage: typeof detail.error_message === 'string' ? detail.error_message : '',
+        requestID: typeof detail.request_id === 'string' ? detail.request_id : '',
         inputTokens,
         outputTokens,
         reasoningTokens,
@@ -839,6 +859,14 @@ export function RequestEventsDetailsCard({
             <div>{selectedError.timestampLabel} · {selectedError.model}</div>
             {selectedError.errorStatus > 0 && <div>HTTP {selectedError.errorStatus}</div>}
             <pre>{selectedError.errorMessage || t('usage_stats.request_error_unavailable', { defaultValue: 'This request has no saved error detail.' })}</pre>
+            <strong>{t('usage_stats.request_error_logs', { defaultValue: 'Request logs' })}</strong>
+            {errorLogError ? (
+              <div>{errorLogError}</div>
+            ) : errorLogLines === null && selectedError.requestID ? (
+              <div>{t('common.loading')}</div>
+            ) : (
+              <pre>{errorLogLines?.length ? errorLogLines.join('\n') : t('usage_stats.request_error_logs_unavailable', { defaultValue: 'No request logs are available.' })}</pre>
+            )}
           </div>
         )}
       </Modal>
@@ -1151,7 +1179,11 @@ export function RequestEventsDetailsCard({
                         <button
                           type="button"
                           className={`${styles.requestEventsResultFailed} ${styles.requestEventsErrorButton}`}
-                          onClick={() => setSelectedError(row)}
+                          onClick={() => {
+                            setErrorLogLines(null);
+                            setErrorLogError('');
+                            setSelectedError(row);
+                          }}
                           title={t('usage_stats.request_error_view', { defaultValue: 'View error detail' })}
                         >
                           {t('stats.failure')}

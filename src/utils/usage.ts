@@ -69,6 +69,7 @@ export interface UsageDetail {
   failed: boolean;
   error_status?: number;
   error_message?: string;
+  request_id?: string;
   reasoning_effort?: string;
   service_tier?: string;
   applied_service_tier?: string;

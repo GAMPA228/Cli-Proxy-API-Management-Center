@@ -9,6 +9,7 @@ export interface LogsQuery {
   after?: number;
   before?: number;
   limit?: number;
+  request_id?: string;
 }
 
 export interface LogsResponse {

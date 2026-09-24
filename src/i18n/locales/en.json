@@ -1215,6 +1215,8 @@
     "request_events_title": "Request Events",
     "request_error_title": "Request Error",
     "request_error_view": "View error detail",
+    "request_error_logs": "Request logs",
+    "request_error_logs_unavailable": "Logs have expired, file logging is disabled, or this request has no ID.",
     "request_error_unavailable": "No error detail was saved for this request.",
     "request_events_filter_model": "Model",
     "request_events_filter_search": "Search",

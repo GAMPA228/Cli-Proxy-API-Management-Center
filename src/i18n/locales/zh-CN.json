@@ -1215,6 +1215,8 @@
     "request_events_title": "请求事件明细",
     "request_error_title": "请求错误详情",
     "request_error_view": "查看错误详情",
+    "request_error_logs": "本次请求日志",
+    "request_error_logs_unavailable": "日志已轮转、文件日志未开启，或这条历史请求没有请求 ID",
     "request_error_unavailable": "这条历史请求没有保存错误详情",
     "request_events_filter_model": "模型",
     "request_events_filter_source": "来源",

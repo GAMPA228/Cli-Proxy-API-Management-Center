@@ -57,6 +57,7 @@ export interface UsageDetailRow {
   failed?: boolean;
   error_status?: number;
   error_message?: string;
+  request_id?: string;
 }
 
 export interface UsageDetailsQuery {
