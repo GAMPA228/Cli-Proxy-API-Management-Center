@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +26,7 @@ import {
 } from '@/services/api/plugins';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import { normalizeApiBase } from '@/utils/connection';
+import { attachPluginAuthBridge } from '@/utils/pluginAuthBridge';
 import styles from './PluginsPage.module.scss';
 
 function resourcePath(id: string, path: string): string | null {
@@ -48,6 +49,9 @@ export function PluginsPage() {
   const { pluginId } = useParams<{ pluginId?: string }>();
   const navigate = useNavigate();
   const apiBase = useAuthStore((state) => state.apiBase);
+  const managementKey = useAuthStore((state) => state.managementKey);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const panelFrame = useRef<HTMLIFrameElement>(null);
   const showNotification = useNotificationStore((state) => state.showNotification);
   const [list, setList] = useState<PluginList | null>(null);
   const [store, setStore] = useState<PluginStore | null>(null);
@@ -209,6 +213,11 @@ export function PluginsPage() {
   const panelUrl = path
     ? new URL(path, normalizeApiBase(apiBase) || window.location.origin).href
     : '';
+  useEffect(() => {
+    const frame = panelFrame.current;
+    if (!frame || !panelUrl || !activePlugin?.effective_enabled) return;
+    return attachPluginAuthBridge(frame, panelUrl, activePlugin.id, () => useAuthStore.getState());
+  }, [panelUrl, activePlugin?.id, activePlugin?.effective_enabled, managementKey, isAuthenticated]);
   const installed = useMemo(
     () =>
       (list?.plugins ?? []).filter((plugin) =>
@@ -287,6 +296,7 @@ export function PluginsPage() {
               <IconExternalLink size={16} />
             </Button>
             <iframe
+              ref={panelFrame}
               key={panelUrl}
               src={panelUrl}
               title={activeMenu?.menu || pluginId}
