@@ -36,6 +36,8 @@ export type UseAuthFilesDataResult = {
   priorityUpdating: Record<string, boolean>;
   fileInputRef: RefObject<HTMLInputElement | null>;
   loadFiles: () => Promise<void>;
+  refreshFiles: () => Promise<void>;
+  filesObservedAt: number;
   handleUploadClick: () => void;
   handleFileChange: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleDelete: (name: string) => void;
@@ -77,6 +79,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const { showNotification, showConfirmation } = useNotificationStore();
 
   const [files, setFiles] = useState<AuthFileItem[]>([]);
+  const [filesObservedAt, setFilesObservedAt] = useState(0);
+  const filesRequest = useRef(0);
+  const refreshingFiles = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -130,16 +135,39 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   }, [files, selectedFiles.size]);
 
   const loadFiles = useCallback(async () => {
+    const request = ++filesRequest.current;
     setLoading(true);
     setError('');
     try {
       const data = await authFilesApi.list();
-      setFiles(data?.files || []);
+      if (request === filesRequest.current) {
+        setFiles(data?.files || []);
+        setFilesObservedAt(Date.now());
+      }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : t('notification.refresh_failed');
       setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  }, [t]);
+
+  const refreshFiles = useCallback(async () => {
+    if (refreshingFiles.current) return;
+    refreshingFiles.current = true;
+    const request = ++filesRequest.current;
+    try {
+      const data = await authFilesApi.list();
+      if (request !== filesRequest.current) return;
+      setFiles(data?.files || []);
+      setFilesObservedAt(Date.now());
+      setError('');
+    } catch (err: unknown) {
+      if (request === filesRequest.current) {
+        setError(err instanceof Error ? err.message : t('notification.refresh_failed'));
+      }
+    } finally {
+      refreshingFiles.current = false;
     }
   }, [t]);
 
@@ -686,6 +714,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   );
 
   return {
+    refreshFiles,
+    filesObservedAt,
     files,
     selectedFiles,
     selectionCount,

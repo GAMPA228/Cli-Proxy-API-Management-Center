@@ -18,6 +18,7 @@ export type AuthFileType =
   | 'unknown';
 
 export interface AuthFileItem {
+  cooldowns?: AuthFileCooldown[] | null;
   id?: string;
   name: string;
   type?: AuthFileType | string;
@@ -36,6 +37,16 @@ export interface AuthFileItem {
   lastRefresh?: string | number;
   modified?: number;
   [key: string]: unknown;
+}
+
+export interface AuthFileCooldown {
+  scope: 'credential' | 'model';
+  model_key?: string;
+  reason: string;
+  retry_at: string;
+  remaining_seconds: number;
+  http_status?: number;
+  backoff_level?: number;
 }
 
 export interface AuthFilesResponse {

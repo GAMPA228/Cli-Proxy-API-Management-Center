@@ -45,6 +45,7 @@ import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileMod
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
 import { AuthFileCooldownReset } from '@/features/authFiles/components/AuthFileCooldownReset';
+import { AuthFileCooldownStatus } from '@/features/authFiles/components/AuthFileCooldownStatus';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
@@ -464,6 +465,7 @@ export function AuthFilesPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<AuthFileItem | null>(null);
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
+  const [cooldownNow, setCooldownNow] = useState(() => Date.now());
 
   const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
   const {
@@ -478,6 +480,8 @@ export function AuthFilesPage() {
     priorityUpdating,
     fileInputRef,
     loadFiles,
+    refreshFiles,
+    filesObservedAt,
     handleUploadClick,
     handleFileChange,
     handleDelete,
@@ -582,8 +586,16 @@ export function AuthFilesPage() {
     isCurrentLayer ? 240_000 : null
   );
 
+  useInterval(() => {
+    if (document.visibilityState === 'visible' && !loading) void refreshFiles();
+  }, isCurrentLayer ? 15_000 : null);
+
+  useInterval(() => {
+    if (document.visibilityState === 'visible') setCooldownNow(Date.now());
+  }, isCurrentLayer && files.some((file) => file.cooldowns?.length) ? 1000 : null);
+
   const filesMatchingProblemFilter = useMemo(
-    () => (problemOnly ? files.filter(hasAuthFileStatusMessage) : files),
+    () => (problemOnly ? files.filter((file) => hasAuthFileStatusMessage(file) || Boolean(file.cooldowns?.length)) : files),
     [files, problemOnly]
   );
 
@@ -1309,6 +1321,12 @@ export function AuthFilesPage() {
                               onReset={loadFiles}
                             />
                           )}
+                          <AuthFileCooldownStatus
+                            name={file.name}
+                            records={file.cooldowns}
+                            observedAt={filesObservedAt}
+                            now={cooldownNow}
+                          />
                         </div>
                       </td>
                       <td
