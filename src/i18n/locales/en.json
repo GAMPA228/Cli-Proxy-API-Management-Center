@@ -565,6 +565,10 @@
     "openai_test_all_partial": "Test completed: {{success}} passed, {{failed}} failed"
   },
   "auth_files": {
+    "display_name": "Display name (note)",
+    "display_name_edit": "Edit display name",
+    "display_name_saved": "Display name saved",
+    "display_name_failed": "Failed to save display name",
     "cooldown_unknown": "Cooldown unknown",
     "cooldown_credential": "Account cooling down",
     "cooldown_models": "Cooling down · {{count}} models",

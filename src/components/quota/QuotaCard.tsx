@@ -8,6 +8,7 @@ import type { TFunction } from 'i18next';
 import type { AuthFileItem, ResolvedTheme, ThemeColors } from '@/types';
 import { TYPE_COLORS } from '@/utils/quota';
 import { formatFileSize } from '@/utils/format';
+import { authDisplayName } from '@/utils/authDisplay';
 import { formatModified } from '@/features/authFiles/constants';
 import styles from '@/pages/QuotaPage.module.scss';
 
@@ -114,7 +115,7 @@ export function QuotaCard<TState extends QuotaStatusState>({
         >
           {getTypeLabel(displayType)}
         </span>
-        <span className={styles.fileName} title={item.name}>{item.name}</span>
+        <span className={styles.fileName} title={item.name}>{authDisplayName(item)}</span>
       </div>
       <div className={styles.cardMeta}>
         <span>

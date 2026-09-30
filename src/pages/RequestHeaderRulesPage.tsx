@@ -9,6 +9,7 @@ import { IconPencil, IconRefreshCw, IconTimer, IconTrash2, IconX } from '@/compo
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import { validateRequestHeaderRules } from '@/features/authFiles/requestHeaderRules';
+import { authOptionLabel } from '@/utils/authDisplay';
 import {
   requestHeaderRulesApi,
   type HeaderRule,
@@ -83,8 +84,7 @@ export function RequestHeaderRulesPage({ readOnly = false }: { readOnly?: boolea
   }, [load]);
   useHeaderRefresh(load);
 
-  const label = (account: HeaderRuleAccount) =>
-    account.note ? account.name + ' (' + account.note + ')' : account.name;
+  const label = authOptionLabel;
   const expired = (rule: HeaderRule) =>
     Boolean(rule.expires_at && Date.parse(rule.expires_at) <= now);
   const ruleStatus = (rule: HeaderRule) =>

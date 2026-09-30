@@ -565,6 +565,10 @@
     "openai_test_all_partial": "测试完成：{{success}} 个通过，{{failed}} 个失败"
   },
   "auth_files": {
+    "display_name": "显示名称（备注）",
+    "display_name_edit": "编辑显示名称",
+    "display_name_saved": "显示名称已保存",
+    "display_name_failed": "保存显示名称失败",
     "cooldown_unknown": "冷却状态未知",
     "cooldown_credential": "账号冷却中",
     "cooldown_models": "冷却中 · {{count}} 个模型",

@@ -6,6 +6,7 @@ import { ConfigSection } from '@/components/config/ConfigSection';
 import { IconChevronDown, IconTrash2 } from '@/components/ui/icons';
 import { authFilesApi } from '@/services/api/authFiles';
 import type { AuthFileItem } from '@/types/authFile';
+import { authDisplayName, authOptionLabel } from '@/utils/authDisplay';
 import type { VisualApiKeyGroup, VisualConfigValues } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
 import { ApiKeysCardEditor } from './VisualConfigEditorBlocks';
@@ -35,6 +36,7 @@ const isCodexAuthFile = (file: AuthFileItem): boolean => {
 };
 
 const authFileLabel = (file: AuthFileItem): string => {
+  if (typeof file.note === 'string' && file.note.trim()) return authOptionLabel(file);
   const primary = String(
     file.email ?? file.account ?? file.label ?? file.name ?? file.id ?? ''
   ).trim();
@@ -120,7 +122,7 @@ export function UpstreamAuthSelector({
         const id = authFileID(file);
         if (!id || (!compact && selectedSet.has(id))) return false;
         if (!normalizedSearch) return true;
-        return `${id} ${authFileLabel(file)} ${file.status ?? ''}`
+        return `${id} ${file.name} ${file.email ?? ''} ${authFileLabel(file)} ${file.status ?? ''}`
           .toLowerCase()
           .includes(normalizedSearch);
       }),
@@ -272,9 +274,9 @@ export function UpstreamAuthSelector({
                       const status = String(file.status ?? '').trim();
                       if (compact) {
                         const known = fileMap.has(id);
-                        const primary = String(
-                          file.email ?? file.account ?? file.label ?? file.name ?? id
-                        );
+                        const primary = typeof file.note === 'string' && file.note.trim()
+                          ? authDisplayName(file)
+                          : String(file.email ?? file.account ?? file.label ?? file.name ?? id);
                         return (
                           <label key={id} className={styles.upstreamAuthCheckOption}>
                             <input

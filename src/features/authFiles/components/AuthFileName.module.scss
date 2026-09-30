@@ -1,0 +1,22 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+  button {
+    flex-shrink: 0;
+    padding: 4px;
+  }
+}
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.original {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+}

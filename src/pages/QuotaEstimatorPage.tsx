@@ -53,6 +53,7 @@ function accountMatchesFile(account: QuotaEstimatorAccount, file: AuthFileItem):
 }
 
 function displayName(file?: AuthFileItem, account?: QuotaEstimatorAccount): string {
+  if (typeof file?.note === 'string' && file.note.trim()) return file.note.trim();
   return (
     normalize(file?.label || file?.email || file?.account || file?.name || account?.account) || '-'
   );

@@ -565,6 +565,10 @@
     "openai_test_all_partial": "Тест завершен: {{success}} прошло, {{failed}} не прошло"
   },
   "auth_files": {
+    "display_name": "Отображаемое имя (заметка)",
+    "display_name_edit": "Изменить отображаемое имя",
+    "display_name_saved": "Отображаемое имя сохранено",
+    "display_name_failed": "Не удалось сохранить имя",
     "cooldown_unknown": "Статус блокировки неизвестен",
     "cooldown_credential": "Аккаунт заблокирован",
     "cooldown_models": "Блокировка · моделей: {{count}}",

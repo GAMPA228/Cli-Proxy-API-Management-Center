@@ -46,6 +46,7 @@ import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
 import { AuthFileCooldownReset } from '@/features/authFiles/components/AuthFileCooldownReset';
 import { AuthFileCooldownStatus } from '@/features/authFiles/components/AuthFileCooldownStatus';
+import { AuthFileName } from '@/features/authFiles/components/AuthFileName';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
@@ -649,6 +650,7 @@ export function AuthFilesPage() {
       const matchSearch =
         !term ||
         item.name.toLowerCase().includes(term) ||
+        (typeof item.note === 'string' && item.note.toLowerCase().includes(term)) ||
         (item.type || '').toString().toLowerCase().includes(term) ||
         (item.provider || '').toString().toLowerCase().includes(term);
 
@@ -1208,11 +1210,11 @@ export function AuthFilesPage() {
                       <td
                         className={`provider-table-cell-ellipsis provider-table-cell-strong ${styles.authTableNameCell}`}
                       >
-                        <CountTooltipCell
-                          items={[file.name]}
-                          triggerLabel={<span className={styles.authTableNameText}>{file.name}</span>}
-                          triggerClassName={styles.authTableNameTrigger}
-                          triggerAriaLabel={t('auth_files.file_name', { defaultValue: '文件名' })}
+                        <AuthFileName
+                          file={file}
+                          editable={!isRuntimeOnly}
+                          disabled={disableControls || deleting === file.name}
+                          onSaved={refreshFiles}
                         />
                       </td>
                       <td className={`provider-table-cell-nowrap ${styles.authTableCenterCell}`}>
