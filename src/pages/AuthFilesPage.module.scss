@@ -311,6 +311,8 @@
 
 .authTableStatusValue {
   display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
   align-items: center;
   justify-content: center;
   max-width: 132px;

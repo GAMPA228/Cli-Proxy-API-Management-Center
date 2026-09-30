@@ -133,6 +133,11 @@ const OAUTH_MODEL_ALIAS_ENDPOINT = '/oauth-model-alias';
 export const authFilesApi = {
   list: () => apiClient.get<AuthFilesResponse>('/auth-files'),
 
+  resetCooldown: (authIndex: string) =>
+    apiClient.post<{ status: string; auth_index: string; models: string[] }>('/reset-quota', {
+      auth_index: authIndex,
+    }),
+
   setStatus: (name: string, disabled: boolean) =>
     apiClient.patch<AuthFileStatusResponse>('/auth-files/status', { name, disabled }),
 

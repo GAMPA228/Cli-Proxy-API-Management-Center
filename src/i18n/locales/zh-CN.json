@@ -565,6 +565,11 @@
     "openai_test_all_partial": "测试完成：{{success}} 个通过，{{failed}} 个失败"
   },
   "auth_files": {
+    "cooldown_reset_button": "清除冷却",
+    "cooldown_reset_hint": "清除此账号的本地路由冷却，不消耗重置次数",
+    "cooldown_reset_confirm": "确定清除 {{name}} 的全部本地账号及模型冷却状态？此操作可能立即恢复路由，但不会恢复上游额度，不消耗重置次数，也不清空 API Key 用量。上游仍不支持模型或仍限流时，可能再次进入冷却。",
+    "cooldown_reset_success": "本地冷却已清除",
+    "cooldown_reset_failed": "清除冷却失败",
     "request_headers_title": "账号请求头",
     "request_headers_name": "第 {{row}} 行请求头名称",
     "request_headers_operation": "第 {{row}} 行操作",

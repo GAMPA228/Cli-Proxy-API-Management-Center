@@ -44,6 +44,7 @@ import { AuthFileDetailModal } from '@/features/authFiles/components/AuthFileDet
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
+import { AuthFileCooldownReset } from '@/features/authFiles/components/AuthFileCooldownReset';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
@@ -1299,6 +1300,14 @@ export function AuthFilesPage() {
                             <span className={`${styles.authTableStatusBadge} ${statusToneClass}`}>
                               {statusLabel}
                             </span>
+                          )}
+                          {authIndexKey && (
+                            <AuthFileCooldownReset
+                              authIndex={authIndexKey}
+                              name={file.name}
+                              disabled={disableControls || deleting === file.name || statusUpdating[file.name] === true}
+                              onReset={loadFiles}
+                            />
                           )}
                         </div>
                       </td>

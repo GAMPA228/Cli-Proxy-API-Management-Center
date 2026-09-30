@@ -565,6 +565,11 @@
     "openai_test_all_partial": "Test completed: {{success}} passed, {{failed}} failed"
   },
   "auth_files": {
+    "cooldown_reset_button": "Clear cooldown",
+    "cooldown_reset_hint": "Clear local routing cooldown without consuming reset credits",
+    "cooldown_reset_confirm": "Clear all local account and model cooldowns for {{name}}? This may immediately resume routing, but does not restore upstream quota, consume reset credits, or clear API Key usage. Upstream errors may trigger cooldown again.",
+    "cooldown_reset_success": "Local cooldown cleared",
+    "cooldown_reset_failed": "Failed to clear cooldown",
     "request_headers_title": "Account Request Headers",
     "request_headers_name": "Header name, row {{row}}",
     "request_headers_operation": "Operation, row {{row}}",
