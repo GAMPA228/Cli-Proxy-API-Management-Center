@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CaptureControls, CaptureViewer } from './UpstreamCapture';
 import captureStyles from './UpstreamCapture.module.scss';
 import { IconEye } from '@/components/ui/icons';
@@ -34,6 +34,13 @@ import { downloadBlob } from '@/utils/download';
 import { UsageTablePagination } from './UsageTablePagination';
 import { RequestPerformanceCell } from './RequestPerformanceCell';
 import { getRequestOutputTps } from '@/utils/usage/requestPerformance';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { RequestEventColumnSelector } from './RequestEventColumnSelector';
+import {
+  REQUEST_EVENT_COLUMNS,
+  normalizeHiddenEventColumns,
+  type RequestEventColumnId,
+} from '@/utils/usage/requestEventColumns';
 import styles from '@/pages/UsagePage.module.scss';
 
 const ALL_FILTER = '__all__';
@@ -303,6 +310,10 @@ export function RequestEventsDetailsCard({
   apiKeyRemarks = {}
 }: RequestEventsDetailsCardProps) {
   const { t, i18n } = useTranslation();
+  const [savedHiddenColumns, setHiddenColumns] = useLocalStorage<unknown>('usage-events:hidden-columns:v1', []);
+  const hiddenColumns = normalizeHiddenEventColumns(savedHiddenColumns);
+  const visibleColumns = REQUEST_EVENT_COLUMNS.filter((column) => !hiddenColumns.includes(column.id));
+  const tableMinWidth = visibleColumns.reduce((width, column) => width + column.width, 0);
 
   const [modelFilter, setModelFilter] = useState(ALL_FILTER);
   const [sourceFilter, setSourceFilter] = useState(ALL_FILTER);
@@ -860,6 +871,7 @@ export function RequestEventsDetailsCard({
     <Card title={t('usage_stats.request_events_title')}>
       <div className={`${captureStyles.controlRow} ${styles.requestEventsCaptureControls}`}>
         <CaptureControls onRefresh={refreshCaptured} />
+        <RequestEventColumnSelector hiddenColumns={hiddenColumns} onChange={setHiddenColumns} />
       </div>
       <CaptureViewer captureID={captureID} onClose={() => setCaptureID(null)} />
       <Modal
@@ -1048,56 +1060,26 @@ export function RequestEventsDetailsCard({
           <div
             className={`${styles.requestEventsTableWrapper} ${shouldEnableTableScroll ? styles.requestEventsTableWrapperScrollable : ''}`.trim()}
           >
-            <table className={`${styles.table} ${styles.requestEventsTable}`}>
+            <table className={`${styles.table} ${styles.requestEventsTable}`} style={{ minWidth: tableMinWidth }}>
               <colgroup>
-                <col className={styles.requestEventsColTime} />
-                <col className={styles.requestEventsColModel} />
-                <col className={styles.requestEventsColSpeed} />
-                <col className={styles.requestEventsColPerformance} />
-                <col className={styles.requestEventsColTTFT} />
-                <col className={styles.requestEventsColClientIP} />
-                <col className={styles.requestEventsColAPIKey} />
-                <col className={styles.requestEventsColSourceType} />
-                <col className={styles.requestEventsColSourceAccount} />
-                <col className={styles.requestEventsColProxy} />
-                <col className={styles.requestEventsColAuthIndex} />
-                <col className={styles.requestEventsColResult} />
-                <col className={styles.requestEventsColCapture} />
-                <col className={styles.requestEventsColToken} />
-                <col className={styles.requestEventsColToken} />
-                <col className={styles.requestEventsColToken} />
-                <col className={styles.requestEventsColToken} />
-                <col className={styles.requestEventsColToken} />
+                {visibleColumns.map((column) => (
+                  <col key={column.id} style={{ width: `${column.width / tableMinWidth * 100}%` }} />
+                ))}
               </colgroup>
               <thead>
                 <tr>
-                  <th>{t('usage_stats.request_events_timestamp')}</th>
-                  <th>{t('usage_stats.model_name')}</th>
-                  <th>{t('usage_stats.request_events_speed')}</th>
-                  <th>{t('usage_stats.request_events_performance')}</th>
-                  <th>{t('usage_stats.request_events_turn_state_length')}</th>
-                  <th>{t('usage_stats.request_events_client_ip')}</th>
-                  <th>{t('usage_stats.request_events_api_key')}</th>
-                  <th>{t('usage_stats.request_events_source_type')}</th>
-                  <th>{t('usage_stats.request_events_source_account')}</th>
-                  <th>{t('usage_stats.request_events_proxy')}</th>
-                  <th>{t('usage_stats.request_events_auth_index')}</th>
-                  <th>{t('usage_stats.request_events_result')}</th>
-                  <th>{t('usage_stats.capture_column')}</th>
-                  <th>{t('usage_stats.input_tokens')}</th>
-                  <th>{t('usage_stats.output_tokens')}</th>
-                  <th>{t('usage_stats.reasoning_tokens')}</th>
-                  <th>{t('usage_stats.cached_tokens')}</th>
-                  <th>{t('usage_stats.total_tokens')}</th>
+                  {visibleColumns.map((column) => (
+                    <th key={column.id}>{t(`usage_stats.${column.label}`)}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {renderedRows.map((row) => (
-                  <tr key={row.id}>
-                    <td title={row.timestamp} className={`${styles.requestEventsTimestamp} ${styles.tableCellMono}`}>
+                {renderedRows.map((row) => {
+                  const cells: Record<RequestEventColumnId, ReactNode> = {
+                    time: <td title={row.timestamp} className={`${styles.requestEventsTimestamp} ${styles.tableCellMono}`}>
                       {row.timestampLabel}
-                    </td>
-                    <td
+                    </td>,
+                    model: <td
                       className={`${styles.modelCell} ${styles.requestModelCell}`}
                       title={[
                         row.model,
@@ -1130,8 +1112,8 @@ export function RequestEventsDetailsCard({
                           )}
                         </span>
                       </span>
-                    </td>
-                    <ServiceTierCell
+                    </td>,
+                    speed: <ServiceTierCell
                       requested={row.serviceTier}
                       applied={row.appliedServiceTier}
                       response={row.responseServiceTier}
@@ -1139,36 +1121,36 @@ export function RequestEventsDetailsCard({
                       appliedLabel={t('usage_stats.request_events_applied_tier')}
                       responseLabel={t('usage_stats.request_events_response_tier')}
                       noResponseLabel={t('usage_stats.request_events_speed_no_response')}
-                    />
-                    <RequestPerformanceCell
+                    />,
+                    performance: <RequestPerformanceCell
                       firstTokenMs={row.firstTokenMs}
                       latencyMs={row.latencyMs}
                       outputTokens={row.outputTokens}
                       failed={row.failed}
                       model={row.model}
                       responseModel={row.responseModel}
-                    />
-                    <td className={styles.tableCellMono}>{row.turnStateLength ?? '-'}</td>
-                    <td
+                    />,
+                    turnState: <td className={styles.tableCellMono}>{row.turnStateLength ?? '-'}</td>,
+                    clientIP: <td
                       className={`${styles.requestEventsClientIP} ${styles.tableCellMono}`}
                       title={row.clientIP}
                     >
                       {row.clientIP}
-                    </td>
-                    <td
+                    </td>,
+                    apiKey: <td
                       className={`${styles.requestEventsAPIKey} ${styles.tableCellMono}`}
                       title={row.apiKeyLabel}
                     >
                       {row.apiKeyLabel}
-                    </td>
-                    <td className={styles.tableCellStatus} title={row.sourceType || '-'}>
+                    </td>,
+                    sourceType: <td className={styles.tableCellStatus} title={row.sourceType || '-'}>
                       {row.sourceType ? (
                         <span className={styles.requestEventsSourceTypeBadge}>{row.sourceType}</span>
                       ) : (
                         <span className={styles.requestEventsSourceTypeEmpty}>-</span>
                       )}
-                    </td>
-                    <td className={`${styles.requestEventsSourceCell} ${styles.tableCellLeft}`}>
+                    </td>,
+                    source: <td className={`${styles.requestEventsSourceCell} ${styles.tableCellLeft}`}>
                       {row.source && row.source !== '-' ? (
                         <CountTooltipCell
                           items={[row.source]}
@@ -1179,17 +1161,17 @@ export function RequestEventsDetailsCard({
                       ) : (
                         <span className={styles.requestEventsSourceText}>-</span>
                       )}
-                    </td>
-                    <td
+                    </td>,
+                    proxy: <td
                       className={`${styles.requestEventsProxy} ${styles.tableCellMono}`}
                       title={row.proxyDisplay}
                     >
                       {row.proxyDisplay}
-                    </td>
-                    <td className={`${styles.requestEventsAuthIndex} ${styles.tableCellMono}`} title={row.authIndex}>
+                    </td>,
+                    authIndex: <td className={`${styles.requestEventsAuthIndex} ${styles.tableCellMono}`} title={row.authIndex}>
                       {row.authIndex}
-                    </td>
-                    <td className={styles.tableCellStatus}>
+                    </td>,
+                    result: <td className={styles.tableCellStatus}>
                       {row.failed ? (
                         <button
                           type="button"
@@ -1206,8 +1188,8 @@ export function RequestEventsDetailsCard({
                       ) : (
                         <span className={styles.requestEventsResultSuccess}>{t('stats.success')}</span>
                       )}
-                    </td>
-                    <td className={styles.tableCellStatus}>
+                    </td>,
+                    capture: <td className={styles.tableCellStatus}>
                       {row.captureID ? (
                         <Button
                           variant="ghost"
@@ -1221,14 +1203,19 @@ export function RequestEventsDetailsCard({
                       ) : (
                         '-'
                       )}
-                    </td>
-                    <td className={styles.tableCellMono}>{row.inputTokens.toLocaleString()}</td>
-                    <td className={styles.tableCellMono}>{row.outputTokens.toLocaleString()}</td>
-                    <td className={styles.tableCellMono}>{row.reasoningTokens.toLocaleString()}</td>
-                    <td className={styles.tableCellMono}>{row.cachedTokens.toLocaleString()}</td>
-                    <td className={styles.tableCellMono}>{row.totalTokens.toLocaleString()}</td>
-                  </tr>
-                ))}
+                    </td>,
+                    input: <td className={styles.tableCellMono}>{row.inputTokens.toLocaleString()}</td>,
+                    output: <td className={styles.tableCellMono}>{row.outputTokens.toLocaleString()}</td>,
+                    reasoning: <td className={styles.tableCellMono}>{row.reasoningTokens.toLocaleString()}</td>,
+                    cached: <td className={styles.tableCellMono}>{row.cachedTokens.toLocaleString()}</td>,
+                    total: <td className={styles.tableCellMono}>{row.totalTokens.toLocaleString()}</td>,
+                  };
+                  return (
+                    <tr key={row.id}>
+                      {visibleColumns.map((column) => <Fragment key={column.id}>{cells[column.id]}</Fragment>)}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

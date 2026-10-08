@@ -1640,7 +1640,7 @@
   border-bottom: 1px solid var(--border-color);
 
   @media (max-width: 1100px) {
-    > div {
+    > div:first-child {
       width: 100%;
       margin-left: 0;
       justify-content: flex-start;
@@ -1704,10 +1704,6 @@
   max-height: 460px;
 }
 
-.requestEventsTable {
-  min-width: 2220px;
-}
-
 .responseModelBadge {
   border-color: #d4a72c;
   background: rgba(212, 167, 44, 0.08);
@@ -1717,60 +1713,6 @@
   font-family: inherit;
   white-space: normal;
   overflow-wrap: anywhere;
-}
-
-.requestEventsColCapture { width: 80px; }
-
-.requestEventsColTTFT {
-  width: 120px;
-}
-
-.requestEventsColPerformance {
-  width: 170px;
-}
-
-.requestEventsColTime {
-  width: 12%;
-}
-
-.requestEventsColModel {
-  width: 320px;
-}
-
-.requestEventsColSpeed {
-  width: 9%;
-}
-
-.requestEventsColClientIP {
-  width: 10%;
-}
-
-.requestEventsColAPIKey {
-  width: 13%;
-}
-
-.requestEventsColSourceType {
-  width: 8%;
-}
-
-.requestEventsColSourceAccount {
-  width: 12%;
-}
-
-.requestEventsColProxy {
-  width: 13%;
-}
-
-.requestEventsColAuthIndex {
-  width: 7%;
-}
-
-.requestEventsColResult {
-  width: 6%;
-}
-
-.requestEventsColToken {
-  width: 7%;
 }
 
 .requestEventsTimestamp {
