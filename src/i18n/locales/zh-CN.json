@@ -1142,6 +1142,10 @@
     "remote_access_disabled": "远程访问不支持此登录方式，请从本地 (localhost) 访问"
   },
   "usage_stats": {
+    "request_events_performance": "性能",
+    "request_events_first_token_short": "首字",
+    "request_events_duration_short": "耗时",
+    "request_events_output_tps_hint": "输出 Token ÷ 完整请求耗时（含首字等待时间；输出可能包含推理 Token）",
     "request_events_turn_state_length": "Turn State 长度",
     "auto_turn_state_toggle": "自动维护 Turn State",
     "auto_turn_state_scope": "账号范围",

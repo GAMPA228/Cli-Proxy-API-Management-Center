@@ -32,6 +32,8 @@ import {
 } from '@/utils/usage';
 import { downloadBlob } from '@/utils/download';
 import { UsageTablePagination } from './UsageTablePagination';
+import { RequestPerformanceCell } from './RequestPerformanceCell';
+import { getRequestOutputTps } from '@/utils/usage/requestPerformance';
 import styles from '@/pages/UsagePage.module.scss';
 
 const ALL_FILTER = '__all__';
@@ -74,6 +76,7 @@ type RequestEventRow = {
   reasoningEffort: string;
   serviceTier: string;
   firstTokenMs: number | null;
+  latencyMs: number | null;
   turnStateLength: number | null;
   captureID: string;
   appliedServiceTier: string;
@@ -253,6 +256,7 @@ const usageDetailFromServerRow = (row: UsageDetailRow): UsageDetail | null => {
     timestamp,
     api: typeof row.api === 'string' ? row.api : '',
     first_token_ms: row.first_token_ms,
+    latency_ms: row.latency_ms,
     turn_state_length: row.turn_state_length,
     capture_id: row.capture_id,
     client_ip: typeof row.client_ip === 'string' ? row.client_ip : '',
@@ -517,6 +521,10 @@ export function RequestEventsDetailsCard({
           typeof detail.first_token_ms === 'number' && Number.isFinite(detail.first_token_ms) && detail.first_token_ms >= 0
             ? detail.first_token_ms
             : null,
+        latencyMs:
+          typeof detail.latency_ms === 'number' && Number.isFinite(detail.latency_ms) && detail.latency_ms >= 0
+            ? detail.latency_ms
+            : null,
         appliedServiceTier,
         responseServiceTier,
         clientIP,
@@ -733,6 +741,8 @@ export function RequestEventsDetailsCard({
       'applied_service_tier',
       'response_service_tier',
       'first_token_ms',
+      'latency_ms',
+      'output_tps',
       'turn_state_length',
       'source_type',
       'source',
@@ -763,6 +773,8 @@ export function RequestEventsDetailsCard({
         row.appliedServiceTier,
         row.responseServiceTier,
         row.firstTokenMs ?? '',
+        row.latencyMs ?? '',
+        getRequestOutputTps(row) ?? '',
         row.turnStateLength ?? '',
         row.sourceType,
         row.source,
@@ -804,6 +816,8 @@ export function RequestEventsDetailsCard({
       applied_service_tier: row.appliedServiceTier,
       response_service_tier: row.responseServiceTier,
       first_token_ms: row.firstTokenMs,
+      latency_ms: row.latencyMs,
+      output_tps: getRequestOutputTps(row),
       turn_state_length: row.turnStateLength,
       source_type: row.sourceType,
       source: row.source,
@@ -1039,7 +1053,7 @@ export function RequestEventsDetailsCard({
                 <col className={styles.requestEventsColTime} />
                 <col className={styles.requestEventsColModel} />
                 <col className={styles.requestEventsColSpeed} />
-                <col className={styles.requestEventsColTTFT} />
+                <col className={styles.requestEventsColPerformance} />
                 <col className={styles.requestEventsColTTFT} />
                 <col className={styles.requestEventsColClientIP} />
                 <col className={styles.requestEventsColAPIKey} />
@@ -1060,7 +1074,7 @@ export function RequestEventsDetailsCard({
                   <th>{t('usage_stats.request_events_timestamp')}</th>
                   <th>{t('usage_stats.model_name')}</th>
                   <th>{t('usage_stats.request_events_speed')}</th>
-                  <th>{t('usage_stats.request_events_ttft')}</th>
+                  <th>{t('usage_stats.request_events_performance')}</th>
                   <th>{t('usage_stats.request_events_turn_state_length')}</th>
                   <th>{t('usage_stats.request_events_client_ip')}</th>
                   <th>{t('usage_stats.request_events_api_key')}</th>
@@ -1126,13 +1140,14 @@ export function RequestEventsDetailsCard({
                       responseLabel={t('usage_stats.request_events_response_tier')}
                       noResponseLabel={t('usage_stats.request_events_speed_no_response')}
                     />
-                    <td className={styles.tableCellMono} style={{ whiteSpace: 'nowrap' }}>
-                      {row.firstTokenMs === null
-                        ? '-'
-                        : row.firstTokenMs < 1000
-                          ? `${row.firstTokenMs.toLocaleString(i18n.language)} ms`
-                          : `${(row.firstTokenMs / 1000).toLocaleString(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s`}
-                    </td>
+                    <RequestPerformanceCell
+                      firstTokenMs={row.firstTokenMs}
+                      latencyMs={row.latencyMs}
+                      outputTokens={row.outputTokens}
+                      failed={row.failed}
+                      model={row.model}
+                      responseModel={row.responseModel}
+                    />
                     <td className={styles.tableCellMono}>{row.turnStateLength ?? '-'}</td>
                     <td
                       className={`${styles.requestEventsClientIP} ${styles.tableCellMono}`}

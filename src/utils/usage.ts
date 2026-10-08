@@ -45,6 +45,7 @@ export interface ApiKeyRemarkEntry {
 }
 
 export interface UsageDetail {
+  latency_ms?: number | null;
   first_token_ms?: number | null;
   turn_state_length?: number | null;
   capture_id?: string;
@@ -568,6 +569,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           timestamp,
           api: apiName,
           first_token_ms: typeof detailRaw.first_token_ms === 'number' ? detailRaw.first_token_ms : null,
+          latency_ms: typeof detailRaw.latency_ms === 'number' ? detailRaw.latency_ms : null,
           turn_state_length: typeof detailRaw.turn_state_length === 'number' ? detailRaw.turn_state_length : null,
           capture_id: typeof detailRaw.capture_id === 'string' ? detailRaw.capture_id : '',
           client_ip: typeof detailRaw.client_ip === 'string' ? detailRaw.client_ip : '',

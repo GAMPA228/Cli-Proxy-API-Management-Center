@@ -1145,6 +1145,10 @@
     "remote_access_disabled": "Этот способ входа недоступен при удалённом доступе. Подключитесь с localhost."
   },
   "usage_stats": {
+    "request_events_performance": "Производительность",
+    "request_events_first_token_short": "Первый токен",
+    "request_events_duration_short": "Длительность",
+    "request_events_output_tps_hint": "Выходные токены / полная длительность запроса, включая ожидание первого токена. Выход может включать токены рассуждений.",
     "request_events_turn_state_length": "Длина Turn State",
     "auto_turn_state_toggle": "Автоматически поддерживать Turn State",
     "auto_turn_state_scope": "Область аккаунтов",

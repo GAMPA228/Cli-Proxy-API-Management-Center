@@ -1142,6 +1142,10 @@
     "remote_access_disabled": "This login method is not available for remote access. Please access from localhost."
   },
   "usage_stats": {
+    "request_events_performance": "Performance",
+    "request_events_first_token_short": "First token",
+    "request_events_duration_short": "Duration",
+    "request_events_output_tps_hint": "Output tokens / total request duration, including first-token wait. Output may include reasoning tokens.",
     "request_events_turn_state_length": "Turn State length",
     "auto_turn_state_toggle": "Automatically maintain Turn State",
     "auto_turn_state_scope": "Account scope",

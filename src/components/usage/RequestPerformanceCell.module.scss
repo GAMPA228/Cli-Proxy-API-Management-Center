@@ -1,0 +1,41 @@
+.performance {
+  --performance-good: #16a34a;
+  --performance-warn: #d97706;
+  --performance-slow: #ea580c;
+  --performance-critical: #dc2626;
+  --performance-unknown: var(--text-secondary);
+  display: inline-flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 2px 0;
+  text-align: left;
+}
+.bar {
+  width: 3px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  gap: 3px 8px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.label,
+.unknown {
+  color: var(--text-secondary);
+}
+.good {
+  color: var(--performance-good);
+}
+.warn {
+  color: var(--performance-warn);
+}
+.slow {
+  color: var(--performance-slow);
+}
+.critical {
+  color: var(--performance-critical);
+}
