@@ -4,7 +4,7 @@
   --performance-slow: #ea580c;
   --performance-critical: #dc2626;
   --performance-unknown: var(--text-secondary);
-  display: inline-flex;
+  display: flex;
   align-items: stretch;
   gap: 8px;
   padding: 2px 0;
