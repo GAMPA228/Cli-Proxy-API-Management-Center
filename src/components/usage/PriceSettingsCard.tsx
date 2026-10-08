@@ -1,11 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
-import { IconPencil, IconTrash2 } from '@/components/ui/icons';
+import { IconPencil, IconTrash2, IconRefreshCw } from '@/components/ui/icons';
+import { useNotificationStore } from '@/stores';
+import { fetchModelPrices } from '@/services/api/modelPricing';
+import { mergeRemoteModelPrices } from '@/utils/usage/modelPricing';
 import type { ModelPrice } from '@/utils/usage';
 import { UsageTablePagination } from './UsageTablePagination';
 import styles from '@/pages/UsagePage.module.scss';
@@ -19,9 +22,57 @@ export interface PriceSettingsCardProps {
 export function PriceSettingsCard({
   modelNames,
   modelPrices,
-  onPricesChange
+  onPricesChange,
 }: PriceSettingsCardProps) {
   const { t } = useTranslation();
+  const showNotification = useNotificationStore((state) => state.showNotification);
+  const [updating, setUpdating] = useState(false);
+  const [updateResult, setUpdateResult] = useState<ReturnType<
+    typeof mergeRemoteModelPrices
+  > | null>(null);
+  const latest = useRef({ modelPrices, modelNames, onPricesChange });
+  const updatePending = useRef(false);
+  useEffect(() => {
+    latest.current = { modelPrices, modelNames, onPricesChange };
+  }, [modelPrices, modelNames, onPricesChange]);
+
+  const handleUpdatePrices = async () => {
+    if (updatePending.current) return;
+    updatePending.current = true;
+    setUpdating(true);
+    setUpdateResult(null);
+    try {
+      const remote = await fetchModelPrices();
+      const current = latest.current;
+      const result = mergeRemoteModelPrices(current.modelPrices, current.modelNames, remote);
+      if (result.updated + result.added > 0) {
+        current.onPricesChange(result.prices);
+        setSelectedModel('');
+        setPromptPrice('');
+        setCompletionPrice('');
+        setCachePrice('');
+      }
+      setUpdateResult(result);
+      showNotification(
+        t('usage_stats.model_price_update_result', {
+          updated: result.updated,
+          added: result.added,
+          unmatched: result.unmatched.length,
+        }),
+        result.updated + result.added > 0 ? 'success' : 'warning'
+      );
+    } catch (error) {
+      showNotification(
+        t('usage_stats.model_price_update_failed', {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+        'error'
+      );
+    } finally {
+      updatePending.current = false;
+      setUpdating(false);
+    }
+  };
 
   // Add form state
   const [selectedModel, setSelectedModel] = useState('');
@@ -91,7 +142,7 @@ export function PriceSettingsCard({
   const options = useMemo(
     () => [
       { value: '', label: t('usage_stats.model_price_select_placeholder') },
-      ...modelNames.map((name) => ({ value: name, label: name }))
+      ...modelNames.map((name) => ({ value: name, label: name })),
     ],
     [modelNames, t]
   );
@@ -100,7 +151,9 @@ export function PriceSettingsCard({
     () =>
       Object.entries(modelPrices)
         .map(([model, price]) => ({ model, price }))
-        .sort((a, b) => a.model.localeCompare(b.model, undefined, { sensitivity: 'base', numeric: true })),
+        .sort((a, b) =>
+          a.model.localeCompare(b.model, undefined, { sensitivity: 'base', numeric: true })
+        ),
     [modelPrices]
   );
   const listTotalPages = Math.max(1, Math.ceil(priceRows.length / listPageSize));
@@ -124,8 +177,39 @@ export function PriceSettingsCard({
   };
 
   return (
-    <Card title={t('usage_stats.model_price_settings')}>
+    <Card
+      title={t('usage_stats.model_price_settings')}
+      extra={
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={updating}
+          disabled={editModel !== null || (!modelNames.length && !Object.keys(modelPrices).length)}
+          onClick={handleUpdatePrices}
+        >
+          <span className={styles.priceUpdateAction}>
+            <IconRefreshCw size={16} />
+            {t('usage_stats.model_price_update')}
+          </span>
+        </Button>
+      }
+    >
       <div className={styles.pricingSection}>
+        {updateResult && (
+          <div className={styles.priceUpdateResult} role="status">
+            {t('usage_stats.model_price_update_result', {
+              updated: updateResult.updated,
+              added: updateResult.added,
+              unmatched: updateResult.unmatched.length,
+            })}
+            {updateResult.unmatched.length > 0 && (
+              <details>
+                <summary>{t('usage_stats.model_price_update_unmatched')}</summary>
+                {updateResult.unmatched.join(', ')}
+              </details>
+            )}
+          </div>
+        )}
         {/* Price Form */}
         <div className={styles.priceForm}>
           <div className={styles.formRow}>
@@ -175,7 +259,7 @@ export function PriceSettingsCard({
               <Button
                 variant="primary"
                 onClick={handleSavePrice}
-                disabled={!selectedModel}
+                disabled={!selectedModel || updating}
               >
                 {t('common.save')}
               </Button>
@@ -222,6 +306,7 @@ export function PriceSettingsCard({
                               size="sm"
                               className={styles.priceActionIcon}
                               onClick={() => handleOpenEdit(model)}
+                              disabled={updating}
                               title={t('common.edit')}
                               aria-label={t('common.edit')}
                             >
@@ -232,6 +317,7 @@ export function PriceSettingsCard({
                               size="sm"
                               className={styles.priceActionIcon}
                               onClick={() => handleDeletePrice(model)}
+                              disabled={updating}
                               title={t('common.delete')}
                               aria-label={t('common.delete')}
                             >

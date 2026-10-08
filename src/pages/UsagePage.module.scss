@@ -804,6 +804,23 @@
   }
 }
 
+.priceUpdateAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.priceUpdateResult {
+  color: var(--text-secondary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+
+  summary {
+    cursor: pointer;
+    margin-top: 6px;
+  }
+}
+
 .modelStatsTable,
 .credentialStatsTable,
 .requestEventsTable {
@@ -1104,6 +1121,7 @@
 
 .priceTable {
   table-layout: fixed;
+  min-width: 800px;
 }
 
 .priceTableColModel {
